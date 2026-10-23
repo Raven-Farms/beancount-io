@@ -5,7 +5,7 @@ import {
   type GiteaCommitClient,
 } from "@/foundation/clients/load-cached-ledger-file-map";
 import { getCacheHelper } from "@/foundation/clients/build-cache";
-import { withLedger } from "@/foundation/rustledger";
+import { countLedgerDirectives } from "@/foundation/rustledger";
 import { getMaxDirectives } from "@/core/backend-v2-limits";
 import { DomainError, ErrorCategory } from "@/shared/errors";
 import { logger } from "@/shared/logger";
@@ -35,7 +35,38 @@ class DirectiveLimitExceededError extends DomainError {
 
 async function countMap(files: Record<string, string>): Promise<number> {
   if (!files["main.bean"]) return 0;
-  return withLedger(files, "main.bean", (ledger) => ledger.directiveCount());
+  return countLedgerDirectives(files, "main.bean");
+}
+
+interface CommittedLedger {
+  files: Record<string, string>;
+  sha: string | null;
+}
+
+/**
+ * The committed file map at HEAD, or at `ref` when given. Committed files only:
+ * managed price feeds are virtual, not the customer's directives (ADR 015
+ * section 9), so a feed can never push a ledger over its tier limit, and a
+ * count never triggers a feed fetch.
+ */
+async function loadCommitted(
+  client: GiteaApi<unknown> | GiteaCommitClient,
+  owner: string,
+  repoName: string,
+  ref?: string,
+): Promise<CommittedLedger> {
+  const commitClient = client as unknown as GiteaCommitClient;
+  // One Gitea round trip: both resolve HEAD through the same coalesced call.
+  // With a pinned ref the loader may answer from cache without asking Gitea, so
+  // HEAD is still resolved with the caller's client: it is their access check.
+  const [head, { files }] = await Promise.all([
+    resolveHeadShaCoalesced(commitClient, owner, repoName),
+    loadCachedFileMapForRepo(commitClient, getCacheHelper(), owner, repoName, {
+      committedOnly: true,
+      ...(ref ? { ref } : {}),
+    }),
+  ]);
+  return { files, sha: ref ?? head ?? null };
 }
 
 export interface DirectiveCount {
@@ -45,7 +76,7 @@ export interface DirectiveCount {
 }
 
 /**
- * How many directives a ledger currently holds.
+ * How many directives a ledger currently holds, or held at commit `ref`.
  *
  * Deliberately the same counter the app write path and the dashboard use —
  * `loadCachedFileMapForRepo` follows `include` into multi-file ledgers, which a
@@ -59,18 +90,10 @@ export async function countDirectivesForRepo(
   client: GiteaApi<unknown>,
   owner: string,
   repoName: string,
+  ref?: string,
 ): Promise<DirectiveCount> {
-  const commitClient = client as unknown as GiteaCommitClient;
-  // Committed files only: managed price feeds are virtual, not the customer's
-  // directives (ADR 015 section 9), so a feed can never push a ledger over its
-  // tier limit, and a count never triggers a feed fetch.
-  const [sha, { files }] = await Promise.all([
-    resolveHeadShaCoalesced(commitClient, owner, repoName),
-    loadCachedFileMapForRepo(commitClient, getCacheHelper(), owner, repoName, {
-      committedOnly: true,
-    }),
-  ]);
-  return { count: await countMap(files), sha: sha ?? null };
+  const { files, sha } = await loadCommitted(client, owner, repoName, ref);
+  return { count: await countMap(files), sha };
 }
 
 /**
@@ -89,6 +112,9 @@ export async function countDirectivesForRepo(
  *
  * `fileChanges` maps repo-relative path → proposed new BASE64 content, or
  * null for a deletion. Non-.bean paths are skipped.
+ *
+ * `commitLedgerFiles` runs this for every commit it makes. A route that writes
+ * to Gitea directly (files, bulk entries) must call it itself.
  */
 export interface DirectiveLimitOptions {
   /**
@@ -96,10 +122,15 @@ export interface DirectiveLimitOptions {
    * exempt from the per-ledger limit by product policy.
    */
   exempt?: boolean;
+  /**
+   * The owner's limit, when the caller already started the lookup — so a
+   * commit that retries asks backend-v2 once, not once per attempt.
+   */
+  maxDirectives?: Promise<number | null>;
 }
 
 export async function checkDirectiveLimitForFileChanges(
-  client: GiteaApi<unknown>,
+  client: GiteaApi<unknown> | GiteaCommitClient,
   owner: string,
   repoName: string,
   fileChanges: Record<string, string | null>,
@@ -116,18 +147,10 @@ export async function checkDirectiveLimitForFileChanges(
   let currentTotal: number;
   let projectedTotal: number;
   try {
-    limit = await getMaxDirectives(owner);
+    limit = await (options.maxDirectives ?? getMaxDirectives(owner));
     if (limit === null || limit < 0) return;
 
-    const { files } = await loadCachedFileMapForRepo(
-      client as unknown as GiteaCommitClient,
-      getCacheHelper(),
-      owner,
-      repoName,
-      { committedOnly: true },
-    );
-    currentTotal = await countMap(files);
-
+    const { files } = await loadCommitted(client, owner, repoName);
     const projected: Record<string, string> = { ...files };
     for (const [path, newBase64] of beanChanges) {
       if (newBase64 === null) {
@@ -137,12 +160,16 @@ export async function checkDirectiveLimitForFileChanges(
       }
     }
     projectedTotal = await countMap(projected);
+    // A write that stays within the limit is allowed whatever the ledger holds
+    // now, so only a write past it pays for the current count.
+    if (projectedTotal <= limit) return;
+    currentTotal = await countMap(files);
   } catch (err) {
     log.warn("directive-limit pre-check failed open", { owner, repoName, err });
     return;
   }
 
-  if (projectedTotal > limit && projectedTotal > currentTotal) {
+  if (projectedTotal > currentTotal) {
     throw new DirectiveLimitExceededError(limit, projectedTotal);
   }
 }

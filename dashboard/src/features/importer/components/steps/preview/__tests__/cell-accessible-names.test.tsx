@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createInstance, type i18n as I18nInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
@@ -7,6 +7,8 @@ import { Table, TableBody } from "@/common/components/ui/table";
 import { en, de } from "@/i18n/locales";
 import { EditablePreviewRow } from "../editable-preview-row";
 import { buildParsedRow } from "../../../../utils/csv-validator";
+import { useCSVParser } from "../../../../hooks/use-csv-parser";
+import { ImportPreviewTable } from "../import-preview-table";
 
 vi.unmock("@/common/hooks/use-translations");
 vi.unmock("react-i18next");
@@ -52,7 +54,7 @@ describe("Smart Import preview cell accessible names", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Edit Date, row 1. Current value: 2026-09-05",
+        name: "Edit Date, row 1. Current value: 9/5/2026",
       }),
     ).toBeInTheDocument();
     expect(
@@ -100,7 +102,7 @@ describe("Smart Import preview cell accessible names", () => {
     await user.keyboard("{Escape}");
     await user.click(
       screen.getByRole("button", {
-        name: "Edit Date, row 1. Current value: 2026-09-05",
+        name: "Edit Date, row 1. Current value: 9/5/2026",
       }),
     );
     const dateInput = screen.getByRole("textbox", { name: "Date, row 1" });
@@ -123,5 +125,55 @@ describe("Smart Import preview cell accessible names", () => {
     expect(
       screen.getByRole("button", { name: "Zeile 1 löschen" }),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * The collapsed cell's name carries the value it shows: the normalized
+ * amount and the localized date, not the bank's raw token (w4/245).
+ */
+describe("Smart Import preview names the displayed value", () => {
+  it("names comma-decimal amounts and dates as the preview shows them", async () => {
+    const user = userEvent.setup();
+    const { result } = renderHook(() => useCSVParser());
+    const parsed = result.current.parseCSV(
+      [
+        "Date;Payee;Description;Amount",
+        "2026-10-20;qa-eu-credit;grouped credit;2.500,00",
+        "2026-10-20;qa-eu-fee;comma fee;-4,50",
+        "2026-10-20;qa-eu-debit;grouped debit;-1.000",
+      ].join("\n"),
+    );
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ImportPreviewTable result={parsed} onResultChange={vi.fn()} />
+      </I18nextProvider>,
+    );
+
+    for (const [row, shown] of [
+      [1, "2500.00"],
+      [2, "-4.50"],
+      [3, "-1000"],
+    ] as const) {
+      expect(
+        screen.getByRole("button", {
+          name: `Edit Amount, row ${row}. Current value: ${shown}`,
+        }),
+      ).toHaveTextContent(shown);
+    }
+    expect(
+      screen.getByRole("button", {
+        name: "Edit Date, row 3. Current value: 10/20/2026",
+      }),
+    ).toHaveTextContent("10/20/2026");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Edit Amount, row 3. Current value: -1000",
+      }),
+    );
+    expect(screen.getByRole("textbox", { name: "Amount, row 3" })).toHaveValue(
+      "-1.000",
+    );
   });
 });

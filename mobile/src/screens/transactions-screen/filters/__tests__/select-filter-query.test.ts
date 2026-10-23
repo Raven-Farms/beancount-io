@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { getFormatDate } from "../../../../common/format-util";
 import {
   countActiveFilters,
   formatTimeFilter,
   isDateRangeValid,
+  monthsBack,
   resolveDateRange,
   selectFiltersForLedger,
   toFilterQuery,
@@ -348,5 +350,122 @@ describe("transactionFiltersVar readers", () => {
       .map((file) => path.relative(srcDir, file));
 
     expect(offenders.join(", ")).toBe("");
+  });
+});
+
+// w21/067: the Custom seed used an unclamped setMonth, so on 31 March "last
+// month through today" began on 3 March.
+describe("the Custom range seed", () => {
+  it("clamps last month to its final day", () => {
+    const seed = (y: number, m: number, d: number) =>
+      getFormatDate(monthsBack(new Date(y, m, d, 12), 1));
+    expect(seed(2026, 2, 31)).toBe("2026-02-28");
+    expect(seed(2026, 2, 29)).toBe("2026-02-28");
+    expect(seed(2026, 4, 31)).toBe("2026-04-30");
+    expect(seed(2026, 11, 31)).toBe("2026-11-30");
+    expect(seed(2026, 9, 21)).toBe("2026-09-21");
+  });
+
+  it("is what the filter screen seeds Custom with", () => {
+    const source = fs.readFileSync(
+      path.join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "transaction-filters-screen",
+        "transaction-filters-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(
+      source.includes(
+        "startDate: prev.startDate ?? getFormatDate(monthsBack(today, 1)),",
+      ),
+    ).toBe(true);
+    expect(source.includes("setMonth(")).toBe(false);
+  });
+});
+
+// w21/306: all three status chips match every transaction, so they filter
+// nothing.
+describe("selecting every status", () => {
+  const all = filters({ statuses: ["cleared", "pending", "other"] });
+
+  it("sends no subtype filter and counts as no filter", () => {
+    expect(toFilterQuery(all, TODAY)).toEqual({});
+    expect(countActiveFilters(all, TODAY)).toBe(0);
+  });
+
+  it("in any order", () => {
+    const shuffled = filters({ statuses: ["other", "cleared", "pending"] });
+    expect(toFilterQuery(shuffled, TODAY)).toEqual({});
+    expect(countActiveFilters(shuffled, TODAY)).toBe(0);
+  });
+
+  it("still filters when only some are selected", () => {
+    const some = filters({ statuses: ["cleared", "pending"] });
+    expect(toFilterQuery(some, TODAY)).toEqual({
+      transactionSubtypes: ["cleared", "pending"],
+    });
+    expect(countActiveFilters(some, TODAY)).toBe(1);
+  });
+
+  it("keeps the other filters when every status is on", () => {
+    const both = filters({
+      statuses: ["cleared", "pending", "other"],
+      range: "1M",
+      account: "Assets:Cash",
+    });
+    expect(Object.keys(toFilterQuery(both, TODAY)).sort()).toEqual([
+      "account",
+      "time",
+    ]);
+    expect(countActiveFilters(both, TODAY)).toBe(2);
+  });
+});
+
+// w21/307: an end of 9999-12-31 passed validation, but the server asks for the
+// day after it (year 10000), fails to parse it and takes the whole journal.
+describe("the last day a custom window may reach", () => {
+  const custom = (startDate: string, endDate: string) =>
+    filters({ range: "custom", startDate, endDate });
+
+  it("never sends 9999-12-31", () => {
+    expect(toFilterQuery(custom("2026-01-01", "9999-12-31"), TODAY).time).toBe(
+      "2026-01-01 - 9999-12-30",
+    );
+    expect(resolveDateRange(custom("9999-12-31", "9999-12-31"), TODAY)).toEqual(
+      { start: "9999-12-30", end: "9999-12-30" },
+    );
+  });
+
+  it("leaves an ordinary or far-future window as it is", () => {
+    expect(toFilterQuery(custom("2026-01-01", "2030-12-31"), TODAY).time).toBe(
+      "2026-01-01 - 2030-12-31",
+    );
+    expect(toFilterQuery(custom("2026-01-01", "9999-12-30"), TODAY).time).toBe(
+      "2026-01-01 - 9999-12-30",
+    );
+  });
+
+  it("caps the picker at the same day", () => {
+    const sheet = fs
+      .readFileSync(
+        path.join(
+          __dirname,
+          "..",
+          "..",
+          "..",
+          "transaction-filters-screen",
+          "transaction-filters-screen.tsx",
+        ),
+        "utf8",
+      )
+      .replace(/\s+/g, "");
+    expect(sheet.includes("maximumDate={MAX_FILTER_DATE}")).toBe(true);
+    expect(
+      sheet.includes("constMAX_FILTER_DATE=parseFormatDate(MAX_FILTER_DAY);"),
+    ).toBe(true);
   });
 });

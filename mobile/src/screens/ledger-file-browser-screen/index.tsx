@@ -1,16 +1,25 @@
+import { routeText } from "@/common/route-text";
+import { isConflictFailure } from "@/common/ledger-conflict";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import {
   Alert,
+  BackHandler,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { router, useScrollToTop } from "expo-router";
+import {
+  router,
+  useFocusEffect,
+  useNavigation,
+  useScrollToTop,
+} from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import {
@@ -25,6 +34,8 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToast } from "@/common/hooks/use-toast";
 import {
+  GetLedgerDirContentDocument,
+  type GetLedgerDirContentQuery,
   useCreateLedgerFileMutation,
   useDeleteLedgerFileMutation,
   useGetLedgerDirContentQuery,
@@ -37,19 +48,29 @@ import { useLedgerGuard } from "@/components/ledger-guard";
 import { TextInputModal } from "@/components/text-input-modal";
 import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
 import { haptics } from "@/common/haptics";
+import { settleWithin } from "@/common/settle-within";
+import { CONNECTION_TIMEOUT_MS } from "@/common/oauth/discovery";
 import { encodeLedgerFileContent } from "@/common/ledger-file-content";
 import { isEditableTextFile } from "@/common/ledger-file-types";
 import {
   buildLedgerFilePath,
   canDeleteLedgerFile,
-  normalizeLedgerFileName,
+  checkLedgerFileName,
+  deleteEmptiesFolder,
+  listingHasFile,
+  parentDirectory,
+  isFolderGone,
   popPathStack,
+  popPathStackFrom,
   pushPathStack,
   sortEntries,
   pathStackForLedger,
   type LedgerPathStack,
 } from "./utils";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import { ledgerVar } from "@/common/vars";
+import { useIsHere } from "@/common/hooks/use-is-here";
+import { iconActionSize } from "@/common/theme/spacing";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,8 +102,12 @@ const getStyles = (theme: ColorTheme) =>
       backgroundColor: theme.white,
       gap: space.xs,
     },
+    // A 44 pt target around the 20 pt icon, not 28 (w21/485).
     breadcrumbBack: {
-      padding: space.xs,
+      minWidth: iconActionSize,
+      minHeight: iconActionSize,
+      alignItems: "center",
+      justifyContent: "center",
     },
     breadcrumbText: {
       fontSize: 13,
@@ -145,7 +170,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     emptyText: {
       fontSize: 15,
-      color: theme.black60,
+      color: theme.black80,
     },
     errorText: {
       fontSize: 14,
@@ -160,7 +185,7 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 13,
       lineHeight: 18,
       textAlign: "center",
-      color: theme.black60,
+      color: theme.black80,
     },
     emptyAction: {
       flexDirection: "row",
@@ -217,7 +242,7 @@ function FileRow({
   const isDir = entry.type === "dir";
   const editable = !isDir && isEditableTextFile(entry.name);
   const tappable = isDir || editable;
-  const protectedFile = !isDir && !canDeleteLedgerFile(entry.name);
+  const protectedFile = !isDir && !canDeleteLedgerFile(entry.path);
 
   const iconName = isDir
     ? "folder-outline"
@@ -239,7 +264,11 @@ function FileRow({
         disabled={!tappable}
         onPress={onPress}
         accessibilityRole={tappable ? "button" : undefined}
-        accessibilityLabel={entry.name}
+        // The kind tells a folder from a file of the same name (w21/142).
+        accessibilityLabel={t(
+          isDir ? "ledgerFilesFolderLabel" : "ledgerFilesFileLabel",
+          { name: entry.name },
+        )}
         accessibilityState={{ disabled: !tappable }}
       >
         <View style={styles.rowIcon}>
@@ -320,10 +349,61 @@ export function LedgerFileBrowserScreen(): JSX.Element {
   const currentPath = pathStack[pathStack.length - 1];
   const inSubDir = pathStack.length > 1;
 
+  // Android's Back goes up a folder before it leaves the tab, and tapping the
+  // Files tab again goes back to the root (w21/274). The folder stack is
+  // component state, so without this Back left the tab from any depth.
+  const goUp = useCallback(
+    () =>
+      setPathState((prev) => ({
+        ledgerId,
+        stack: popPathStack(pathStackForLedger(prev, ledgerId)),
+      })),
+    [ledgerId],
+  );
+  useFocusEffect(
+    useCallback(() => {
+      if (!inSubDir) return undefined;
+      const subscription = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          goUp();
+          return true;
+        },
+      );
+      return () => subscription.remove();
+    }, [goUp, inSubDir]),
+  );
+  const navigation = useNavigation();
+  useEffect(() => {
+    if (!inSubDir) return undefined;
+    return navigation.addListener("tabPress" as never, () => {
+      if (navigation.isFocused()) {
+        setPathState({ ledgerId, stack: [""] });
+      }
+    });
+  }, [inSubDir, ledgerId, navigation]);
+
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  // Names into other folders found to exist already, shown as "already exists".
+  const [knownExisting, setKnownExisting] = useState<string[]>([]);
+  const openCreateDialog = useCallback(() => {
+    setKnownExisting([]);
+    setCreateModalVisible(true);
+  }, [setKnownExisting, setCreateModalVisible]);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
+  const isHere = useIsHere();
   const createInFlightRef = useRef(false);
+  // Which Create attempt is current. Cancel moves it on, so an attempt still
+  // waiting on the folder lookup finds itself void and writes nothing (w21/376).
+  const createAttemptRef = useRef(0);
+  const [lookingUp, setLookingUp] = useState(false);
+  const cancelCreate = () => {
+    createAttemptRef.current += 1;
+    createInFlightRef.current = false;
+    setLookingUp(false);
+    setCreateModalVisible(false);
+  };
   const deleteInFlightRef = useRef(false);
 
   const { data, loading, error, refetch } = useGetLedgerDirContentQuery({
@@ -345,6 +425,14 @@ export function LedgerFileBrowserScreen(): JSX.Element {
 
   const sorted = useMemo(() => sortEntries(entries), [entries]);
 
+  // A folder removed by another client, or by our own delete, steps up to the
+  // nearest folder that still lists (w21/088).
+  const folderGone = isFolderGone(error, pathStack);
+  useEffect(() => {
+    if (folderGone) updatePathStack(popPathStack);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- updatePathStack is rebuilt each render
+  }, [folderGone, currentPath]);
+
   const isFirstLoad = loading && !data;
 
   const [createLedgerFile, { loading: creating }] =
@@ -355,40 +443,88 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     setRefreshing(true);
     try {
       await refetch();
-    } catch (refreshError: unknown) {
-      const message =
-        refreshError instanceof Error
-          ? refreshError.message
-          : t("ledgerLoadError");
-      toast.showToast({ message, type: "error" });
+    } catch {
+      // A read: the generic load failure, not the transport's text (w21/117).
+      toast.showToast({ message: t("ledgerLoadError"), type: "error" });
     } finally {
       setRefreshing(false);
     }
   }, [currentPath, refetch, t, toast]);
 
-  const isValidNewFilename = useCallback(
-    (input: string) => {
-      const filename = normalizeLedgerFileName(input);
-      return (
-        filename !== null && !entries.some((entry) => entry.name === filename)
-      );
+  // Create is disabled with the reason under the field, never silently.
+  const validateNewFilename = useCallback(
+    (input: string): boolean | string => {
+      const check = checkLedgerFileName(input, [
+        ...entries.map((entry) => entry.name),
+        ...knownExisting,
+      ]);
+      if (check.ok) return true;
+      switch (check.issue) {
+        case "empty":
+          return false;
+        case "exists":
+          return t("ledgerFileNameExists", { name: check.filename });
+        case "extension":
+          return t("ledgerFileNameExtension");
+        case "path":
+          return t("ledgerFileNamePath");
+        case "portable":
+          return t("ledgerFileNamePortable");
+      }
     },
-    [entries],
+    [entries, knownExisting, t],
   );
 
   const handleCreate = useCallback(
     async (input: string) => {
-      const filename = normalizeLedgerFileName(input);
-      if (
-        !filename ||
-        entries.some((entry) => entry.name === filename) ||
-        !canWrite ||
-        createInFlightRef.current
-      )
-        return;
+      const check = checkLedgerFileName(input, [
+        ...entries.map((entry) => entry.name),
+        ...knownExisting,
+      ]);
+      if (!check.ok || !canWrite || createInFlightRef.current) return;
+      const { filename } = check;
 
       const filePath = buildLedgerFilePath(currentPath, filename);
       createInFlightRef.current = true;
+      const attempt = (createAttemptRef.current += 1);
+      // A name into another folder is checked against that folder's listing
+      // while the dialog is still open, so a clash shows under the field with
+      // the typed name kept, instead of a failed create after it closed
+      // (w21/222). If the listing cannot be read, the server stays the judge.
+      if (filename.includes("/")) {
+        setLookingUp(true);
+        try {
+          // Bounded: a hung server must not hold the dialog open for the OS
+          // request timeout. Past the bound the server stays the judge.
+          const lookup = await settleWithin(
+            client.query<GetLedgerDirContentQuery>({
+              query: GetLedgerDirContentDocument,
+              variables: { ledgerId, dirPath: parentDirectory(filePath) },
+              fetchPolicy: "network-only",
+            }),
+            CONNECTION_TIMEOUT_MS,
+          );
+          // Cancelled meanwhile: create nothing, open nothing (w21/376).
+          if (createAttemptRef.current !== attempt) return;
+          if (
+            lookup.status === "done" &&
+            listingHasFile(
+              lookup.value.data?.getLedgerDirContent ?? [],
+              filePath,
+            )
+          ) {
+            setKnownExisting((known) => [...known, filename]);
+            createInFlightRef.current = false;
+            setLookingUp(false);
+            return;
+          }
+        } catch {
+          // Unreadable or absent folder: nothing to clash with, or the server
+          // will say so.
+        }
+        if (createAttemptRef.current !== attempt) return;
+        setLookingUp(false);
+      }
       setCreateModalVisible(false);
       try {
         const result = await createLedgerFile({
@@ -401,25 +537,47 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         });
         const createdPath = result.data?.createLedgerFile.path ?? filePath;
         haptics.success();
+        // The editor opens the *selected* ledger's file. Switched, or left,
+        // during the create, the file exists in the ledger it was made in
+        // and opening that path elsewhere could edit another ledger's file
+        // of the same name (w21/196): say where, and open nothing.
+        const stayedHere = ledgerVar() === ledgerId && isHere();
         toast.showToast({
-          message: t("ledgerCreateFileSuccess", { name: filename }),
+          message: stayedHere
+            ? t("ledgerCreateFileSuccess", { name: filename })
+            : t("ledgerCreateFileSuccessIn", {
+                name: filename,
+                ledger: ledgerId,
+              }),
           type: "success",
         });
         // Not awaited: the user is on their way into the editor, and the
         // listing behind them repaints as soon as the refetch lands.
         void invalidateLedgerData(client, "file");
+        if (!stayedHere) return;
         router.push({
           pathname: guest
             ? "/examples/ledger-file-editor"
             : "/(app)/ledger-file-editor",
-          params: { path: createdPath },
+          params: { path: routeText(createdPath), ledger: ledgerId },
         });
       } catch (createError: unknown) {
         haptics.error();
+        // A file of that name is there already (another device made it, or the
+        // list was stale): say so by name, remember it, and refresh the list,
+        // where the generic failure toast told the user nothing (w21/564).
+        if (isConflictFailure(createError)) {
+          setKnownExisting((known) => [...known, filename]);
+          void invalidateLedgerData(client, "file");
+          toast.showToast({
+            message: t("ledgerFileNameExists", { name: filename }),
+            type: "error",
+          });
+          return;
+        }
         const message =
-          createError instanceof Error
-            ? createError.message
-            : t("ledgerCreateFileFailed");
+          ledgerWriteFailureMessage(createError, { t }) ??
+          t("ledgerCreateFileFailed");
         toast.showToast({ message, type: "error" });
       } finally {
         createInFlightRef.current = false;
@@ -428,10 +586,12 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     [
       client,
       guest,
+      isHere,
       canWrite,
       createLedgerFile,
       currentPath,
       entries,
+      knownExisting,
       ledgerId,
       refetch,
       t,
@@ -443,13 +603,15 @@ export function LedgerFileBrowserScreen(): JSX.Element {
     async (entry: DirEntry) => {
       if (
         !canWrite ||
-        !canDeleteLedgerFile(entry.name) ||
+        !canDeleteLedgerFile(entry.path) ||
         deleteInFlightRef.current
       )
         return;
 
       deleteInFlightRef.current = true;
       setDeletingPath(entry.path);
+      // The folder this delete was tapped in; Back may move on before it ends.
+      const tappedIn = pathStack[pathStack.length - 1]!;
       try {
         await deleteLedgerFile({
           variables: {
@@ -464,27 +626,47 @@ export function LedgerFileBrowserScreen(): JSX.Element {
           message: t("ledgerDeleteFileSuccess", { name: entry.name }),
           type: "success",
         });
+        // The folder's last file takes the folder with it: list its parent.
+        if (deleteEmptiesFolder(pathStack, sorted.length)) {
+          updatePathStack((stack) => popPathStackFrom(stack, tappedIn));
+        }
         // Awaited: the delete buttons stay disabled until the row is actually
         // gone, so a second tap can't resend the sha we just spent.
         await invalidateLedgerData(client, "file");
       } catch (deleteError: unknown) {
         haptics.error();
-        const message =
-          deleteError instanceof Error
-            ? deleteError.message
-            : t("ledgerDeleteFileFailed");
+        // The file changed elsewhere, so the sha in hand is spent and every
+        // retry would send it again: refresh the list and say so, instead of
+        // the server's "sha does not match [given: …]" (w21/380).
+        const changed = isConflictFailure(deleteError);
+        if (changed) await invalidateLedgerData(client, "file");
+        const message = changed
+          ? t("ledgerDeleteFileChanged")
+          : (ledgerWriteFailureMessage(deleteError, { t }) ??
+            t("ledgerDeleteFileFailed"));
         toast.showToast({ message, type: "error" });
       } finally {
         deleteInFlightRef.current = false;
         setDeletingPath(null);
       }
     },
-    [canWrite, client, deleteLedgerFile, ledgerId, refetch, t, toast],
+    [
+      canWrite,
+      client,
+      deleteLedgerFile,
+      ledgerId,
+      pathStack,
+      refetch,
+      sorted.length,
+      t,
+      toast,
+      updatePathStack,
+    ],
   );
 
   const handleDelete = useCallback(
     (entry: DirEntry) => {
-      if (!canWrite || !canDeleteLedgerFile(entry.name)) return;
+      if (!canWrite || !canDeleteLedgerFile(entry.path)) return;
       Alert.alert(
         t("ledgerDeleteFileTitle"),
         t("ledgerDeleteFileMessage", { name: entry.name }),
@@ -509,7 +691,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         pathname: guest
           ? "/examples/ledger-file-editor"
           : "/(app)/ledger-file-editor",
-        params: { path: entry.path },
+        params: { path: routeText(entry.path), ledger: ledgerId },
       });
     }
   };
@@ -519,6 +701,9 @@ export function LedgerFileBrowserScreen(): JSX.Element {
   };
 
   const breadcrumbLabel = inSubDir ? currentPath : "";
+  // The up button names the folder it goes to; the root has no folder name
+  // (w21/277).
+  const parentFolder = parentDirectory(currentPath).split("/").pop() ?? "";
 
   return (
     <View style={styles.container}>
@@ -527,7 +712,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         action={
           canWrite && {
             accessibilityLabel: t("ledgerCreateFile"),
-            onPress: () => setCreateModalVisible(true),
+            onPress: openCreateDialog,
             icon: (
               <Ionicons
                 name="add-circle-outline"
@@ -547,7 +732,11 @@ export function LedgerFileBrowserScreen(): JSX.Element {
             onPress={handleBack}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={t("ledgerNavigateUp")}
+            accessibilityLabel={
+              parentFolder
+                ? t("ledgerNavigateUpTo", { folder: parentFolder })
+                : t("ledgerNavigateUp")
+            }
           >
             <Ionicons
               name={directionalIcon("chevron-back")}
@@ -555,7 +744,11 @@ export function LedgerFileBrowserScreen(): JSX.Element {
               color={theme.primary}
             />
           </TouchableOpacity>
-          <Text style={styles.breadcrumbText} numberOfLines={1}>
+          <Text
+            style={styles.breadcrumbText}
+            numberOfLines={1}
+            ellipsizeMode="head"
+          >
             {breadcrumbLabel}
           </Text>
         </View>
@@ -602,7 +795,7 @@ export function LedgerFileBrowserScreen(): JSX.Element {
                     style={styles.emptyAction}
                     activeOpacity={0.7}
                     disabled={creating}
-                    onPress={() => setCreateModalVisible(true)}
+                    onPress={openCreateDialog}
                     accessibilityRole="button"
                     accessibilityLabel={t("ledgerCreateFile")}
                     accessibilityState={{ disabled: creating }}
@@ -632,9 +825,10 @@ export function LedgerFileBrowserScreen(): JSX.Element {
         placeholder={t("ledgerCreateFilePlaceholder")}
         confirmButtonText={t("ledgerCreateFile")}
         cancelButtonText={t("cancel")}
-        validateInput={isValidNewFilename}
+        validateInput={validateNewFilename}
+        busy={lookingUp}
         onConfirm={(input) => void handleCreate(input)}
-        onCancel={() => setCreateModalVisible(false)}
+        onCancel={cancelCreate}
       />
     </View>
   );

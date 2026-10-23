@@ -303,6 +303,23 @@ const ACTION_REQUIREMENTS: Readonly<
     credential: BILLING_CREDENTIAL,
     auditClass: "write",
   },
+  // Reads billing state and asks Stripe what a change would cost; changes
+  // nothing, so it needs only the read relationship.
+  [AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW]: {
+    relationships: userRelationship(USER_RELATIONSHIPS.READ_BILLING),
+    credential: BILLING_CREDENTIAL,
+    auditClass: "read",
+  },
+  [AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY]: {
+    relationships: userRelationship(USER_RELATIONSHIPS.WRITE_BILLING),
+    credential: BILLING_CREDENTIAL,
+    auditClass: "write",
+  },
+  [AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_CANCEL]: {
+    relationships: userRelationship(USER_RELATIONSHIPS.WRITE_BILLING),
+    credential: BILLING_CREDENTIAL,
+    auditClass: "write",
+  },
   [AUTHORIZATION_ACTIONS.USER_AI_USAGE_READ]: {
     relationships: userRelationship(USER_RELATIONSHIPS.OWNER),
     credential: { methods: EVERY_CREDENTIAL, capability: "read" },

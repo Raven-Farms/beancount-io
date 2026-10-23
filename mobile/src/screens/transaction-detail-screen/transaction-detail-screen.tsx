@@ -1,6 +1,7 @@
+import { routeText } from "@/common/route-text";
 import { useGuest } from "@/common/guest/guest-context";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -10,11 +11,13 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import {
+  fonts,
   fontSizes,
   fontWeights,
   gutter,
@@ -30,11 +33,11 @@ import { useThemeStyle, useToast } from "@/common/hooks";
 import { useLedgerWrite } from "@/common/hooks/use-ledger-write";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
+import { useDeleteLedgerEntrySourceSliceMutation } from "@/generated-graphql/graphql";
 import {
-  useDeleteLedgerEntrySourceSliceMutation,
-  useGetLedgerEntryContextQuery,
-} from "@/generated-graphql/graphql";
-import { invalidateLedgerData } from "@/common/apollo/invalidate-ledger";
+  invalidateLedgerData,
+  ledgerRevisionVar,
+} from "@/common/apollo/invalidate-ledger";
 import { EntryContext } from "@/screens/transactions-screen/entry-context";
 import { openEditTransaction } from "@/screens/edit-transaction-screen";
 import {
@@ -56,8 +59,26 @@ import {
   selectTransactionMenuActions,
   selectTransactionTitle,
   type TransactionMenuAction,
+  userMetadataLines,
 } from "./selectors/select-transaction-detail";
+import {
+  holdGeneratedEntry,
+  selectOwnEntry,
+} from "./selectors/select-own-entry";
+import { isPluginCopy } from "./selectors/select-plugin-copy";
+import { useTransactionContext } from "./use-transaction-context";
 import { shouldShowTransactionWriteActions } from "./selectors/select-transaction-write-actions";
+import {
+  createRevisionCheck,
+  isEntryGone,
+} from "./selectors/select-entry-gone";
+import { selectEntryErrors } from "./selectors/select-entry-errors";
+import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
+import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
+import { deleteTransaction } from "./delete-transaction";
+import { ledgerWriteFailureMessage } from "@/common/ledger-refusal";
+import { i18n } from "@/translations";
 import { PostingRow } from "./components/posting-row";
 import { buildLedgerUrl } from "@/common/app-links/build-ledger-url";
 import {
@@ -66,7 +87,9 @@ import {
 } from "@/common/app-links/ledger-url-actions";
 import { getServerUrl } from "@/common/vars/server-url";
 import { HERO_AMOUNT_FIT } from "@/components/amount-text/hero-amount-fit";
-import { letterSpacing } from "@/common/rtl";
+import { LEADING_TEXT_ALIGN, letterSpacing } from "@/common/rtl";
+import { createSingleFlight } from "@/common/single-flight";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -149,7 +172,7 @@ const getStyles = (theme: ColorTheme) =>
     statusText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
-      color: theme.warning,
+      color: theme.warningText,
     },
     sectionTitle: {
       fontSize: fontSizes.md,
@@ -157,6 +180,46 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.black80,
       marginTop: 8,
       marginBottom: 8,
+    },
+    errorBanner: {
+      borderWidth: 1,
+      borderColor: theme.error,
+      borderRadius: 12,
+      padding: 12,
+      gap: 8,
+      marginBottom: 8,
+    },
+    errorRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+    },
+    errorText: {
+      flex: 1,
+      fontSize: fontSizes.sm,
+      lineHeight: 20,
+      color: theme.error,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    errorAction: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+      color: theme.primary,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    copyNotice: {
+      borderWidth: 1,
+      borderColor: theme.controlBorder,
+      borderRadius: 12,
+      padding: 12,
+      gap: 8,
+      marginBottom: 8,
+    },
+    copyNoticeText: {
+      fontSize: fontSizes.sm,
+      lineHeight: 20,
+      color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     card: {
       borderWidth: 1,
@@ -186,6 +249,12 @@ const getStyles = (theme: ColorTheme) =>
     metadataBody: {
       flex: 1,
       minWidth: 0,
+    },
+    metadataLine: {
+      fontSize: fontSizes.sm,
+      fontFamily: fonts.mono,
+      color: theme.text01,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     metadataLabel: {
       fontSize: fontSizes.xs,
@@ -264,6 +333,8 @@ const TransactionDetailImpl = ({
   originAccount?: string;
 }): JSX.Element => {
   const ledgerId = useLedgerGuard();
+  const operatingCurrency = useOperatingCurrency();
+  const roots = useLedgerRootNames();
   const { canWrite } = useLedgerAccess();
   const router = useRouter();
   const guest = useGuest();
@@ -281,17 +352,63 @@ const TransactionDetailImpl = ({
     entryHash,
     ledgerId,
   });
-  const shouldLoadContext = !stashedEntry || hasEditableSource(stashedEntry);
+  // A generated entry stays known after another transaction is stashed over
+  // it (w21/444).
+  const [heldGenerated, setHeldGenerated] = useState<JournalTransaction | null>(
+    null,
+  );
+  const nextHeld = holdGeneratedEntry(heldGenerated, stashedEntry);
+  if (nextHeld !== heldGenerated) setHeldGenerated(nextHeld);
+  const ownEntry = selectOwnEntry(stashedEntry, nextHeld, entryHash);
+  const shouldLoadContext = !ownEntry || hasEditableSource(ownEntry);
 
   // Also serves as the fallback entry source when the stash is cold (deep
   // link or remount) — the context payload carries the full entry JSON.
-  const { data, loading, error } = useGetLedgerEntryContextQuery({
-    variables: { entryHash, ledgerId },
-    skip: !entryHash || !shouldLoadContext,
-  });
+  const {
+    data,
+    loading,
+    error,
+    refetch: refetchContext,
+    generatedFrom,
+  } = useTransactionContext(
+    { entryHash, ledgerId },
+    !entryHash || !shouldLoadContext,
+  );
+  // A write made from a screen above this one (a delete, an editor fix) leaves
+  // this entry's context cached as it was. Recheck on return, and only when
+  // the ledger was written meanwhile; a NOT_FOUND then shows the gone state
+  // below (w21/094).
+  const ledgerChangedSinceCheck = useMemo(
+    () => createRevisionCheck(() => ledgerRevisionVar()),
+    [],
+  );
+  // The revision moves only when an invalidation has settled, which can be
+  // after the screen above has navigated back here: a focus-only check saw no
+  // change and the later bump went unread (w21/527). Following the revision
+  // re-runs the check while focused.
+  const ledgerRevision = useReactiveVar(ledgerRevisionVar);
+  useFocusEffect(
+    useCallback(() => {
+      if (!entryHash || !shouldLoadContext) return;
+      if (ledgerChangedSinceCheck()) {
+        void refetchContext().catch(() => undefined);
+      }
+      // `ledgerRevision` only re-runs this; the check reads the var itself.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      entryHash,
+      shouldLoadContext,
+      ledgerChangedSinceCheck,
+      refetchContext,
+      ledgerRevision,
+    ]),
+  );
 
-  const [deleteMutation, { loading: deleting }] =
-    useDeleteLedgerEntrySourceSliceMutation();
+  const [deleteMutation] = useDeleteLedgerEntrySourceSliceMutation();
+  // One delete at a time: with no feedback a user repeated ⋯ → Delete, and
+  // the second got "not found" after the first had succeeded (w21/197).
+  const [deleting, setDeleting] = useState(false);
+  const deleteFlight = useRef(createSingleFlight(setDeleting)).current;
 
   const sha256sum = data?.getLedgerEntryContext?.sha256sum;
 
@@ -301,29 +418,42 @@ const TransactionDetailImpl = ({
   }, [canWrite, sha256sum, entryHash, ledgerId, originAccount, router]);
 
   const handleDelete = useCallback(() => {
-    if (!canWrite || !sha256sum) return;
+    if (!canWrite || !sha256sum || deleteFlight.busy()) return;
     Alert.alert(t("deleteTransactionTitle"), t("deleteTransactionMessage"), [
       { text: t("cancel"), style: "cancel" },
       {
         text: t("deleteTransaction"),
         style: "destructive",
-        onPress: async () => {
-          await confirmWrite({
-            perform: () =>
-              deleteMutation({
-                variables: {
-                  input: { entryHash, sha256sum },
-                  ledgerId,
-                },
-              }),
-            successMessage: t("deleteSuccess"),
-            failureMessage: t("deleteFailed"),
-            // The server's reason is more useful than "delete failed".
-            failureMessageFor: (e) =>
-              e instanceof Error ? e.message : t("deleteFailed"),
-            afterSuccess: () => invalidateLedgerData(client, "entries"),
-          });
-        },
+        onPress: () =>
+          void deleteFlight.run(() =>
+            deleteTransaction({
+              confirmWrite,
+              perform: () =>
+                deleteMutation({
+                  variables: {
+                    input: { entryHash, sha256sum },
+                    ledgerId,
+                  },
+                }),
+              // The server's reason is more useful than "delete failed".
+              describeFailure: (e) => ledgerWriteFailureMessage(e, i18n),
+              showRefusal: (title, message) => Alert.alert(title, message),
+              messages: {
+                loading: t("deleting"),
+                success: t("deleteSuccess"),
+                failure: t("deleteFailed"),
+                changed: t("deleteTransactionChanged"),
+              },
+              afterSuccess: () => invalidateLedgerData(client, "entries"),
+              // The entry moved on elsewhere: reload it, so a removed one
+              // shows its state and a changed one deletes on the fresh copy
+              // instead of failing the same way again (w21/250).
+              onStale: async () => {
+                void invalidateLedgerData(client, "entries");
+                await refetchContext().catch(() => undefined);
+              },
+            }),
+          ),
       },
     ]);
   }, [
@@ -333,20 +463,63 @@ const TransactionDetailImpl = ({
     ledgerId,
     deleteMutation,
     client,
+    refetchContext,
     t,
     confirmWrite,
+    deleteFlight,
   ]);
 
   const entry: JournalTransaction | null = useMemo(() => {
-    if (stashedEntry) {
-      return stashedEntry;
+    if (ownEntry) {
+      return ownEntry;
     }
     const contextEntry = data?.getLedgerEntryContext?.entry as unknown as
       JournalDirectiveType | undefined;
     return contextEntry && isJournalTransaction(contextEntry)
       ? contextEntry
       : null;
-  }, [stashedEntry, data]);
+  }, [ownEntry, data]);
+
+  // Errors the ledger reports inside this entry's own lines (w21/030).
+  const { errors: ledgerErrors } = useLedgerErrors(ledgerId);
+  const contextSource = data?.getLedgerEntryContext;
+  const sourceMeta = (
+    contextSource?.entry as { meta?: { filename?: string; lineno?: number } }
+  )?.meta;
+  const entryErrors = selectEntryErrors(
+    ledgerErrors,
+    contextSource && sourceMeta?.filename && sourceMeta.lineno != null
+      ? {
+          filename: sourceMeta.filename,
+          lineno: sourceMeta.lineno,
+          slice: contextSource.slice,
+        }
+      : null,
+  );
+  const openErrorInEditor = useCallback(
+    (error: { filename?: string | null; lineno?: number | null }) => {
+      router.push({
+        pathname: guest
+          ? "/examples/ledger-file-editor"
+          : "/(app)/ledger-file-editor",
+        params: {
+          path: routeText(error.filename ?? ""),
+          ledger: ledgerId,
+          ...(error.lineno != null
+            ? { initialLine: String(error.lineno) }
+            : {}),
+        },
+      });
+    },
+    [router, guest],
+  );
+
+  // Changed or removed elsewhere since the list loaded: refresh the lists
+  // behind this screen so the stale row is gone when the user goes back.
+  const entryGone = isEntryGone(error);
+  useEffect(() => {
+    if (entryGone) void invalidateLedgerData(client, "entries");
+  }, [entryGone, client]);
 
   const handlePressAccount = useCallback(
     (account: string) => {
@@ -393,6 +566,17 @@ const TransactionDetailImpl = ({
     });
   }, [entryLinkUrl, toast, t]);
 
+  if (entryGone) {
+    // Not the cached copy, and no Share or Copy link to an entry that no
+    // longer exists (w21/013).
+    return (
+      <RouteLedgerUnavailable
+        title={t("transaction")}
+        message={t("transactionDetailRemoved")}
+      />
+    );
+  }
+
   if (!entry) {
     return (
       <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -406,6 +590,12 @@ const TransactionDetailImpl = ({
               <LoadingTile style={styles.skeletonMeta} />
               <LoadingTile style={styles.skeletonSection} />
             </View>
+          ) : error ? (
+            // A cold link whose read failed (not "gone": that returned above)
+            // is not "no data": it can be retried (w21/296).
+            <CardLoadFailure
+              onRetry={() => void refetchContext().catch(() => undefined)}
+            />
           ) : (
             <Text style={styles.stateText}>{t("journalNoData")}</Text>
           )}
@@ -414,31 +604,33 @@ const TransactionDetailImpl = ({
     );
   }
 
-  const hero = selectHeroAmount(entry, t("multiplePostings"));
+  const hero = selectHeroAmount(
+    entry,
+    t("multiplePostings"),
+    operatingCurrency,
+    roots,
+  );
   const postingRows = selectPostingRows(entry);
   const title = selectTransactionTitle(entry) || t("transaction");
   const isPending = entry.flag === "!";
   const formattedDate = formatLedgerDate(entry.date.slice(0, 10), locale);
-  const hasCashPosting = entry.postings.some(
-    (posting) =>
-      posting.account.startsWith("Assets:") ||
-      posting.account.startsWith("Liabilities:"),
-  );
-  const displayHeroAmount =
-    hero.isPositive === false && hero.text && hasCashPosting
-      ? `-${hero.text}`
-      : hero.text;
   const iconPostings = entry.postings.map((posting) => ({
     account: posting.account,
     amount: Number.parseFloat(posting.units.number),
+    currency: posting.units.currency,
   }));
-  const hasMetadata = Boolean(entry.tags?.length || entry.links?.length);
+  const entryMeta = userMetadataLines(entry.meta);
+  const hasMetadata = Boolean(
+    entry.tags?.length || entry.links?.length || entryMeta.length,
+  );
   // Source and balance context is read-only, so any reader of a
   // source-backed entry sees it; only edit/delete need write access.
   const showEntryContext = !isGenerated;
+  const pluginCopy = isPluginCopy(entry, contextSource?.slice, generatedFrom);
   const showWriteActions = shouldShowTransactionWriteActions(
     canWrite,
     sha256sum,
+    pluginCopy,
   );
   const menuActions = selectTransactionMenuActions({
     isGenerated,
@@ -489,7 +681,7 @@ const TransactionDetailImpl = ({
                     ) : null}
                     {menuItems.length > 0 ? (
                       <MenuButton
-                        accessibilityLabel={t("details")}
+                        accessibilityLabel={t("transactionActions")}
                         icon={
                           <Ionicons
                             name="ellipsis-horizontal"
@@ -510,7 +702,11 @@ const TransactionDetailImpl = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <View style={styles.heroIcon}>
+          <View
+            style={styles.heroIcon}
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+          >
             <AccountTypeIcon postings={iconPostings} />
           </View>
           <Text style={styles.heroTitle}>{title}</Text>
@@ -523,13 +719,19 @@ const TransactionDetailImpl = ({
               },
             ]}
           >
-            {displayHeroAmount}
+            {hero.text}
           </AmountText>
           {entry.payee && entry.narration ? (
             <Text style={styles.heroSubtitle}>{entry.narration}</Text>
           ) : null}
           <View style={styles.heroMeta}>
-            <Ionicons name="calendar-outline" size={16} color={theme.black80} />
+            <Ionicons
+              name="calendar-outline"
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              size={16}
+              color={theme.black80}
+            />
             <Text style={styles.heroDate}>{formattedDate}</Text>
             {isPending && (
               <View style={styles.statusBadge}>
@@ -540,9 +742,62 @@ const TransactionDetailImpl = ({
           </View>
         </View>
 
+        {entryErrors.length > 0 ? (
+          <View style={styles.errorBanner} testID="transaction-errors">
+            {entryErrors.map((error, index) => (
+              <View key={`${error.lineno}-${index}`} style={styles.errorRow}>
+                <Ionicons
+                  name="warning-outline"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                  size={16}
+                  color={theme.error}
+                />
+                <Text style={styles.errorText} selectable>
+                  {error.message}
+                </Text>
+              </View>
+            ))}
+            <Text
+              style={styles.errorAction}
+              accessibilityRole="button"
+              onPress={() => openErrorInEditor(entryErrors[0]!)}
+            >
+              {t("transactionErrorOpenFile")}
+            </Text>
+          </View>
+        ) : null}
+
+        {pluginCopy ? (
+          // Edit and Delete are withheld from a copy, since they would change
+          // its source and every other copy: say so, and open the source when
+          // the ledger names it (w21/508).
+          <View style={styles.copyNotice} testID="transaction-plugin-copy">
+            <Text style={styles.copyNoticeText}>{t("pluginCopyNotice")}</Text>
+            {generatedFrom ? (
+              <Text
+                style={styles.errorAction}
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: guest
+                      ? "/examples/transaction-detail"
+                      : "/transaction-detail",
+                    params: { entry_hash: generatedFrom, ledger: ledgerId },
+                  })
+                }
+              >
+                {t("pluginCopyOpenSource")}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {postingRows.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>{t("moneyFlow")}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("moneyFlow")}
+            </Text>
             <View style={[styles.card, styles.flowCard]}>
               {postingRows.map((posting, index) => (
                 <PostingRow
@@ -565,12 +820,16 @@ const TransactionDetailImpl = ({
 
         {hasMetadata && (
           <>
-            <Text style={styles.sectionTitle}>{t("details")}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("details")}
+            </Text>
             <View style={styles.card}>
               {entry.tags?.length ? (
                 <View style={styles.metadataRow}>
                   <Ionicons
                     name="pricetag-outline"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
                     size={20}
                     color={theme.black80}
                     style={styles.metadataIcon}
@@ -596,6 +855,8 @@ const TransactionDetailImpl = ({
                 >
                   <Ionicons
                     name="link-outline"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
                     size={20}
                     color={theme.black80}
                     style={styles.metadataIcon}
@@ -612,6 +873,32 @@ const TransactionDetailImpl = ({
                   </View>
                 </View>
               ) : null}
+              {entryMeta.length ? (
+                <View
+                  style={[
+                    styles.metadataRow,
+                    Boolean(entry.tags?.length || entry.links?.length) &&
+                      styles.metadataRowDivider,
+                  ]}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                    size={20}
+                    color={theme.black80}
+                    style={styles.metadataIcon}
+                  />
+                  <View style={styles.metadataBody}>
+                    <Text style={styles.metadataLabel}>{t("metadata")}</Text>
+                    {entryMeta.map((line) => (
+                      <Text style={styles.metadataLine} key={line} selectable>
+                        {line}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
             </View>
           </>
         )}
@@ -624,6 +911,7 @@ const TransactionDetailImpl = ({
               contextData={data?.getLedgerEntryContext}
               contextLoading={loading}
               contextError={error}
+              onRetryContext={() => void refetchContext().catch(() => {})}
             />
           </View>
         ) : null}
@@ -665,7 +953,7 @@ const TransactionDetailRoute = ({
 export const TransactionDetailScreen = (): JSX.Element => {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `common/route-ledger` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{
+  const params = useRouteParams<{
     entry_hash?: string;
     ledger?: string;
     origin_account?: string;

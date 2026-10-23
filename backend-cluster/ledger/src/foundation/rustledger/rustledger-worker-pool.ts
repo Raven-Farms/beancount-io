@@ -15,6 +15,7 @@ import type {
   RustledgerWorkerTask,
   RustledgerWorkerValue,
 } from "./rustledger-worker-protocol";
+import { config } from "@/config";
 
 const DEFAULT_WORKER_COUNT = Math.max(
   1,
@@ -88,7 +89,8 @@ function createNodeWorker(): WorkerLike {
  * backpressure, and timed-out work is interrupted by terminating its worker.
  */
 export class RustledgerWorkerPool {
-  private readonly workerCount: number;
+  /** How many worker threads this pool runs at most. */
+  public readonly workerCount: number;
   private readonly maxQueueDepth: number;
   private readonly taskTimeoutMs: number;
   private readonly workerFactory: WorkerFactory;
@@ -164,6 +166,15 @@ export class RustledgerWorkerPool {
       kind: "filter",
       directives,
       options,
+    });
+  }
+
+  public countDirectives(files: FileMap, entryPoint: string): Promise<number> {
+    return this.enqueue<number>({
+      id: this.nextTaskId,
+      kind: "directive-count",
+      files,
+      entryPoint,
     });
   }
 
@@ -337,7 +348,9 @@ export class RustledgerWorkerPool {
 let sharedPool: RustledgerWorkerPool | undefined;
 
 export function getRustledgerWorkerPool(): RustledgerWorkerPool {
-  sharedPool ??= new RustledgerWorkerPool();
+  sharedPool ??= new RustledgerWorkerPool({
+    workerCount: config.rustledgerWorkers,
+  });
   return sharedPool;
 }
 

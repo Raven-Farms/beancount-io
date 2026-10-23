@@ -1,6 +1,9 @@
 import { useGuest } from "@/common/guest/guest-context";
+import { parseFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useMemo, useCallback, useRef, useState } from "react";
+import { LoadMoreFailed } from "@/components/load-more-failed";
 import { useRouter, useScrollToTop } from "expo-router";
 import {
   ActivityIndicator,
@@ -18,7 +21,8 @@ import { NetworkStatus, useReactiveVar } from "@apollo/client";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
-import { LedgerDrawerHeader } from "@/components";
+import { LedgerDrawerHeader, StaleDataBanner } from "@/components";
+import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 import { AddTransactionCallback } from "@/common/globalFnFactory";
 import { TransactionsHeader } from "./transactions-header";
 import { EntryRow } from "./entry-row";
@@ -37,6 +41,12 @@ import {
   groupToSections,
 } from "./utils/transaction-display-utils";
 import { toPlainSearchFilter } from "./utils/plain-search-filter";
+import { searchForLedger, type ScopedSearch } from "./filters/scoped-search";
+import {
+  journalListKey,
+  journalRowKeys,
+  mergeJournalPage,
+} from "./utils/merge-journal-page";
 import {
   countActiveFilters,
   selectFiltersForLedger,
@@ -73,7 +83,7 @@ const getStyles = (theme: ColorTheme) =>
     errorText: {
       fontSize: fontSizes.lg,
       fontWeight: fontWeights.medium,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
       lineHeight: 24,
     },
@@ -86,7 +96,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     loadingFooterText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
     },
   });
 
@@ -103,12 +113,23 @@ const TransactionList = () => {
   const theme = useTheme().colorTheme;
   const { t, locale } = useTranslations();
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  // Kept with its ledger, so a switch starts with an empty box (w21/114).
+  const [scopedSearch, setScopedSearch] = useState<ScopedSearch>({
+    ledgerId,
+    text: "",
+  });
+  const searchQuery = searchForLedger(scopedSearch, ledgerId);
+  const setSearchQuery = (text: string) => setScopedSearch({ ledgerId, text });
 
   // Search runs server-side through `query.filter`, so it reaches transactions
   // past the first page — but only once typing settles. Quote + escape so
   // ordinary merchant punctuation is a STRING literal, not advanced-filter syntax.
-  const search = useDebouncedValue(searchQuery.trim(), 300);
+  // The debounced copy carries its ledger too, so the last term typed on the
+  // previous ledger is never sent for this one while it settles.
+  const search = searchForLedger(
+    useDebouncedValue(scopedSearch, 300),
+    ledgerId,
+  ).trim();
   const filter = useMemo(() => toPlainSearchFilter(search), [search]);
 
   // Status / date range / account, picked in the filter modal. Like the search
@@ -123,10 +144,13 @@ const TransactionList = () => {
     () => selectFiltersForLedger(scopedFilters, ledgerId),
     [scopedFilters, ledgerId],
   );
-  const activeFilterCount = countActiveFilters(filters, new Date());
+  // Relative ranges (1M, 3M, YTD) end today, which moves at midnight and on
+  // a return to the app; captured once, they hid newer entries (w21/078).
+  const today = useToday();
+  const activeFilterCount = countActiveFilters(filters, parseFormatDate(today));
   const filterQuery = useMemo(
-    () => toFilterQuery(filters, new Date()),
-    [filters],
+    () => toFilterQuery(filters, parseFormatDate(today)),
+    [filters, today],
   );
 
   const { data, loading, error, refetch, fetchMore, networkStatus } =
@@ -160,55 +184,92 @@ const TransactionList = () => {
     () => groupToSections(transactions, "", locale),
     [transactions, locale],
   );
+  const rowKeys = useMemo(() => journalRowKeys(transactions), [transactions]);
 
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || loading || !ledgerId) return;
+  // The list the query shows now, read when a page lands (w21/116).
+  const listKeyRef = useRef("");
+  const listKey = journalListKey(ledgerId, { filter, ...filterQuery });
+  listKeyRef.current = listKey;
 
-    try {
-      await fetchMore({
-        variables: {
-          ledgerId,
-          query: {
-            offset: transactions.length,
-            limit: PAGE_SIZE,
-            directiveTypes: DIRECTIVE_TYPES,
-            filter,
-            ...filterQuery,
-          },
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult?.getLedgerJournal?.data) return prev;
-          return {
-            ...prev,
-            getLedgerJournal: {
-              ...prev.getLedgerJournal,
-              data: [
-                ...(prev.getLedgerJournal.data || []),
-                ...fetchMoreResult.getLedgerJournal.data,
-              ],
-              total: fetchMoreResult.getLedgerJournal.total,
+  // The list whose next page failed to load, so a different list starts clean.
+  // While set, scrolling to the end does not ask again; Retry does (w21/353).
+  const [loadMoreFailedFor, setLoadMoreFailedFor] = useState<string | null>(
+    null,
+  );
+  const loadMoreFailed = loadMoreFailedFor === listKey;
+
+  const loadMore = useCallback(
+    async (retry = false) => {
+      if (isLoadingMore || !hasMore || loading || !ledgerId) return;
+      if (loadMoreFailed && !retry) return;
+      const requestedFor = listKeyRef.current;
+      setLoadMoreFailedFor(null);
+
+      // An entry added elsewhere shifted the pages; reload from the top, where
+      // it now sits (w21/035).
+      let listMoved = false;
+      try {
+        await fetchMore({
+          variables: {
+            ledgerId,
+            query: {
+              offset: transactions.length,
+              limit: PAGE_SIZE,
+              directiveTypes: DIRECTIVE_TYPES,
+              filter,
+              ...filterQuery,
             },
-          };
-        },
-      });
-    } catch (err) {
-      console.error("Error loading more transactions:", err);
-    }
-  }, [
-    isLoadingMore,
-    hasMore,
-    loading,
-    ledgerId,
-    transactions.length,
-    fetchMore,
-    filter,
-    filterQuery,
-  ]);
+          },
+          updateQuery: (prev, { fetchMoreResult }) => {
+            // Requested for a list no longer shown (w21/116).
+            if (listKeyRef.current !== requestedFor) return prev;
+            if (!fetchMoreResult?.getLedgerJournal?.data) return prev;
+            const { data, overlapped } = mergeJournalPage(
+              prev.getLedgerJournal.data || [],
+              fetchMoreResult.getLedgerJournal.data,
+              {
+                loaded: prev.getLedgerJournal.total,
+                page: fetchMoreResult.getLedgerJournal.total,
+              },
+            );
+            listMoved = overlapped;
+            return {
+              ...prev,
+              getLedgerJournal: {
+                ...prev.getLedgerJournal,
+                data,
+                total: fetchMoreResult.getLedgerJournal.total,
+              },
+            };
+          },
+        });
+        if (listMoved) void refetch().catch(() => undefined);
+      } catch (err) {
+        console.error("Error loading more transactions:", err);
+        setLoadMoreFailedFor(requestedFor);
+      }
+    },
+    [
+      isLoadingMore,
+      hasMore,
+      loading,
+      loadMoreFailed,
+      ledgerId,
+      transactions.length,
+      fetchMore,
+      refetch,
+      filter,
+      filterQuery,
+    ],
+  );
 
   const onRefresh = async () => {
     try {
       setIsRefreshing(true);
       await refetch();
+      // The list is back at its first page: the next page failed on the old one
+      // and is asked for again by scrolling (w21/465).
+      setLoadMoreFailedFor(null);
     } catch (err) {
       console.error("Error refreshing transactions:", err);
     } finally {
@@ -250,7 +311,11 @@ const TransactionList = () => {
   );
 
   const isInitialLoading = loading && !transactions.length;
-  const isBlank = !loading && !error && sections.length === 0;
+  // A failed refresh keeps the rows already loaded, under the stale banner;
+  // only a failure with nothing to list replaces them (w21/081).
+  const loadFailed = Boolean(error) && transactions.length === 0;
+  const showStale = isShowingStaleDataFromQueries([{ data, error }]);
+  const isBlank = !loading && !loadFailed && sections.length === 0;
   const isNarrowed = !!search || activeFilterCount > 0;
   // A ledger with no transactions gets the welcome copy even when it holds
   // other directives — this tab only ever shows transactions.
@@ -269,6 +334,7 @@ const TransactionList = () => {
           }
         }
       />
+      {showStale ? <StaleDataBanner /> : null}
       <SectionList
         ref={listRef}
         ListHeaderComponent={
@@ -283,10 +349,11 @@ const TransactionList = () => {
         contentContainerStyle={styles.listContent}
         contentInsetAdjustmentBehavior="automatic"
         alwaysBounceVertical
-        sections={isInitialLoading || error ? [] : sections}
+        sections={isInitialLoading ? [] : sections}
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.entry_hash}-${index}`}
+        // Unique per row: identical twins share a hash (w21/419).
+        keyExtractor={(item) => rowKeys.get(item) ?? item.entry_hash}
         stickySectionHeadersEnabled={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
@@ -296,7 +363,7 @@ const TransactionList = () => {
             onRefresh={onRefresh}
           />
         }
-        onEndReached={loadMore}
+        onEndReached={() => void loadMore()}
         onEndReachedThreshold={0.5}
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
@@ -305,12 +372,11 @@ const TransactionList = () => {
         ListEmptyComponent={
           isInitialLoading ? (
             TransactionsListSkeleton
-          ) : error ? (
+          ) : loadFailed ? (
             () => (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>
                   {t("transactionsLoadError")}
-                  {error?.message}
                 </Text>
               </View>
             )
@@ -328,6 +394,8 @@ const TransactionList = () => {
               <ActivityIndicator color={theme.primary} />
               <Text style={styles.loadingFooterText}>{t("loadingMore")}</Text>
             </View>
+          ) : loadMoreFailed && hasMore ? (
+            <LoadMoreFailed onRetry={() => void loadMore(true)} />
           ) : !hasMore && transactions.length > 0 ? (
             <View style={styles.loadingFooter}>
               <Text style={styles.loadingFooterText}>{t("noMoreEntries")}</Text>

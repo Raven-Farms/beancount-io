@@ -100,6 +100,16 @@ const jaCommodities: Record<string, TranslationEntry> = {
     message: "価格を更新できませんでした",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message: "価格は更新されましたが、チャートを再読み込みできませんでした。",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "チャートを再読み込み",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default jaCommodities;

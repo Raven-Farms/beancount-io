@@ -1,0 +1,17 @@
+{
+  "name": "beancount-io",
+  "plugins": [
+    {
+      "name": "beancount-io",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Finance"
+    }
+  ]
+}

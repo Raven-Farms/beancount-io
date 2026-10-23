@@ -650,7 +650,8 @@ def feed_revision_id(etag: str | None, text: str) -> str:
     if etag:
         safe = re.sub(r"[^A-Za-z0-9._-]", "", etag.removeprefix("W/").replace('"', ""))
         # Not a name the cache keeps for itself: `ETag: "head"` wrote its record
-        # over head.json, and a leading dot hid the files (w5/645).
-        if 0 < len(safe) <= 128 and safe != "head" and safe[0].isalnum():
+        # over head.json, and a leading dot hid the files (w5/645). In any case:
+        # `HEAD.json` is head.json on a case-insensitive volume (w5/862).
+        if 0 < len(safe) <= 128 and safe.casefold() != "head" and safe[0].isalnum():
             return safe
     return sha256(text.encode("utf-8")).hexdigest()

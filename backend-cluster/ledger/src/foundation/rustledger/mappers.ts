@@ -74,9 +74,15 @@ export function formatCellValue(cell: CellValue): string {
   if (isAmount(cell)) return formatAmount(cell);
   if (isUnitsCell(cell)) {
     const base = formatAmount(cell.units);
-    return cell.cost
-      ? `${base} {${cell.cost.number} ${cell.cost.currency}}`
-      : base;
+    if (!cell.cost) return base;
+    // As Beancount writes a lot, and as beanquery prints one: the date and
+    // label are what tell two lots at the same cost apart, and what a
+    // lot-specific reduction has to name (w23/015).
+    const { number, currency, date, label } = cell.cost;
+    const parts = [`${number} ${currency}`];
+    if (date) parts.push(date);
+    if (label) parts.push(JSON.stringify(label));
+    return `${base} {${parts.join(", ")}}`;
   }
   if (isPositionsCell(cell)) {
     return cell.positions

@@ -6,6 +6,8 @@ import {
   GetLedgerEntryContextDocument,
   AccountReportDocument,
   AccountJournalDocument,
+  LedgerAccountCloseDatesDocument,
+  QueryShellDocument,
   UpdateLedgerFileDocument,
   DeleteLedgerFileDocument,
   CreateLedgerFileDocument,
@@ -104,7 +106,7 @@ describe("guest read isolation", () => {
       "account report",
       AccountReportDocument,
       { accountName: "Assets:Cash", conversion: "units" },
-      { getLedgerAccountReport: { linechartData: [] } },
+      { getLedgerAccountReport: { linechartData: [], accountBalanceData: [] } },
     ],
     [
       "account journal",
@@ -118,6 +120,20 @@ describe("guest read isolation", () => {
           items: [],
         },
       },
+    ],
+    // w21/635: Accounts and Home hide emptied closed accounts, and Spending stops
+    // at today, from these two public reads; the gate refused both for guests.
+    [
+      "account close dates",
+      LedgerAccountCloseDatesDocument,
+      {},
+      { getLedgerAccountDirectives: [] },
+    ],
+    [
+      "query shell",
+      QueryShellDocument,
+      { query: "SELECT 1" },
+      { queryShell: { table: { rows: [], types: [] } } },
     ],
   ] as const) {
     it(`loads the shared ${name} screen's actual operation anonymously`, async () => {
@@ -204,6 +220,54 @@ describe("guest read isolation", () => {
     });
   }
 
+  // w21/427: a vanished entry is that screen's "removed", not the end of the
+  // example. (A missing file is not an error at all: the ledger answers null,
+  // so a file read is not exempt, w21/495.)
+  for (const [name, document, extra] of [
+    ["entry", GetLedgerEntryContextDocument, { entryHash: "gone" }],
+  ] as const) {
+    it(`leaves a missing ${name} to its own screen`, async () => {
+      await client.query({ query, variables });
+      response = {
+        errors: [{ message: "Not found", extensions: { code: "NOT_FOUND" } }],
+      };
+      await rejects(() =>
+        client.query({
+          query: document,
+          variables: { ...variables, ...extra },
+        }),
+      );
+      expect(failures).toEqual([]);
+    });
+
+    it(`still reports lost access found by the ${name} read`, async () => {
+      response = {
+        errors: [{ message: "Private", extensions: { code: "FORBIDDEN" } }],
+      };
+      await rejects(() =>
+        client.query({
+          query: document,
+          variables: { ...variables, ...extra },
+        }),
+      );
+      expect(failures).toEqual(["unavailable"]);
+    });
+  }
+
+  it("does not exempt a file read: the server never answers it NOT_FOUND", async () => {
+    await client.query({ query, variables });
+    response = {
+      errors: [{ message: "Not found", extensions: { code: "NOT_FOUND" } }],
+    };
+    await rejects(() =>
+      client.query({
+        query: GetLedgerFileDocument,
+        variables: { ...variables, path: "gone.bean" },
+      }),
+    );
+    expect(failures).toEqual(["unavailable"]);
+  });
+
   it("distinguishes connection failures and never falls back to the managed server", async () => {
     globalThis.fetch = async (url) => {
       requests.push({ url: String(url), options: {} });
@@ -214,6 +278,50 @@ describe("guest read isolation", () => {
     expect(requests.map(({ url }) => url)).toEqual([
       "https://books.example/prefix/api-gateway/",
     ]);
+  });
+
+  // w21/292: one failed refresh or scroll blanked the whole example though its
+  // rows were still on screen.
+  it("keeps the example when a connection fails after something loaded", async () => {
+    await client.query({ query, variables });
+    globalThis.fetch = async () => {
+      throw new Error("offline");
+    };
+    await rejects(() =>
+      client.query({ query, variables, fetchPolicy: "network-only" }),
+    );
+    // A second failing read (a scroll, a pull to refresh) is no different.
+    await rejects(() =>
+      client.query({ query, variables, fetchPolicy: "network-only" }),
+    );
+    expect(failures).toEqual([]);
+    // The rows are still in the cache for the screens to show.
+    const cached = client.readQuery({ query, variables });
+    expect(cached?.getLedger.id).toBe(variables.ledgerId);
+  });
+
+  it("still blanks it when the first load never arrives", async () => {
+    globalThis.fetch = async () => {
+      throw new Error("offline");
+    };
+    await rejects(() => client.query({ query, variables }));
+    expect(failures).toEqual(["connection"]);
+  });
+
+  it("still reports lost access after a load, and an error result is not a load", async () => {
+    response = {
+      errors: [
+        { message: "Example unavailable", extensions: { code: "NOT_FOUND" } },
+      ],
+    };
+    await rejects(() => client.query({ query, variables }));
+    globalThis.fetch = async () => {
+      throw new Error("offline");
+    };
+    await rejects(() =>
+      client.query({ query, variables, fetchPolicy: "network-only" }),
+    );
+    expect(failures).toEqual(["unavailable", "connection"]);
   });
 
   it("cannot populate a replacement client with a late old response", async () => {

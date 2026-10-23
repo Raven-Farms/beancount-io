@@ -1,65 +1,51 @@
 import { Crown } from "lucide-react";
 import { Badge } from "@/common/components/ui/badge";
 import { type UserTier } from "@/common/hooks/use-user-limits";
-import { getTierInfo } from "@/common/lib/subscription/tier-config";
+import { planLabelKey } from "@/common/lib/subscription/tier-config";
 import { type TierQuota } from "@/common/hooks/use-all-tier-quotas";
 import { useQuotaNumberFormat } from "./use-quota-number-format";
+import { describeTierQuota } from "./tier-quota-summary";
+import { useMoneyFormat } from "./use-money-format";
+import type { PlanInterval } from "@/common/lib/subscription/plan-change";
+
+/** What the current Stripe subscription bills, when there is one. */
+export interface CurrentBilling {
+  interval: PlanInterval | null;
+  /** Cents, as Stripe reports the price. */
+  amount: number;
+  currency: string;
+  isLegacyPrice: boolean;
+  paymentMethod: { brand: string; last4: string } | null;
+}
 
 export function CurrentPlanBanner({
   tier,
   renewalDate,
   tierQuota,
   t,
+  billing = null,
 }: {
   tier: UserTier;
   renewalDate: string | null;
   tierQuota: TierQuota | null;
   t: (key: string, params?: Record<string, string | number>) => string;
+  billing?: CurrentBilling | null;
 }) {
   const formatCount = useQuotaNumberFormat();
-  const tierInfo = getTierInfo(tier);
+  const formatMoney = useMoneyFormat();
   const isFree = tier === "FREE";
   const isEnterprise = tier === "ENTERPRISE";
+  const tierName = t(planLabelKey(tier));
 
-  const tierName = isFree
-    ? t("userSettings.freePlan")
-    : isEnterprise
-      ? t("userSettings.enterprisePlan")
-      : tierInfo
-        ? t(tierInfo.labelKey)
-        : t("userSettings.freePlan");
-
-  // Same translated quota strings the upgrade cards use, so the current plan is
-  // described in the app language instead of hardcoded English.
   const featureSummary = tierQuota
-    ? [
-        t("userSettings.aiTokensPerMonth", {
-          count: formatCount(tierQuota.aiCfoTokensMax),
-        }),
-        tierQuota.maxLedgers === -1
-          ? t("userSettings.unlimitedLedgers")
-          : t("userSettings.includedLedgers", {
-              count: tierQuota.maxLedgers,
-              formattedCount: formatCount(tierQuota.maxLedgers),
-            }),
-        tierQuota.maxDirectives === -1
-          ? t("userSettings.unlimitedDirectives")
-          : t("userSettings.includedDirectives", {
-              count: formatCount(tierQuota.maxDirectives),
-            }),
-        tierQuota.maxCollaboratorsPerLedger === -1
-          ? t("userSettings.unlimitedCollaborators")
-          : t("userSettings.collaboratorsPerLedger", {
-              count: tierQuota.maxCollaboratorsPerLedger,
-              formattedCount: formatCount(tierQuota.maxCollaboratorsPerLedger),
-            }),
-      ].join(" · ")
+    ? describeTierQuota(tierQuota, t, formatCount)
     : isEnterprise
       ? t("userSettings.unlimited")
       : null;
 
   return (
     <div
+      data-testid="current-plan-banner"
       className={`rounded-lg border p-4 ${
         isFree ? "border-border bg-muted/30" : "border-primary/20 bg-primary/5"
       }`}
@@ -90,6 +76,33 @@ export function CurrentPlanBanner({
                 className="text-xs text-muted-foreground mt-2"
               >
                 {featureSummary}
+              </p>
+            )}
+            {billing && (
+              <p
+                data-testid="current-billing"
+                className="text-xs text-muted-foreground mt-2"
+              >
+                <strong className="text-foreground">
+                  {formatMoney(billing.amount, billing.currency)}
+                  {t(
+                    billing.interval === "year"
+                      ? "userSettings.perYear"
+                      : "userSettings.perMonth",
+                  )}
+                </strong>
+                {billing.isLegacyPrice && (
+                  <> · {t("userSettings.legacyPrice")}</>
+                )}
+                {billing.paymentMethod && (
+                  <>
+                    {" · "}
+                    <span className="capitalize">
+                      {billing.paymentMethod.brand}
+                    </span>{" "}
+                    •••• {billing.paymentMethod.last4}
+                  </>
+                )}
               </p>
             )}
             {renewalDate && (

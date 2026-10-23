@@ -16,7 +16,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = "2024-01-01 open Assets:Cash USD\n"
-HINT = "bea check takes the ledger from --file, not as an argument: run bea --file books.bean check."
+HINT = "bea check takes the ledger from --file, not as an argument: run bea --file books.bean check"
 
 
 def _bea(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -51,7 +51,8 @@ def test_a_positional_ledger_gets_the_file_hint(tmp_path: Path, with_main: bool,
     result = _bea(tmp_path, *flags, "check", "books.bean")
 
     assert result.returncode == 2, result.stdout + result.stderr
-    assert HINT in result.stdout + result.stderr
+    # `--json` stays in the command, so following it prints the envelope (w5/838).
+    assert HINT.replace("run bea ", f"run bea {flags[0]} " if flags else "run bea ") in result.stdout + result.stderr
 
 
 def test_a_cache_filename_value_is_not_a_ledger(tmp_path: Path) -> None:

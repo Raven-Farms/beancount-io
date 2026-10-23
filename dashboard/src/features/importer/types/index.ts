@@ -81,9 +81,13 @@ export type CSVParseResult = {
   hasErrors: boolean;
   /**
    * When set, multi-stage parsing must keep these rows for repair and must
-   * not fall through to LLM — even if `validCount` is 0.
+   * not fall through to LLM — even if `validCount` is 0: an amount the
+   * representability guard refused (`unsupported-precision`), or a header the
+   * parser recognized whose records all carry its columns
+   * (`recognized-layout`), so their errors are the reader's to fix and a
+   * header-only file is honestly empty (w4/961).
    */
-  blockLlmFallback?: "unsupported-precision";
+  blockLlmFallback?: "unsupported-precision" | "recognized-layout";
 };
 
 export type BulkImportError = {

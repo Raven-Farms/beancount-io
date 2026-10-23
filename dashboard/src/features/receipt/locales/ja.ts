@@ -220,6 +220,12 @@ const jaReceipt: Record<string, TranslationEntry> = {
     message: "レシート取引の記録に失敗しました",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "記録されている可能性があります。再度記録する前に仕訳帳を確認してください。",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default jaReceipt;

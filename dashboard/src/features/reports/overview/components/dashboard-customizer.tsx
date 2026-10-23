@@ -83,6 +83,7 @@ export function DashboardCustomizer({
   open,
   onOpenChange,
   returnFocus,
+  closeFocusFallback,
   showTrigger = true,
 }: {
   layout: DashboardLayout;
@@ -92,6 +93,8 @@ export function DashboardCustomizer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   returnFocus?: RefObject<HTMLElement | null>;
+  /** Where focus goes when neither the opener nor a trigger is left. */
+  closeFocusFallback?: RefObject<HTMLElement | null>;
   showTrigger?: boolean;
 }) {
   const labels = useWidgetLabels();
@@ -111,6 +114,12 @@ export function DashboardCustomizer({
           if (opener?.isConnected) {
             event.preventDefault();
             opener.focus();
+          } else if (!showTrigger && closeFocusFallback?.current) {
+            // A public reader has no header trigger for Radix to return to,
+            // and restoring a module removed the empty-state opener: resume
+            // at the dashboard rather than on the body (w4/299).
+            event.preventDefault();
+            closeFocusFallback.current.focus();
           }
         }}
       >

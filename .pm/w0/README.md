@@ -7,6 +7,11 @@
 - [x] **m1** — [Translate the English copies shipped in non-English catalogs, and guard against them](./done/m1/README.md) (8 tasks) ← from dashboard QA 2026-10-15
 - [x] **m2** — [Structured ledger writes refuse changes that would break the ledger](./done/m2/README.md) (7 tasks) ← from /pm-brainstorm for w0 2026-10-17
 - [x] **m3** — [Make i18n:prepare safe to run and honest about English copies](./done/m3/README.md) (8 tasks) ← from /pm-brainstorm for w0 2026-10-17
+- [x] **m4** — [A password reset ends every session the old password issued](./done/m4/README.md) (6 tasks) ← from security review 2026-10-18
+- [x] **m5** — [Directive counting runs on the worker pool, not the request thread](./done/m5/README.md) (6 tasks) ← from security review 2026-10-18
+- [x] **m6** — [Every app-mediated ledger write enforces the directive limit at one boundary](./done/m6/README.md) (7 tasks) ← from security review 2026-10-18; after m5
+- [x] **m7** — [Login limits key on a trusted client address and on the account](./done/m7/README.md) (6 tasks) ← from security review 2026-10-18
+- [x] **m8** — [Ledger archive downloads stream straight from Gitea](./done/m8/README.md) (7 tasks) ← from security review 2026-10-18; owner chose forwarding over removal
 
 ## Dropped
 
@@ -18,5 +23,8 @@
 
 ## Inbox
 
-No open notes. Resolved notes are in [`done/`](./done/).
+- [051 — Account deletion accepts an application-API OAuth token of any scope (latent; decision first, see w2/m12)](./blocked/051.md) — **blocked:** needs the owner's choice between requiring `ledger.admin`, a full-access token, or recording the current design.
+- [055 — On a host with fewer than three cores, a small ledger's parse waits behind a large ledger's](./blocked/055.md) — **blocked:** the hosted worker count needs the plan's memory and cores; `RUSTLEDGER_WORKERS` and the startup count shipped.
+
+Resolved notes are in [`done/`](./done/).
 

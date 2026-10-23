@@ -1,6 +1,8 @@
 import { resolveCurrencyBalance } from "../../common/balance-util";
 import { notInTotalOf, type Holding } from "../../common/balance-display";
 import { dropRoot, leafName } from "../../common/account-util";
+import { getCurrencySymbol } from "../../common/currency-util";
+import { amountScale } from "../../common/number-utils";
 
 export type AccountNode = {
   /** Full beancount account, e.g. "Assets:Bank:Checking". */
@@ -11,6 +13,12 @@ export type AccountNode = {
   value: number;
   /** Immediate sub-accounts (one level deeper), same shape. */
   children: AccountNode[];
+  /**
+   * The postings made to the parent itself, as a child row of its own. They
+   * had none, so a parent's children did not add up to it (w21/174). Its
+   * `account` is the parent's.
+   */
+  own?: true;
 };
 
 /** Beancount's five root account categories; each key is also its i18n key. */
@@ -99,6 +107,8 @@ export function accountCategory(
 type RawChild = {
   account: string;
   balance_children: Record<string, number | string>;
+  /** The account's own postings, without its descendants. */
+  balance?: Record<string, number | string> | null;
   children?: RawChild[] | null;
 };
 
@@ -108,6 +118,23 @@ type RawChild = {
  * `ZeroBalanceOptions`) the holdings that value cannot express count too.
  */
 type TreeRules = {
+  /**
+   * Whether a node with rows beneath it survives the zero-value filter even
+   * when its own value is zero: the Accounts tab keeps a parent whose children
+   * net to nothing (w21/423); a report category that nets to nothing is "$0.00 ·
+   * 0%", noise (w21/055, w21/492).
+   */
+  keepNetZeroParents: boolean;
+  /**
+   * Whether two rolled-up balances are the same amount (see `amountTolerance`).
+   */
+  same: (a: number, b: number) => boolean;
+  /**
+   * Whether a parent's own postings earn a row of their own beyond what their
+   * operating-currency value says: its euros or shares, when the whole balance
+   * counts (w21/450).
+   */
+  ownHoldsMore: (balance: RawChild["balance"]) => boolean;
   /** Spares a node the zero-value filter would otherwise drop. */
   keep: (node: AccountNode) => boolean;
   /** Whether `children` hold exactly what `parent` does, beyond the value. */
@@ -117,6 +144,19 @@ type TreeRules = {
   ) => boolean;
 };
 
+/**
+ * Whether the zero-value filter spares a node: it holds something, is listed,
+ * or has a row beneath it that does. Receivable's closed Alice +20 and Bob -20
+ * net to nothing, and went with it (w21/423).
+ */
+function spared(node: AccountNode, rules: TreeRules): boolean {
+  return (
+    node.value !== 0 ||
+    (rules.keepNetZeroParents && node.children.length > 0) ||
+    rules.keep(node)
+  );
+}
+
 function toNode(
   raw: RawChild,
   currency: string,
@@ -124,16 +164,33 @@ function toNode(
   displayName: (account: string) => string,
   rules: TreeRules,
 ): AccountNode {
+  const children = (raw.children ?? [])
+    .map((child) => toNode(child, currency, sign, leafName, rules))
+    .filter((node) => spared(node, rules));
+  // A parent's own postings, beside its sub-accounts, so the rows beneath it
+  // add up to it (w21/174). A leaf's own balance is its value already.
+  const ownValue = raw.balance
+    ? sign * resolveCurrencyBalance(raw.balance, currency)
+    : 0;
+  if (
+    children.length > 0 &&
+    (!rules.same(ownValue, 0) || rules.ownHoldsMore(raw.balance))
+  ) {
+    children.push({
+      account: raw.account,
+      name: leafName(raw.account),
+      value: ownValue,
+      children: [],
+      own: true,
+    });
+  }
   return {
     account: raw.account,
     name: displayName(raw.account),
     value: sign * resolveCurrencyBalance(raw.balance_children, currency),
-    children: (raw.children ?? [])
-      .map((child) => toNode(child, currency, sign, leafName, rules))
-      .filter((node) => node.value !== 0 || rules.keep(node))
-      // By magnitude: a large negative belongs next to its large siblings, not
-      // sunk to the bottom of the list.
-      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value)),
+    // By magnitude: a large negative belongs next to its large siblings, not
+    // sunk to the bottom of the list.
+    children: children.sort((a, b) => Math.abs(b.value) - Math.abs(a.value)),
   };
 }
 
@@ -141,8 +198,30 @@ function toNode(
  * Two rolled-up balances that round to the same cent. Values are float sums, so
  * an exact `===` would miss `902.36` vs `902.3600000000001`.
  */
-function sameAmount(a: number, b: number): boolean {
-  return Math.abs(a - b) < 0.005;
+function sameWithin(tolerance: number): (a: number, b: number) => boolean {
+  return (a, b) => Math.abs(a - b) < tolerance;
+}
+
+/**
+ * How close two balances in `currency` must be to count as one. Half a cent for
+ * a known currency. A commodity the app has no symbol for (BTC as a ledger's
+ * operating currency) is held at its own recorded digits instead: a flat half
+ * cent folded a wallet's 0.004 BTC into nothing and left the rows short of their
+ * total (w21/451). Never less than half a cent.
+ */
+function amountTolerance(raw: readonly RawChild[], currency: string): number {
+  if (getCurrencySymbol(currency) !== "") return 0.005;
+  let scale = 2;
+  for (const node of rawNodes(raw)) {
+    for (const balance of [node.balance_children, node.balance]) {
+      const entry = balance?.[currency];
+      if (entry !== undefined) {
+        scale = Math.max(scale, amountScale(String(entry)));
+      }
+    }
+  }
+  // Bounded: float residue near 1e-15 must still fold.
+  return 0.5 * 10 ** -Math.min(scale, 12);
 }
 
 /**
@@ -162,7 +241,7 @@ function compressChain(node: AccountNode, rules: TreeRules): AccountNode {
   const segments = [node.name];
   while (
     current.children.length === 1 &&
-    sameAmount(current.children[0].value, current.value) &&
+    rules.same(current.children[0].value, current.value) &&
     rules.sameHoldings(current.children, current)
   ) {
     current = current.children[0];
@@ -173,6 +252,7 @@ function compressChain(node: AccountNode, rules: TreeRules): AccountNode {
     name: segments.join(":"),
     value: current.value,
     children: current.children.map((child) => compressChain(child, rules)),
+    ...(current.own ? { own: true as const } : {}),
   };
 }
 
@@ -182,12 +262,14 @@ function compressChain(node: AccountNode, rules: TreeRules): AccountNode {
  * holding postings of its own fails this and keeps its row.
  */
 function isPassThrough(node: AccountNode, rules: TreeRules): boolean {
-  if (node.children.length === 0) {
+  // Its own-postings row (w21/174) makes the children sum up, but the node
+  // still holds money of its own and keeps its row.
+  if (node.children.length === 0 || node.children.some((child) => child.own)) {
     return false;
   }
   const childSum = node.children.reduce((sum, child) => sum + child.value, 0);
   return (
-    sameAmount(childSum, node.value) && rules.sameHoldings(node.children, node)
+    rules.same(childSum, node.value) && rules.sameHoldings(node.children, node)
   );
 }
 
@@ -232,7 +314,7 @@ function buildTopLevel(
 ): AccountNode[] {
   const rows = topLevel
     .map((child) => toNode(child, currency, sign, dropRoot, rules))
-    .filter((accountNode) => accountNode.value !== 0 || rules.keep(accountNode))
+    .filter((accountNode) => spared(accountNode, rules))
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
     .map((node) => compressChain(node, rules));
   return skipPassThroughLevels(rows, rules);
@@ -262,8 +344,15 @@ function treeRules(
   keep: ReadonlySet<string>,
   wholeBalance = false,
 ): TreeRules {
+  const same = sameWithin(amountTolerance(raw, currency));
   if (!wholeBalance) {
-    return { keep: (node) => keep.has(node.account), sameHoldings: () => true };
+    return {
+      same,
+      keepNetZeroParents: false,
+      ownHoldsMore: () => false,
+      keep: (node) => keep.has(node.account),
+      sameHoldings: () => true,
+    };
   }
   const unconverted = new Map(
     rawNodes(raw).map((node) => [
@@ -272,6 +361,10 @@ function treeRules(
     ]),
   );
   return {
+    same,
+    keepNetZeroParents: true,
+    ownHoldsMore: (balance) =>
+      balance != null && notInTotalOf(balance, currency).length > 0,
     keep: (node) =>
       keep.has(node.account) ||
       (unconverted.get(node.account)?.length ?? 0) > 0,
@@ -308,6 +401,7 @@ export type AccountCategory = {
 type SerializableChild = {
   account: string;
   balanceChildren: Record<string, number | string>;
+  balance?: Record<string, number | string> | null;
   children?: SerializableChild[] | null;
 };
 
@@ -323,6 +417,7 @@ function fromSerializable(node: SerializableChild): RawChild {
   return {
     account: node.account,
     balance_children: node.balanceChildren,
+    balance: node.balance,
     children: (node.children ?? []).map(fromSerializable),
   };
 }
@@ -374,6 +469,7 @@ export type ZeroBalanceOptions = {
 function graftZeroAccounts(
   children: readonly RawChild[],
   options: ZeroBalanceOptions,
+  currency: string,
 ): { children: RawChild[]; keep: Set<string> } {
   const keep = new Set<string>();
   const wanted = options.accounts ?? [];
@@ -382,11 +478,22 @@ function graftZeroAccounts(
     return { children: children as RawChild[], keep };
   }
 
-  const existing = new Set(rawNodes(children).map((node) => node.account));
+  // A descendant the filters will not drop: listed, or holding something.
+  // The raw tree also carries closed accounts, emptied, which they do drop
+  // (w21/280).
+  const survives = (node: RawChild): boolean =>
+    wanted.includes(node.account) ||
+    resolveCurrencyBalance(node.balance_children, currency) !== 0 ||
+    (options.wholeBalance === true &&
+      notInTotalOf(node.balance_children, currency).length > 0);
+  const rendered = rawNodes(children).filter(survives);
   // Copied, never mutated in place: the raw nodes belong to the Apollo cache.
+  // Every field `toNode` reads: dropping `balance` left a parent's own postings
+  // out of the Accounts tab, so its rows did not add up to it (w21/331).
   const clone = (node: RawChild): RawChild => ({
     account: node.account,
     balance_children: node.balance_children,
+    balance: node.balance,
     children: (node.children ?? []).map(clone),
   });
   const grafted = children.map(clone);
@@ -395,13 +502,9 @@ function graftZeroAccounts(
     if (!account.startsWith(`${root}:`)) {
       continue;
     }
-    // An ancestor of accounts the hierarchy already renders: those rows stand
+    // An ancestor of accounts the hierarchy still renders: those rows stand
     // in for it, so it needs neither a graft nor a reprieve from the filter.
-    if (
-      Array.from(existing).some((rendered) =>
-        rendered.startsWith(`${account}:`),
-      )
-    ) {
+    if (rendered.some((node) => node.account.startsWith(`${account}:`))) {
       continue;
     }
     let siblings = grafted;
@@ -457,6 +560,7 @@ export function selectAccountTreeFromRoot(
   const { children: raw, keep } = graftZeroAccounts(
     (children ?? []).map(fromSerializable),
     zeroBalance,
+    currency,
   );
   return buildTopLevel(
     raw,

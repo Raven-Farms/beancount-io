@@ -28,6 +28,8 @@ import {
   buildPriceMap,
   clampDirectives,
   collectAttributes,
+  collectSourceFiles,
+  DEFAULT_ENTRY_POINT,
   collectDocuments,
   collectEvents,
   collectLedgerAccounts,
@@ -42,12 +44,14 @@ import {
   parseFavaOptions,
   parseLedgerFiles,
   resolveConversion,
+  resolveEntryIdsAtSources,
   TimeFilterParseError,
   AdvancedFilterParseError,
   type IntervalKey,
   type IntervalWindow,
   type LedgerAttributes,
   type LedgerSnapshot,
+  type ReplacedSourceRange,
   type ReportAccounts,
 } from "@/foundation/rustledger";
 import {
@@ -131,6 +135,42 @@ interface ILedgerDataService {
       enforceInputLimits?: boolean;
     },
   ): Promise<BeancountErrorPublic[]>;
+
+  /**
+   * Public entry ID of the directive starting in each source range of the
+   * projected ledger (`null` where none parsed): the hashes the entries a
+   * write committed carry, for a caller to act on them (w23/060).
+   */
+  projectedEntryIds(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      ranges: ReplacedSourceRange[];
+      /** As for `checkProjectedErrors`. */
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<(string | null)[]>;
+
+  /**
+   * The files the projected ledger loads — its include closure, globs and
+   * all — so a write can tell whether a file it creates would be read
+   * (w23/062). Empty when the projection has no entry point.
+   */
+  projectedSourceFiles(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      /** As for `checkProjectedErrors`. */
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<string[]>;
+
+  /**
+   * bean-check over a complete set of files that is not a repository yet —
+   * the ledger a guided setup would create (ADR021, w23/048). Base64 text,
+   * entry point `main.bean`, the same input caps as `/check`.
+   */
+  checkLedgerFiles(params: {
+    files: { path: string; content: string }[];
+  }): Promise<BeancountErrorPublic[]>;
 
   getCurrencies(params: BaseParams): Promise<string[]>;
 
@@ -444,6 +484,71 @@ export class LedgerDataService implements ILedgerDataService {
       enforceInputLimits?: boolean;
     },
   ): Promise<BeancountErrorPublic[]> {
+    const { projected, entryPoint, repoPaths } =
+      await this.projectFileMap(params);
+    // The engine throws on a missing entry point, which reached callers as an
+    // outage; a projection that removes it is a ledger that will not load,
+    // and that is an error to preview like any other (w23/031).
+    if (!Object.hasOwn(projected, entryPoint)) {
+      return [
+        {
+          message: `Entry point ${entryPoint} does not exist; the ledger would not load`,
+          source: null,
+          code: null,
+          hint: `Keep ${entryPoint}: replace its content instead of deleting or renaming it.`,
+          severity: "error",
+        },
+      ];
+    }
+    const snapshot = await parseLedgerFiles(projected, entryPoint, {
+      repoPaths,
+    });
+    return toBeancountErrorsPublic(snapshot.errors);
+  }
+
+  async projectedEntryIds(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      ranges: ReplacedSourceRange[];
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<(string | null)[]> {
+    const { projected, entryPoint, repoPaths } =
+      await this.projectFileMap(params);
+    const { ranges } = params;
+    if (!Object.hasOwn(projected, entryPoint)) return ranges.map(() => null);
+    // One full, correctly booked parse, as after a slice save: a directive
+    // hashed in isolation would mis-hash lot reductions and lose pushtags.
+    const snapshot = await parseLedgerFiles(projected, entryPoint, {
+      repoPaths,
+      includeSourceDetails: true,
+    });
+    return resolveEntryIdsAtSources(snapshot, ranges).map((id) => id ?? null);
+  }
+
+  async projectedSourceFiles(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<string[]> {
+    const { projected, entryPoint } = await this.projectFileMap(params);
+    return Object.hasOwn(projected, entryPoint)
+      ? collectSourceFiles(projected, entryPoint)
+      : [];
+  }
+
+  /** The repository's file map with `overlays` applied (`null` deletes). */
+  private async projectFileMap(
+    params: BaseParams & {
+      overlays: ProjectedFileOverlay[];
+      enforceInputLimits?: boolean;
+    },
+  ): Promise<{
+    projected: Record<string, string>;
+    entryPoint: string;
+    repoPaths: string[];
+  }> {
     const { ledgerId, userId, overlays, enforceInputLimits = true } = params;
     if (
       !Array.isArray(overlays) ||
@@ -495,8 +600,45 @@ export class LedgerDataService implements ILedgerDataService {
       }
       projected[overlay.path] = text;
     });
-    const snapshot = await parseLedgerFiles(projected, entryPoint, {
-      repoPaths,
+    return { projected, entryPoint, repoPaths };
+  }
+
+  async checkLedgerFiles(params: {
+    files: { path: string; content: string }[];
+  }): Promise<BeancountErrorPublic[]> {
+    const { files } = params;
+    if (!Array.isArray(files) || files.length > MAX_PROJECTED_FILES) {
+      throw new BadUserInputError(
+        `at most ${MAX_PROJECTED_FILES} files may be checked at once`,
+      );
+    }
+    const fileMap: Record<string, string> = {};
+    let totalBytes = 0;
+    files.forEach((file, index) => {
+      if (
+        file === null ||
+        typeof file !== "object" ||
+        typeof file.content !== "string"
+      ) {
+        throw new BadUserInputError(`files[${index}] must carry text content`);
+      }
+      assertSafeRepoPath(file.path, `files[${index}].path`);
+      const text = Buffer.from(file.content, "base64").toString("utf8");
+      totalBytes += text.length;
+      if (totalBytes > MAX_PROJECTED_BYTES) {
+        throw new BadUserInputError(
+          `files exceed ${MAX_PROJECTED_BYTES} bytes`,
+        );
+      }
+      fileMap[file.path] = text;
+    });
+    if (!Object.hasOwn(fileMap, DEFAULT_ENTRY_POINT)) {
+      throw new BadUserInputError(
+        `files must include the entry point ${DEFAULT_ENTRY_POINT}`,
+      );
+    }
+    const snapshot = await parseLedgerFiles(fileMap, DEFAULT_ENTRY_POINT, {
+      repoPaths: Object.keys(fileMap),
     });
     return toBeancountErrorsPublic(snapshot.errors);
   }

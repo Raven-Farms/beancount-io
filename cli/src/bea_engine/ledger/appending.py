@@ -14,12 +14,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from bea_engine import protocol
 from bea_engine.ledger import write as ledger_write
-from bea_engine.ledger.text import refuse_control_characters, without_root_name_errors
+from bea_engine.ledger.text import new_account_format_problem, refuse_control_characters, without_root_name_errors
 from bea_engine.query import format_error
 
 
@@ -34,13 +35,16 @@ def answer(
 ) -> dict[str, Any]:
     """Validate (and optionally append) raw directive text against a ledger."""
     entries = _parse_directives(text)
+    _refuse_documents_outside(text, entries, file, into)
     snapshot = _snapshot_for(file, token)
+    _refuse_invisible_new_accounts(entries, file, snapshot)
     target = ledger_write.destination(file, into)
     warnings = ledger_write.validate_append(
         file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False
     )
     if dry_run:
-        seeded = ledger_write.new_include_seed(snapshot, target) + snapshot.require_target(target, into=into)
+        seed = ledger_write.new_include_seed(snapshot, target)
+        seeded = seed + snapshot.require_target(target, into=into)
         return {
             "count": len(entries),
             "target": str(target),
@@ -49,9 +53,41 @@ def answer(
             # The aligned lines the commit appends, so a confirmation shows what
             # will be written rather than the proposal before alignment (w5/374).
             "text": ledger_write.appended_lines(seeded, [text]),
+            # A new include's file: the lines it starts with, written ahead of
+            # the text, and that it is created at all (w5/849).
+            "seed": seed.decode("utf-8"),
+            "created": not (target.exists() or target.is_symlink()),
         }
     ledger_write.append(file, [text], allow_errors=allow_errors, into=into, snapshot=snapshot, one_entry_each=False)
     return {"written": len(entries), "target": str(target), "warnings": warnings}
+
+
+def _refuse_documents_outside(text: str, entries: list[Any], file: Path, into: Path | None) -> None:
+    """Refuse a `document` naming a file outside the ledger's folder, before anything looks for it.
+
+    Validation reports a missing document file, so the answer told the model
+    whether any path on the machine exists — one bit per call, with nothing
+    shown to the user (w5/848). Outside the folder is refused the same way
+    whether or not the file is there.
+    """
+    from beancount.core.data import Document
+    from beancount.parser import parser
+
+    if not any(isinstance(entry, Document) for entry in entries):
+        return
+    folder = Path(file).resolve().parent
+    # Parsed as the file it lands in, so a relative path resolves beside it
+    # as the loader will resolve it, not against this process's directory.
+    located, _, _ = parser.parse_string(text, report_filename=str(ledger_write.destination(file, into)))
+    for entry in located:
+        if not isinstance(entry, Document):
+            continue
+        named = Path(os.path.expanduser(str(entry.filename))).resolve()
+        if not named.is_relative_to(folder):
+            raise protocol.UsageError(
+                "Write rejected: an AI-proposed document must name a file inside the ledger's folder; "
+                "this one is outside it. Move the file into the ledger's folder first."
+            )
 
 
 def _parse_directives(text: str) -> list[Any]:
@@ -70,6 +106,31 @@ def _parse_directives(text: str) -> list[Any]:
         detail = "; ".join(format_error(error) for error in errors) or "No dated directives were supplied."
         raise protocol.LedgerError(f"Write rejected: {detail}")
     return list(entries)
+
+
+def _refuse_invisible_new_accounts(entries: list[Any], file: Path, snapshot: ledger_write.LedgerSnapshot) -> None:
+    """Refuse a format character in an account the text opens or posts to, unless the ledger already opens it.
+
+    A zero-width space in `Assets:Ca\u200bsh` showed invisibly on the
+    approval panel, and approving it split the balance across two
+    identical-looking accounts (w5/847). `add` refuses such a new name already;
+    an existing one (a ZWNJ a script needs) is still written to. The ledger is
+    loaded only when a name carries such a character.
+    """
+    from beancount.core.data import Open
+    from beancount.core.getters import get_entry_accounts
+
+    from bea_engine import managed_load
+
+    names = {name for entry in entries for name in get_entry_accounts(entry)}
+    suspect = sorted(name for name in names if new_account_format_problem(name) is not None)
+    if not suspect:
+        return
+    existing, _, _ = managed_load.load_file(file, snapshot=snapshot)
+    opened = {entry.account for entry in existing if isinstance(entry, Open)}
+    for name in suspect:
+        if name not in opened:
+            raise protocol.UsageError(f"Write rejected: {new_account_format_problem(name)}")
 
 
 def _snapshot_for(file: Path, token: dict[str, str] | None) -> ledger_write.LedgerSnapshot:

@@ -40,7 +40,8 @@ import { createLedgerId, parseLedgerId } from "@/shared/str";
 import { VOCABULARY_READS } from "@/features/ledger/api/rest/v1/vocabulary-handler";
 import { LEDGER_OPTIONS_READ } from "@/features/ledger/api/rest/v1/options-handler";
 import { ANALYSIS_READS } from "@/features/ledger/api/rest/v1/analysis-handler";
-import { NotFoundError } from "@/shared/errors";
+import { NotFoundError, OperationNotAllowedError } from "@/shared/errors";
+import type { LedgerArchive } from "@/features/ledger/service/ledger-archive-service";
 
 /**
  * The MCP surface's resource fragment (ADR 0008 D2).
@@ -99,23 +100,56 @@ export interface McpResourceDescriptor {
   >;
 }
 
+/**
+ * The largest archive the MCP resource returns. A resource read answers in one
+ * JSON-RPC message, so the archive is held whole in memory — and grows by a
+ * third as base64 — where REST streams it. Past this the read is refused and
+ * the agent is pointed at the download URL, which streams at any size.
+ */
+export const MCP_ARCHIVE_BLOB_MAX_BYTES = 8 * 1024 * 1024;
+const MCP_ARCHIVE_BLOB_MAX_MIB = MCP_ARCHIVE_BLOB_MAX_BYTES / (1024 * 1024);
+
+/** The archive's bytes, or `undefined` once they pass the blob cap. */
+async function readCappedArchive(
+  archive: LedgerArchive,
+): Promise<Buffer | undefined> {
+  if ((archive.contentLength ?? 0) > MCP_ARCHIVE_BLOB_MAX_BYTES) {
+    archive.body.destroy();
+    return undefined;
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  // Leaving the loop early destroys the body, which ends the Gitea request.
+  for await (const chunk of archive.body as AsyncIterable<Buffer>) {
+    size += chunk.length;
+    if (size > MCP_ARCHIVE_BLOB_MAX_BYTES) return undefined;
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks, size);
+}
+
 async function readArchive(
   context: McpRequestContext,
   ledgerId: string,
   archive: string,
 ) {
-  const response = await context.ledgerArchiveService.download({
+  const download = await context.ledgerArchiveService.download({
     identity: context.identity,
     ledgerId,
     archive,
   });
-  const disposition = response.headers.get("content-disposition");
+  const bytes = await readCappedArchive(download);
+  if (!bytes)
+    throw new OperationNotAllowedError(
+      "readArchive",
+      `${archive} is larger than the ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB an MCP resource returns`,
+      `Read \`beancount://${ledgerId}/archive-download-url\` for an HTTP URL that streams the archive at any size. It is a REST endpoint: fetch it with a personal API key (\`x-api-key\`) or a signed-in browser session. An MCP OAuth token is scoped to the MCP endpoint and is refused there.`,
+    );
   return {
-    blob: (await response.buffer()).toString("base64"),
-    mimeType:
-      response.headers.get("content-type") ?? "application/octet-stream",
-    ...(disposition && {
-      _meta: { "beancount/contentDisposition": disposition },
+    blob: bytes.toString("base64"),
+    mimeType: download.contentType,
+    ...(download.contentDisposition && {
+      _meta: { "beancount/contentDisposition": download.contentDisposition },
     }),
   };
 }
@@ -272,15 +306,14 @@ const bankResources: readonly McpResourceDescriptor[] = [
     description: "Status and institution details for a single bank connection.",
     mimeType: "application/json",
     uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/banks/{itemId}`,
-    read: async (ctx, vars) => {
-      resolveLedgerId(ctx, vars);
-      return JSON.stringify(
+    read: async (ctx, vars) =>
+      JSON.stringify(
         await ctx.services.plaidItem.getItem(
           ctx.identity,
           String(vars.itemId ?? ""),
+          resolveLedgerId(ctx, vars),
         ),
-      );
-    },
+      ),
   },
   {
     name: "bankAccountsForItem",
@@ -430,7 +463,12 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
       read: async (context, variables) => {
         const { username, page, limit } = socialListQuery.parse(variables);
         return JSON.stringify(
-          await context.socialService[read.method](username, page, limit),
+          await context.socialService[read.method](
+            username,
+            page,
+            limit,
+            context.identity.userId,
+          ),
         );
       },
     }),
@@ -494,8 +532,7 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
   {
     name: "ledgerArchive",
     title: "Ledger Archive",
-    description:
-      "Download archive bytes as an MCP base64 blob. `archive` is a Git reference and its format, `<ref>.zip` or `<ref>.tar.gz` (for example `main.zip`), as on REST. Every call rechecks ledger read authority and spends the shared archive-download budget.",
+    description: `Download archive bytes as an MCP base64 blob, up to ${MCP_ARCHIVE_BLOB_MAX_MIB} MiB. \`archive\` is a Git reference and its format, \`<ref>.zip\` or \`<ref>.tar.gz\` (for example \`main.zip\`), as on REST. A larger archive is refused; read \`beancount://{owner}/{name}/archive-download-url\` for an HTTP URL that streams it at any size. Every call rechecks ledger read authority and spends the shared archive-download budget.`,
     mimeType: "application/octet-stream",
     uriTemplate: "beancount://{owner}/{name}/archive/{archive}",
     read: async (context, variables) =>
@@ -528,7 +565,7 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
     name: "ledgerArchiveDownloadUrl",
     title: "Ledger Archive Download URL",
     description:
-      "Get the authenticated HTTP URL for main.zip. Fetch it with the same session cookie, OAuth bearer token, or API key; no credential is embedded in the URL. This resource discovers a URL and does not deliver archive bytes.",
+      "Get the authenticated HTTP URL for main.zip. It is a REST endpoint: fetch it with a personal API key (x-api-key) or a signed-in browser session; an MCP OAuth token is scoped to the MCP endpoint and is refused there. No credential is embedded in the URL. This resource discovers a URL and does not deliver archive bytes.",
     mimeType: "application/json",
     uriTemplate: "beancount://{owner}/{name}/archive-download-url",
     read: async (context, variables) =>
@@ -636,10 +673,14 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
       queryNames: Object.keys(read.query.shape),
       read: async (context, variables) => {
         const { owner: _owner, name: _name, ...query } = variables;
+        const parsed = read.query.parse(query);
         const result = await read.fetch(context.services, {
           identity: context.identity,
           ledgerId: resolveLedgerId(context, variables),
-          query: read.query.parse(query),
+          query:
+            "mcpDefaultLimit" in read && parsed.limit === undefined
+              ? { ...parsed, limit: read.mcpDefaultLimit }
+              : parsed,
         });
         return JSON.stringify(result);
       },
@@ -738,13 +779,13 @@ export const MCP_RESOURCES: readonly McpResourceDescriptor[] = [
     name: "ledgerMetadata",
     title: "Ledger Metadata",
     description:
-      "Read ledger metadata, visibility, repository URLs, and caller permissions.",
+      "Read ledger metadata, visibility, repository URLs, caller permissions, and whether the caller has starred it (isStarred).",
     mimeType: "application/json",
     uriTemplate: `${RESOURCE_SCHEME}://{owner}/{name}/metadata`,
     listSegment: "metadata",
     read: async (context, variables) =>
       JSON.stringify(
-        await context.ledgerWorkflow.getLedger({
+        await context.ledgerWorkflow.getLedgerMetadata({
           identity: context.identity,
           ledgerId: resolveLedgerId(context, variables),
         }),

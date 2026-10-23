@@ -19,7 +19,16 @@ export const listLedgerFilesInputSchema = z.object({
 });
 
 export const listLedgerFilesOutputSchema = toolOutputSchema(
-  z.array(z.object({ path: z.string(), type: z.enum(["file", "dir"]) })),
+  z.array(
+    z.object({
+      path: z.string(),
+      name: z.string(),
+      type: z.enum(["file", "dir"]),
+      size: z.number(),
+      sha: z.string(),
+      lastCommitSha: z.string().nullable(),
+    }),
+  ),
 );
 export type ListLedgerFilesOutput = z.infer<typeof listLedgerFilesOutputSchema>;
 
@@ -39,7 +48,16 @@ export async function executeListLedgerFiles(
         identity,
         dirPath: normalizeAgentDirPath(input.dir_path),
       });
-      return entries.map((e) => ({ path: e.path, type: e.type }));
+      // Everything the listing knows, as REST and GraphQL return it: sha is
+      // the lock of a delete or update (w21/200).
+      return entries.map((e) => ({
+        path: e.path,
+        name: e.name,
+        type: e.type,
+        size: e.size,
+        sha: e.sha,
+        lastCommitSha: e.lastCommitSha,
+      }));
     },
   });
 }

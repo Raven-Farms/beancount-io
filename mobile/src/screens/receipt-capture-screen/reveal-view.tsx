@@ -84,10 +84,19 @@ export const RevealView = ({
       style={styles.scrim}
       entering={FadeIn.duration(durations.fast)}
     >
+      {/* Decorative: VoiceOver goes straight to the header (w21/639). */}
       <Animated.View entering={FadeIn.duration(durations.base)}>
-        <Ionicons name="sparkles" size={28} color={CHROME.icon} />
+        <Ionicons
+          name="sparkles"
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+          size={28}
+          color={CHROME.icon}
+        />
       </Animated.View>
-      <Text style={styles.title}>{t("receiptRevealTitle")}</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        {t("receiptRevealTitle")}
+      </Text>
       {/* Staggered so the eye lands on the payee, then the amount, in the
           order the fields are read back. */}
       <Animated.View entering={FadeInDown.duration(durations.base)}>

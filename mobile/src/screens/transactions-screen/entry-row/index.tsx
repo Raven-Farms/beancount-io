@@ -8,6 +8,9 @@ import {
 } from "react-native";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import type { RootNames } from "@/common/account-root";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
+import { useOperatingCurrency } from "@/common/hooks/use-operating-currency";
 import {
   fontSizes,
   fontWeights,
@@ -30,7 +33,8 @@ import {
 import { getEntryPostings } from "../utils/entry-utils";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { selectEntryRowAmount } from "./format-entry-row-amount";
-import { entryRowSecondaryText } from "./entry-row-secondary";
+import { entryRowSecondaryText, entryRowTitle } from "./entry-row-secondary";
+import { entryRowDateLine } from "./entry-row-date";
 import { entryRowAccessibilityLabel } from "./entry-row-accessibility-label";
 
 const getStyles = (theme: ColorTheme) =>
@@ -87,11 +91,11 @@ const getStyles = (theme: ColorTheme) =>
     badgeText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
-      color: "#fff",
+      color: theme.onWarning,
     },
     typeLabel: {
       fontSize: fontSizes.xs,
-      color: theme.black60,
+      color: theme.black80,
       flexShrink: 1,
     },
     amount: {
@@ -116,6 +120,9 @@ const getStyles = (theme: ColorTheme) =>
 const getDisplayInfo = (
   entry: JournalDirectiveType,
   mixedLabel: string,
+  untitledLabel: string,
+  operatingCurrency: string | undefined,
+  roots: RootNames,
 ): { name: string; amountStr: string; isPositive: boolean | null } => {
   if (isJournalOpen(entry)) {
     const currencies = entry.currencies?.join(", ") ?? "";
@@ -134,35 +141,64 @@ const getDisplayInfo = (
     };
   }
 
-  const name = entry.payee || entry.narration || entry.directive_type;
+  // A bare transaction is titled in the app's language, not by its English
+  // directive type (w21/241).
+  const name = entryRowTitle(entry) ?? untitledLabel;
 
-  return { name, ...selectEntryRowAmount(entry, mixedLabel) };
+  return {
+    name,
+    ...selectEntryRowAmount(entry, mixedLabel, operatingCurrency, roots),
+  };
 };
 
 interface EntryRowProps {
   entry: JournalDirectiveType;
   onPress?: () => void;
+  /**
+   * Show the entry's date under its name, judged against this day (the cards
+   * that list recent entries have no date headers; w21/261).
+   */
+  dateToday?: string;
 }
 
-export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
+export const EntryRow: React.FC<EntryRowProps> = ({
+  entry,
+  onPress,
+  dateToday,
+}) => {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
 
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  const operatingCurrency = useOperatingCurrency();
+  const roots = useLedgerRootNames();
   const { name, amountStr, isPositive } = getDisplayInfo(
     entry,
     t("multiplePostings"),
+    t("transaction"),
+    operatingCurrency,
+    roots,
   );
-  const secondary = isJournalTransaction(entry)
+  const narration = isJournalTransaction(entry)
     ? entryRowSecondaryText(entry)
     : null;
+  const secondary =
+    dateToday === undefined
+      ? narration
+      : entryRowDateLine({
+          date: entry.date,
+          today: dateToday,
+          locale,
+          upcomingLabel: t("entryUpcoming"),
+          secondary: narration,
+        });
   const isPending = isJournalTransaction(entry) && entry.flag === "!";
   // Brand text for the logo: payee/narration only (not the directive_type
   // fallback), so non-transactions match on their account instead.
   const brandText = isJournalTransaction(entry)
-    ? entry.payee || entry.narration || undefined
+    ? entryRowTitle(entry)
     : undefined;
 
   const leading = (
@@ -187,7 +223,7 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
         </View>
         {isPending && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>P</Text>
+            <Text style={styles.badgeText}>!</Text>
           </View>
         )}
       </View>
@@ -214,10 +250,12 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
           style={[
             styles.amount,
             stacked && styles.amountStacked,
-            { color: theme.black60 },
+            { color: theme.black80 },
           ]}
         >
-          {entry.directive_type}
+          {isJournalTransaction(entry)
+            ? t("transaction")
+            : entry.directive_type}
         </AmountText>
       )}
     </>
@@ -232,8 +270,10 @@ export const EntryRow: React.FC<EntryRowProps> = ({ entry, onPress }) => {
         accessibilityRole="button"
         accessibilityLabel={entryRowAccessibilityLabel({
           name,
+          secondary,
           amountStr,
           isPending,
+          pendingLabel: t("pending"),
         })}
       >
         {content}

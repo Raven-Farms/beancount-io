@@ -2,6 +2,7 @@ import {
   Arg,
   Ctx,
   Field,
+  Int,
   ObjectType,
   InputType,
   Query,
@@ -10,12 +11,6 @@ import {
 import { AllowAnonymous } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import { GraphQLJSONObject } from "graphql-scalars";
-import {
-  CustomSubtype,
-  DirectiveType,
-  DocumentSubtype,
-  TransactionSubtype,
-} from "@/foundation/fava";
 import type { ILedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
 
 @ObjectType()
@@ -53,6 +48,13 @@ class EntryContext {
       "The feed URL when the entry comes from a managed price include; such an entry is read-only.",
   })
   managed_source: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "The entry hash of the source entry when this entry is a copy a plugin or a pad generated from it (amortize_over, forecast, padding). A copy shares its source's text and checksum, so editing or deleting it changes the source and every other copy.",
+  })
+  generated_from: string | null;
 }
 
 @InputType()
@@ -73,22 +75,32 @@ class JournalQueryInput {
   offset?: number;
 
   @Field(() => [String], { nullable: true })
-  directiveTypes?: DirectiveType[];
+  directiveTypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  transactionSubtypes?: TransactionSubtype[];
+  transactionSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  documentSubtypes?: DocumentSubtype[];
+  documentSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  customSubtypes?: CustomSubtype[];
+  customSubtypes?: string[];
 }
 
 @ObjectType()
 class PlaintextJournalResponse {
   @Field(() => String)
   content: string;
+
+  @Field(() => Int, {
+    description: "Entries the filters select, before offset and limit.",
+  })
+  total: number;
+
+  @Field(() => Boolean, {
+    description: "Whether entries remain after this page.",
+  })
+  truncated: boolean;
 }
 
 @ObjectType()
@@ -128,6 +140,15 @@ class PlaintextJournalQueryInput {
 
   @Field(() => String, { nullable: true })
   time?: string;
+
+  @Field(() => Int, {
+    nullable: true,
+    description: "Entries per page, 1 to 1000; omitted, every entry.",
+  })
+  limit?: number;
+
+  @Field(() => Int, { nullable: true })
+  offset?: number;
 }
 
 @InputType()
@@ -161,16 +182,16 @@ class AccountJournalQueryInput {
   conversion?: string;
 
   @Field(() => [String], { nullable: true })
-  directiveTypes?: DirectiveType[];
+  directiveTypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  transactionSubtypes?: TransactionSubtype[];
+  transactionSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  documentSubtypes?: DocumentSubtype[];
+  documentSubtypes?: string[];
 
   @Field(() => [String], { nullable: true })
-  customSubtypes?: CustomSubtype[];
+  customSubtypes?: string[];
 }
 
 @Resolver()

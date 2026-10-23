@@ -77,6 +77,10 @@ export const SAME_AS_ENGLISH: Record<
   ],
   de: [
     {
+      reason: "The sign words Plus and Minus are the German ones.",
+      keys: ["signPlus", "signMinus"],
+    },
+    {
       reason: "Loanwords German uses unchanged.",
       keys: [
         "journal",
@@ -125,9 +129,10 @@ export const SAME_AS_ENGLISH: Record<
     { reason: "Blog is the same loanword.", keys: ["feedSourceBlog"] },
   ],
   fr: [
+    { reason: "Plus is the French word too.", keys: ["signPlus"] },
     {
       reason: "Public is also the French adjective for a public ledger.",
-      keys: ["discoveryPublic"],
+      keys: ["createLedgerPublic", "discoveryPublic"],
     },
     {
       reason: "French spells these the same as English.",
@@ -160,6 +165,7 @@ export const SAME_AS_ENGLISH: Record<
     { reason: "Blog is the same loanword.", keys: ["feedSourceBlog"] },
   ],
   nl: [
+    { reason: "Plus is the Dutch word too.", keys: ["signPlus"] },
     {
       reason: "Dutch uses these English words unchanged.",
       keys: [
@@ -215,6 +221,7 @@ export const SAME_AS_ENGLISH: Record<
     { reason: "Blog is the same loanword.", keys: ["feedSourceBlog"] },
   ],
   sk: [
+    { reason: "Plus is the Slovak word too.", keys: ["signPlus"] },
     {
       reason: "Slovak spells this the same as English.",
       keys: ["budgetInterval"],

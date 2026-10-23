@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { InlineError } from "@/components/inline-error";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -19,6 +20,7 @@ import Animated, {
 import { durations, useTheme } from "@/common/theme";
 import { easeStandard } from "@/common/theme/motion-easing";
 import { ColorTheme } from "@/types/theme-props";
+import { useTranslations } from "@/common/hooks/use-translations";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -108,6 +110,11 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 16,
       fontWeight: "600",
     },
+    inputError: {
+      marginTop: 8,
+      fontSize: 13,
+      color: theme.error,
+    },
     confirmButtonDisabled: {
       color: theme.black40,
       fontSize: 16,
@@ -125,7 +132,14 @@ type TextInputModalProps = {
   confirmButtonText?: string;
   cancelButtonText?: string;
   destructive?: boolean;
-  validateInput?: (text: string) => boolean;
+  /**
+   * Whether the text may be confirmed. A string means no and says why: it is
+   * shown under the field and announced, so a disabled Confirm is never
+   * unexplained (w21/014). `false` disables without a message.
+   */
+  validateInput?: (text: string) => boolean | string;
+  /** The caller is checking the input against the server: Confirm waits. */
+  busy?: boolean;
 };
 
 export const TextInputModal: React.FC<TextInputModalProps> = ({
@@ -135,12 +149,17 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   placeholder,
   onConfirm,
   onCancel,
-  confirmButtonText = "Confirm",
-  cancelButtonText = "Cancel",
+  confirmButtonText,
+  cancelButtonText,
   destructive = false,
   validateInput,
+  busy = false,
 }) => {
   const theme = useTheme().colorTheme;
+  // Translated defaults, never English ones (w21/178).
+  const { t } = useTranslations();
+  confirmButtonText ??= t("confirm");
+  cancelButtonText ??= t("cancel");
   const styles = getStyles(theme);
   const [inputText, setInputText] = useState("");
   const opacity = useSharedValue(0);
@@ -177,14 +196,17 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
     transform: [{ scale: scale.value }],
   }));
 
+  const validation = validateInput ? validateInput(inputText) : true;
+  // `busy`: the caller is checking the input against the server; Confirm waits.
+  const isConfirmDisabled = validation !== true || busy;
+  const inputError = typeof validation === "string" ? validation : null;
+
   const handleConfirm = () => {
-    if (validateInput && !validateInput(inputText)) {
+    if (isConfirmDisabled) {
       return;
     }
     onConfirm(inputText);
   };
-
-  const isConfirmDisabled = validateInput && !validateInput(inputText);
 
   if (!visible) return null;
 
@@ -198,16 +220,23 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
       <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
         <Pressable
           style={StyleSheet.absoluteFill}
+          accessible={false}
           onPress={onCancel}
         ></Pressable>
         <KeyboardAvoidingView
           style={styles.avoider}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Animated.View style={[styles.modalContainer, modalAnimatedStyle]}>
+          <Animated.View
+            style={[styles.modalContainer, modalAnimatedStyle]}
+            // VoiceOver's two-finger scrub dismisses it as Cancel (w21/357).
+            onAccessibilityEscape={onCancel}
+          >
             <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
               <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.title} accessibilityRole="header">
+                  {title}
+                </Text>
                 {message && <Text style={styles.message}>{message}</Text>}
               </View>
               <View style={styles.inputContainer}>
@@ -216,16 +245,25 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
                   value={inputText}
                   onChangeText={setInputText}
                   placeholder={placeholder}
+                  accessibilityLabel={title}
                   placeholderTextColor={theme.controlPlaceholder}
                   autoFocus
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
+                {inputError ? (
+                  <InlineError
+                    style={styles.inputError}
+                    testID="text-input-modal-error"
+                    message={inputError}
+                  />
+                ) : null}
               </View>
             </ScrollView>
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={styles.button}
+                accessibilityRole="button"
                 onPress={onCancel}
                 activeOpacity={0.6}
               >
@@ -234,9 +272,11 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               <View style={styles.buttonDivider} />
               <TouchableOpacity
                 style={styles.button}
+                accessibilityRole="button"
                 onPress={handleConfirm}
                 activeOpacity={0.6}
                 disabled={isConfirmDisabled}
+                accessibilityState={{ disabled: isConfirmDisabled, busy }}
               >
                 <Text
                   style={

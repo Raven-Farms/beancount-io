@@ -6,7 +6,7 @@ import { useTranslations } from "@/common/hooks/use-translations.ts";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { PageSEO } from "@/common/components/seo/page-seo";
 import { isUnauthenticatedError } from "@/common/apollo/links/auth-error-link";
-import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 import { ErrorDetails } from "@/common/components/error-details";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
 
@@ -27,7 +27,7 @@ export default function ErrorPage({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   // The whole destination, not just its path, so a query and an anchor
   // survive the trip through login.
-  const next = useLoginNextPath();
+  const next = useSafeReturnPath();
 
   const unauthenticated = isUnauthenticatedError(error);
 
@@ -61,11 +61,9 @@ export default function ErrorPage({ error, reset }: ErrorComponentProps) {
 
   // A recognized failure category (a gateway 502, a network failure, …)
   // names itself truthfully instead of the generic page copy (w3/646).
-  const mappedErrorKey = getErrorMessageKey(error);
-  const mappedDescription =
-    mappedErrorKey === "common.errors.generic"
-      ? t("common.errorDescription")
-      : t(mappedErrorKey);
+  const mappedDescription = t(
+    getErrorMessageKey(error, "common.errorDescription"),
+  );
 
   return (
     <>

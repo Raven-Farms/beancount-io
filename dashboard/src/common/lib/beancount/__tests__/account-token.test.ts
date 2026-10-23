@@ -8,6 +8,12 @@ describe("isCompleteAccountToken", () => {
     "Assets:Emergency-Fund",
     "Assets:401K",
     "Assets:Épargne",
+    // w4/279: combining marks (Devanagari, decomposed É) and a titlecase
+    // initial, all accepted by the ledger.
+    "Assets:Qa-20261020:\u0939\u093F\u0902\u0926\u0940",
+    "Assets:Qa-20261020:E\u0301pargne",
+    "Assets:Qa-20261020:\u01C5ep",
+    "Assets:现金",
   ])("accepts %s", (account) => {
     expect(isCompleteAccountToken(account)).toBe(true);
   });
@@ -18,6 +24,8 @@ describe("isCompleteAccountToken", () => {
     "Assets:Emergency Fund",
     "Assets:Emergency USD",
     "Assets:checking",
+    "Assets:\u0301Epargne",
+    "Assets:Bank_1",
     "Checking",
     "",
   ])("rejects %s", (account) => {
@@ -38,11 +46,11 @@ describe("buildOpenAccountSchema", () => {
 
   it("blocks malformed tokens before a mutation can be prepared", () => {
     expect(
-      schema.safeParse({ date: new Date(), account: "Assets:" }).success,
+      schema.safeParse({ date: "2026-10-20", account: "Assets:" }).success,
     ).toBe(false);
     expect(
       schema.safeParse({
-        date: new Date(),
+        date: "2026-10-20",
         account: "Assets:Emergency Fund",
       }).error?.issues[0]?.message,
     ).toBe("whitespace");
@@ -50,12 +58,12 @@ describe("buildOpenAccountSchema", () => {
 
   it("keeps the configured-prefix rule and accepts valid names", () => {
     expect(
-      schema.safeParse({ date: new Date(), account: "Checking" }).error
+      schema.safeParse({ date: "2026-10-20", account: "Checking" }).error
         ?.issues[0]?.message,
     ).toBe("prefix");
     expect(
       schema.safeParse({
-        date: new Date(),
+        date: "2026-10-20",
         account: "Assets:QaSyntaxDraft",
       }).success,
     ).toBe(true);
@@ -63,11 +71,11 @@ describe("buildOpenAccountSchema", () => {
 
   it("allows correcting a rejected value into a valid account", () => {
     expect(
-      schema.safeParse({ date: new Date(), account: "Assets::Cash" }).success,
+      schema.safeParse({ date: "2026-10-20", account: "Assets::Cash" }).success,
     ).toBe(false);
     expect(
       schema.safeParse({
-        date: new Date(),
+        date: "2026-10-20",
         account: "Assets:Emergency-Fund",
       }).success,
     ).toBe(true);
@@ -84,7 +92,7 @@ describe("account name reasons (w0/017)", () => {
         : problem.kind,
   });
   const message = (account: string) =>
-    schema.safeParse({ date: new Date(), account }).error?.issues[0]?.message;
+    schema.safeParse({ date: "2026-10-20", account }).error?.issues[0]?.message;
 
   it("names the actual reason instead of one catch-all", () => {
     expect(message("Assets:bank")).toBe("component-start:bank");
@@ -124,7 +132,7 @@ describe("accounts the ledger already opens (w3/557)", () => {
     existing,
   );
   const message = (account: string) =>
-    schema.safeParse({ date: new Date(), account }).error?.issues[0]?.message;
+    schema.safeParse({ date: "2026-10-20", account }).error?.issues[0]?.message;
 
   it("refuses an open account and names its open date", () => {
     expect(message("Assets:Cash")).toBe("open:Assets:Cash:2026-01-01");
@@ -136,7 +144,7 @@ describe("accounts the ledger already opens (w3/557)", () => {
 
   it("accepts a new child of an existing account", () => {
     expect(
-      schema.safeParse({ date: new Date(), account: "Assets:Cash:Wallet" })
+      schema.safeParse({ date: "2026-10-20", account: "Assets:Cash:Wallet" })
         .success,
     ).toBe(true);
   });
@@ -144,7 +152,7 @@ describe("accounts the ledger already opens (w3/557)", () => {
   it("compares names exactly, leaving a case-different root to the prefix rule", () => {
     expect(message("assets:cash")).toBe("prefix");
     expect(
-      schema.safeParse({ date: new Date(), account: "Assets:CASH" }).success,
+      schema.safeParse({ date: "2026-10-20", account: "Assets:CASH" }).success,
     ).toBe(true);
   });
 });

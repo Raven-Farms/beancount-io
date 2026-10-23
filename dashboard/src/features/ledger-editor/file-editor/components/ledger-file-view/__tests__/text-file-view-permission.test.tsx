@@ -223,7 +223,9 @@ describe("TextFileView write permission", () => {
 
     fireEvent.click(screen.getByText("common.save"));
     fireEvent.keyDown(editor, { key: "s", metaKey: true });
-    fireEvent.click(screen.getByText("common.save"));
+    // While pending the toolbar reads Saving… and the source is read-only.
+    fireEvent.click(screen.getByRole("button", { name: "common.saving" }));
+    expect(editor).toHaveAttribute("readonly");
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onExitEditMode).not.toHaveBeenCalled();

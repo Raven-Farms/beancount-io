@@ -48,6 +48,8 @@ async function fixture() {
       envelope({
         content:
           '2026-01-02 * "café"\n  Expenses:Café  12.34 USD\n  Assets:Bank\n',
+        total: 1,
+        truncated: false,
       }),
     ),
     getAccountJournal: jest.fn().mockResolvedValue(
@@ -219,7 +221,7 @@ describe("journal adapter contracts", () => {
       path: "plaintext-journal",
       field: "getLedgerPlaintextJournal",
       params: { account: "Assets:Bank", filter: "#travel", time: "2026" },
-      selection: "content",
+      selection: "content total truncated",
     },
     {
       path: "account-journal",
@@ -267,7 +269,7 @@ describe("journal adapter contracts", () => {
           ? f.journal.plaintextJournal
           : f.journal.getAccountJournal;
       expect(method).toHaveBeenCalledTimes(3);
-      for (const call of method.mock.calls)
+      for (const [index, call] of method.mock.calls.entries())
         expect(call).toEqual([
           "alice",
           "main",
@@ -297,8 +299,47 @@ describe("journal adapter contracts", () => {
                   }),
                 ),
               }
-            : entry.params,
+            : // MCP, the second call, pages the export by default (w23/044).
+              { ...entry.params, ...(index === 1 && { limit: 200 }) },
         ]);
+    } finally {
+      await f.close();
+    }
+  });
+
+  // w23/044: one read returned the whole ledger's text; MCP now pages it by
+  // default while REST and GraphQL keep the whole export the dashboard reads.
+  it("pages the plaintext export on request on every surface", async () => {
+    const f = await fixture();
+    try {
+      const rest = await (
+        await f.rest("plaintext-journal?limit=2&offset=2")
+      ).json();
+      expect(rest).toMatchObject({ total: 1, truncated: false });
+      expect(await f.mcp("plaintext-journal?limit=2&offset=2")).toEqual(rest);
+      const gql = await f.gql(
+        'getLedgerPlaintextJournal(ledgerId: "alice/main", query: { limit: 2, offset: 2 }) { content total truncated }',
+      );
+      expect(gql.data?.getLedgerPlaintextJournal).toEqual(rest);
+      for (const [, , query] of f.journal.plaintextJournal.mock.calls)
+        expect(query).toMatchObject({ limit: 2, offset: 2 });
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses a plaintext page above 1000 entries on every surface", async () => {
+    const f = await fixture();
+    try {
+      expect((await f.rest("plaintext-journal?limit=1001")).status).toBe(400);
+      await expect(f.mcp("plaintext-journal?limit=1001")).rejects.toThrow();
+      const gql = await f.gql(
+        'getLedgerPlaintextJournal(ledgerId: "alice/main", query: { limit: 1001 }) { content }',
+      );
+      expect(gql.errors?.[0]?.message).toContain(
+        "limit must be an integer from 1 to 1000",
+      );
+      expect(f.journal.plaintextJournal).not.toHaveBeenCalled();
     } finally {
       await f.close();
     }
@@ -536,4 +577,159 @@ describe("listLedgerEntries tool", () => {
       }
     },
   );
+});
+
+/**
+ * w23/006. The ledger service filters kinds by exact match, so the lowercase
+ * spelling `addLedgerEntries` takes — `"transaction"` — and any typo came back
+ * as an empty success. Every surface now matches case-insensitively and
+ * refuses an unknown kind before authorization or ledger work.
+ */
+describe("journal directive kinds", () => {
+  const loose = {
+    directiveTypes: ["transaction", "OPEN"],
+    transactionSubtypes: ["Cleared"],
+    documentSubtypes: ["LINKED"],
+    customSubtypes: ["Budget"],
+  };
+  const canonical = {
+    directive_types: ["Transaction", "Open"],
+    transaction_subtypes: ["cleared"],
+    document_subtypes: ["linked"],
+    custom_subtypes: ["budget"],
+  };
+
+  it("forwards any spelling of a kind as the ledger's own, on every surface", async () => {
+    const f = await fixture();
+    try {
+      const path = `journal?${encode(loose)}`;
+      expect((await f.rest(path)).status).toBe(200);
+      await f.mcp(path);
+      const tool = await f.tool({ directiveTypes: loose.directiveTypes });
+      expect(tool.isError).toBeFalsy();
+      const gql = await f.gql(
+        `getLedgerJournal(ledgerId: "alice/main", query: { ${gqlInput(loose)} }) { total }`,
+      );
+      expect(gql.errors).toBeUndefined();
+      const forwarded = f.journal.getJournal.mock.calls.map(
+        ([, , params]) => params,
+      );
+      expect(forwarded).toHaveLength(4);
+      for (const params of [forwarded[0], forwarded[1], forwarded[3]])
+        expect(params).toMatchObject(canonical);
+      expect(forwarded[2]).toMatchObject({
+        directive_types: canonical.directive_types,
+      });
+
+      const accountPath = `account-journal?${encode({ account: "Assets:Bank", ...loose })}`;
+      expect((await f.rest(accountPath)).status).toBe(200);
+      await f.mcp(accountPath);
+      const accountGql = await f.gql(
+        `getLedgerAccountJournal(ledgerId: "alice/main", query: { account: "Assets:Bank", ${gqlInput(loose)} }) { total }`,
+      );
+      expect(accountGql.errors).toBeUndefined();
+      for (const [, , params] of f.journal.getAccountJournal.mock.calls)
+        expect(params).toMatchObject(canonical);
+      expect(f.journal.getAccountJournal).toHaveBeenCalledTimes(3);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each([
+    { directiveTypes: ["Txn"], field: "directiveTypes" },
+    { directiveTypes: ["Transaction", "Nope"], field: "directiveTypes" },
+    { transactionSubtypes: ["settled"], field: "transactionSubtypes" },
+    { documentSubtypes: ["attached"], field: "documentSubtypes" },
+    { customSubtypes: ["forecast"], field: "customSubtypes" },
+  ])(
+    "refuses an unknown $field value as BAD_USER_INPUT before reading",
+    async ({ field, ...params }) => {
+      const f = await fixture();
+      try {
+        for (const read of ["journal", "account-journal"]) {
+          const path = `${read}?${encode({ account: "Assets:Bank", ...params })}`;
+          const rest = await f.rest(path);
+          expect(rest.status).toBe(400);
+          expect((await rest.json()).error).toMatchObject({
+            code: "BAD_USER_INPUT",
+          });
+          await expect(f.mcp(path)).rejects.toMatchObject({
+            data: { code: "BAD_USER_INPUT" },
+          });
+        }
+        const gql = await f.gql(
+          `getLedgerJournal(ledgerId: "alice/main", query: { ${gqlInput(params)} }) { total }`,
+        );
+        const error = gql.errors?.[0];
+        expect(error).toBeDefined();
+        expect(formatError(error!.toJSON(), error!).extensions).toMatchObject({
+          code: "BAD_USER_INPUT",
+          field,
+        });
+        if ("directiveTypes" in params) {
+          const tool = await f.tool(params);
+          expect(tool.isError).toBe(true);
+          expect(JSON.stringify(tool.content)).toContain("BAD_USER_INPUT");
+        }
+        expect(f.journal.getJournal).not.toHaveBeenCalled();
+        expect(f.journal.getAccountJournal).not.toHaveBeenCalled();
+        expect(f.authorize).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it("keeps an empty list as an empty filter", async () => {
+    const f = await fixture();
+    try {
+      expect(
+        (await f.rest(`journal?${encode({ directiveTypes: [] })}`)).status,
+      ).toBe(200);
+      expect(f.journal.getJournal.mock.calls[0]![2]).toMatchObject({
+        directive_types: [],
+      });
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("publishes the kinds as an enum in listLedgerEntries' input schema", async () => {
+    const f = await fixture();
+    try {
+      const server = assembleMcpRegistry(
+        {
+          identity: pinnedReadToken,
+          services: {},
+        } as unknown as McpRequestContext,
+        config,
+      );
+      const client = new Client({ name: "journal-kinds", version: "1" });
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      await Promise.all([client.connect(a), server.connect(b)]);
+      const { tools } = await client.listTools();
+      const schema = tools.find(({ name }) => name === "listLedgerEntries")
+        ?.inputSchema as unknown as {
+        properties: { directiveTypes: { items: { enum?: string[] } } };
+      };
+      expect(schema.properties.directiveTypes.items.enum).toEqual([
+        "Transaction",
+        "Balance",
+        "Commodity",
+        "Close",
+        "Custom",
+        "Document",
+        "Event",
+        "Note",
+        "Open",
+        "Pad",
+        "Price",
+      ]);
+      await client.close();
+      await server.close();
+    } finally {
+      await f.close();
+    }
+  });
 });

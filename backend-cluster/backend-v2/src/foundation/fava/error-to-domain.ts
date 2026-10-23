@@ -16,6 +16,7 @@ import {
 import { FavaApiError } from "./api-client";
 
 const LEDGER_NAME_ALREADY_EXISTS = "LEDGER_NAME_ALREADY_EXISTS";
+const LEDGER_NAME_RESERVED = "LEDGER_NAME_RESERVED";
 const DIRECTIVE_LIMIT_EXCEEDED = "DIRECTIVE_LIMIT_EXCEEDED";
 const UNBALANCED = "UNBALANCED";
 /**
@@ -25,6 +26,32 @@ const UNBALANCED = "UNBALANCED";
 const NEW_LEDGER_ERRORS = "NEW_LEDGER_ERRORS";
 const RESOURCE_LIMIT_MESSAGE =
   /^(.*?) limit reached\. Maximum: (\d+), Current: (\d+)\./i;
+
+/**
+ * What a ledger-service 404 says is missing (w23/047). It names the thing —
+ * `Entry with ID 'h' not found` — and dropping that for a bare "Ledger resource
+ * not found" told an agent holding a stale entry hash that its ledger was gone.
+ * Gitea's generic wording names nothing and keeps the old message.
+ */
+function notFoundFromUpstream(message: string): NotFoundError {
+  const named = /^(.+?) with ID '(.*)' not found$/s.exec(message);
+  if (named) {
+    const [, resource, id] = named;
+    return new NotFoundError(
+      resource,
+      id,
+      resource === "Entry"
+        ? "Entry hashes change when an entry is edited or an identical twin is deleted; read fresh ones with `listLedgerEntries`."
+        : undefined,
+    );
+  }
+  const informative =
+    message.trim() !== "" &&
+    !/^(not found|the target couldn't be found\.?)$/i.test(message.trim());
+  const notFound = new NotFoundError("Ledger resource");
+  if (informative) notFound.message = message;
+  return notFound;
+}
 
 function upstreamMessage(error: FavaApiError, fallback: string): string {
   return error.body?.error || error.message || fallback;
@@ -88,6 +115,16 @@ export function favaApiErrorToDomainError(
     });
   }
 
+  // A renamed ledger's former name: no ledger has it, so the existing-name
+  // conflict and its "listed by listLedgers" hint would be false (w23/061).
+  if (code === LEDGER_NAME_RESERVED) {
+    return new ConflictError("Ledger", message, {
+      reasonCode: LEDGER_NAME_RESERVED,
+      field: "name",
+      hint: "Choose a different ledger name. A renamed ledger's old name keeps redirecting to it, so the name stays taken; `listLedgers` lists that ledger under its new name.",
+    });
+  }
+
   const resourceLimit = resourceLimitFromError(error);
   if (resourceLimit) return resourceLimit;
 
@@ -96,7 +133,15 @@ export function favaApiErrorToDomainError(
     const named =
       (typeof details?.detail === "string" && details.detail) || message;
     const count = typeof details?.count === "number" ? details.count : 1;
-    return new NewLedgerErrorsError("entries", count, named);
+    // The ledger names the write: "add" for structured entries, "update" or
+    // "delete" for source-slice writes (w21/m1). Anything else — an older
+    // ledger service sends none — reads as the structured add it used to be.
+    const action = details?.action;
+    return new NewLedgerErrorsError(
+      action === "update" || action === "delete" ? action : "entries",
+      count,
+      named,
+    );
   }
 
   if (code === UNBALANCED) {
@@ -119,7 +164,7 @@ export function favaApiErrorToDomainError(
     case 403:
       return new ForbiddenError(message, "Ledger API");
     case 404:
-      return new NotFoundError("Ledger resource");
+      return notFoundFromUpstream(error.body?.error || "");
     case 409:
       return new ConflictError("Ledger resource", message);
     case 429:

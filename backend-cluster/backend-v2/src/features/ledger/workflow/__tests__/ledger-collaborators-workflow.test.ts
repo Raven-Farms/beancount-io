@@ -58,6 +58,10 @@ describe("LedgerCollaboratorsWorkflow authorization", () => {
       { getPublicApiClient, getApiContext, getAdminClient } as never,
       {} as never,
       { authorizeOrThrow } as never,
+      {
+        user: { getUserByUsername: jest.fn().mockResolvedValue(null) },
+      } as never,
+      {} as never,
     );
   });
 
@@ -115,6 +119,22 @@ describe("LedgerCollaboratorsWorkflow authorization", () => {
       expect(getLedgerCollaboratorPermission).not.toHaveBeenCalled();
       expect(addOrUpdateLedgerCollaborator).not.toHaveBeenCalled();
       expect(deleteLedgerCollaborator).not.toHaveBeenCalled();
+    },
+  );
+
+  // w23/038: the host answers an out-of-range page or limit with its own.
+  it.each([
+    [1, 51],
+    [0, 10],
+    [1, 2.5],
+  ])(
+    "refuses page %p and limit %p before the decision or the host",
+    async (page, limit) => {
+      await expect(
+        workflow.listCollaborators({ identity, ledgerId, page, limit }),
+      ).rejects.toMatchObject({ category: "BAD_USER_INPUT" });
+      expect(authorizeOrThrow).not.toHaveBeenCalled();
+      expect(listLedgerCollaborators).not.toHaveBeenCalled();
     },
   );
 

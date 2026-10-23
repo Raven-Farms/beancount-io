@@ -1,5 +1,7 @@
+import { SUBSCRIPTION_PERIOD_VERIFICATION_VERSION } from "./subscription-plan";
 import { StripeService } from "./stripe-service";
 import type { IPaidCustomerModel } from "@/features/stripe/data/paid-customer-model";
+import type { PaidCustomer } from "@/features/stripe/data/paid-customer-model/types";
 import type { IModels } from "@/foundation/models";
 import type Stripe from "stripe";
 import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "./stripe";
@@ -44,6 +46,7 @@ describe("StripeService", () => {
   let mockStripeCustomers: {
     retrieve: jest.Mock;
   };
+  let mockStripeSchedules: { retrieve: jest.Mock; release: jest.Mock };
   let mockStripeInstance: unknown;
 
   beforeEach(() => {
@@ -78,9 +81,15 @@ describe("StripeService", () => {
       retrieve: jest.fn(),
     };
 
+    mockStripeSchedules = {
+      retrieve: jest.fn(async () => ({ id: "sub_sched_1", status: "active" })),
+      release: jest.fn(async () => ({ id: "sub_sched_1", status: "released" })),
+    };
+
     mockStripeInstance = {
       subscriptions: mockStripeSubscriptions,
       customers: mockStripeCustomers,
+      subscriptionSchedules: mockStripeSchedules,
     };
 
     stripeUseCase = new StripeService(mockModels, mockPostgresDb);
@@ -169,9 +178,76 @@ describe("StripeService", () => {
       expect(result.message).toContain("end of the current billing period");
       expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
         subscriptionId,
-        { cancel_at_period_end: true },
+        {
+          cancel_at_period_end: true,
+          cancellation_details: { feedback: "" },
+        },
       );
       expect(mockStripeSubscriptions.cancel).not.toHaveBeenCalled();
+    });
+
+    it("records the subscriber's reason with Stripe's cancellation details", async () => {
+      mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+        id: "customer_doc_id",
+        userId,
+        clientId,
+        stripeCustomerId: "cus_123",
+      } as unknown as Awaited<
+        ReturnType<typeof mockIPaidCustomerModel.findByUserIdAndClientId>
+      >);
+      mockStripeSubscriptions.retrieve.mockResolvedValue({
+        id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
+      } as unknown as Stripe.Subscription);
+      mockStripeSubscriptions.update.mockResolvedValue({});
+
+      await stripeUseCase.cancelSubscription(
+        subscriptionId,
+        userId,
+        clientId,
+        "MISSING_FEATURES",
+      );
+
+      expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
+        subscriptionId,
+        {
+          cancel_at_period_end: true,
+          cancellation_details: { feedback: "missing_features" },
+        },
+      );
+    });
+
+    it("releases a pending scheduled change before cancelling, which Stripe would otherwise refuse", async () => {
+      mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+        id: "customer_doc_id",
+        userId,
+        clientId,
+        stripeCustomerId: "cus_123",
+      } as unknown as Awaited<
+        ReturnType<typeof mockIPaidCustomerModel.findByUserIdAndClientId>
+      >);
+      mockStripeSubscriptions.retrieve.mockResolvedValue({
+        id: subscriptionId,
+        customer: "cus_123",
+        livemode: true,
+        schedule: "sub_sched_1",
+      } as unknown as Stripe.Subscription);
+      mockStripeSubscriptions.update.mockResolvedValue({});
+
+      const result = await stripeUseCase.cancelSubscription(
+        subscriptionId,
+        userId,
+        clientId,
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockStripeSchedules.release).toHaveBeenCalledWith("sub_sched_1");
+      expect(
+        mockStripeSchedules.release.mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        mockStripeSubscriptions.update.mock.invocationCallOrder[0],
+      );
     });
 
     it("should return error when customer is not authorized", async () => {
@@ -276,6 +352,147 @@ describe("StripeService", () => {
 
       expect(result.success).toBe(false);
       expect(result.message).toContain("error occurred");
+    });
+  });
+
+  describe("lastVerifiedTier", () => {
+    const future = new Date(Date.now() + 86_400_000);
+    const binding = (overrides: Record<string, unknown>) => ({
+      id: "pc",
+      userId: "user_123",
+      clientId: BILLING_CLIENT_ID,
+      stripeCustomerId: "cus_123",
+      currentPeriodEnd: future,
+      periodVerificationVersion: SUBSCRIPTION_PERIOD_VERIFICATION_VERSION,
+      periodTier: "GROWTH",
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      (
+        mockIPaidCustomerModel as unknown as { findByUserId: jest.Mock }
+      ).findByUserId = jest.fn();
+    });
+    const withBindings = (...rows: unknown[]) =>
+      (
+        mockIPaidCustomerModel as unknown as { findByUserId: jest.Mock }
+      ).findByUserId.mockResolvedValue(rows);
+
+    it("returns the tier a current verified period paid for", async () => {
+      withBindings(binding({}));
+      await expect(stripeUseCase.lastVerifiedTier("user_123")).resolves.toBe(
+        "GROWTH",
+      );
+    });
+
+    it.each([
+      ["an expired period", { currentPeriodEnd: new Date(0) }],
+      ["an older verification", { periodVerificationVersion: 1 }],
+      ["no recorded tier", { periodTier: undefined }],
+      ["an unknown tier", { periodTier: "PLATINUM" }],
+    ])("trusts nothing with %s", async (_label, overrides) => {
+      withBindings(binding(overrides));
+      await expect(
+        stripeUseCase.lastVerifiedTier("user_123"),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("cancelScheduledPlanChange", () => {
+    const userId = "user_123";
+    const clientId = BILLING_CLIENT_ID;
+    const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
+    const PREMIUM_MONTHLY = "price_1RrSOGEqsEqs2tLVFnyB34qG";
+    const pending = {
+      id: "sub_sched_1",
+      status: "active",
+      current_phase: { start_date: 1, end_date: 2 },
+      phases: [
+        { start_date: 1, items: [{ price: GROWTH_MONTHLY }] },
+        { start_date: 2, items: [{ price: PREMIUM_MONTHLY }] },
+      ],
+    };
+    const subscriptionOn = (schedule: unknown) => ({
+      id: "sub_1",
+      customer: "cus_123",
+      livemode: true,
+      status: "active",
+      schedule,
+      items: { data: [{ id: "si_1", price: { id: GROWTH_MONTHLY } }] },
+    });
+
+    beforeEach(() => {
+      stripeUseCase.getStripeInstance = jest
+        .fn()
+        .mockReturnValue(mockStripeInstance);
+      mockIPaidCustomerModel.findByUserIdAndClientId.mockResolvedValue({
+        userId,
+        clientId,
+        stripeCustomerId: "cus_123",
+      } as unknown as Awaited<
+        ReturnType<typeof mockIPaidCustomerModel.findByUserIdAndClientId>
+      >);
+    });
+
+    it("releases the schedule and leaves the current plan as it is", async () => {
+      mockStripeSubscriptions.list.mockResolvedValue({
+        data: [subscriptionOn(pending)],
+      });
+
+      const result = await stripeUseCase.cancelScheduledPlanChange(
+        userId,
+        clientId,
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockStripeSchedules.release).toHaveBeenCalledWith("sub_sched_1");
+      expect(mockStripeSubscriptions.update).not.toHaveBeenCalled();
+    });
+
+    it("is a harmless success when nothing is scheduled, so a repeated undo is fine", async () => {
+      mockStripeSubscriptions.list.mockResolvedValue({
+        data: [subscriptionOn(null)],
+      });
+
+      await expect(
+        stripeUseCase.cancelScheduledPlanChange(userId, clientId),
+      ).resolves.toEqual({
+        success: true,
+        message: "No plan change is scheduled.",
+      });
+      expect(mockStripeSchedules.release).not.toHaveBeenCalled();
+    });
+
+    it("refuses to guess between two active subscriptions", async () => {
+      mockStripeSubscriptions.list.mockResolvedValue({
+        data: [
+          subscriptionOn(pending),
+          { ...subscriptionOn(pending), id: "sub_2" },
+        ],
+      });
+
+      const result = await stripeUseCase.cancelScheduledPlanChange(
+        userId,
+        clientId,
+      );
+
+      expect(result.success).toBe(false);
+      expect(mockStripeSchedules.release).not.toHaveBeenCalled();
+    });
+
+    it("reports a Stripe failure without throwing", async () => {
+      mockStripeSubscriptions.list.mockResolvedValue({
+        data: [subscriptionOn(pending)],
+      });
+      mockStripeSchedules.release.mockRejectedValueOnce(new Error("boom"));
+
+      const result = await stripeUseCase.cancelScheduledPlanChange(
+        userId,
+        clientId,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("try again");
     });
   });
 
@@ -485,7 +702,10 @@ describe("StripeService", () => {
       expect(result.message).toContain("resumed successfully");
       expect(mockStripeSubscriptions.update).toHaveBeenCalledWith(
         subscriptionId,
-        { cancel_at_period_end: false },
+        {
+          cancel_at_period_end: false,
+          cancellation_details: { feedback: "" },
+        },
       );
     });
 
@@ -701,6 +921,57 @@ describe("StripeService", () => {
         expect.objectContaining({ status: "active" }),
       );
     });
+    // Stripe's default listing (no `status`) is every subscription that is
+    // not canceled, which is how a past-due one reaches the tier check; its
+    // grace is read from latest_invoice.next_payment_attempt.
+    it.each([
+      [
+        "a tier lookup",
+        { status: "current" },
+        undefined,
+        ["data.latest_invoice"],
+      ],
+      [
+        "a current read for Billing status",
+        { status: "current", expandForStatus: true },
+        undefined,
+        ["data.schedule", "data.latest_invoice"],
+      ],
+      [
+        "the full Billing view",
+        { status: "all", expandForStatus: true },
+        "all",
+        ["data.schedule", "data.latest_invoice"],
+      ],
+    ] as const)(
+      "asks Stripe for %s with the latest invoice a past-due grace needs",
+      async (_label, options, status, expand) => {
+        const binding = {
+          userId,
+          clientId: BILLING_CLIENT_ID,
+          stripeCustomerId: "cus_123",
+        } as unknown as PaidCustomer;
+        mockStripeSubscriptions.list.mockResolvedValue({
+          has_more: false,
+          data: [],
+        });
+
+        await stripeUseCase.listSubscriptions(userId, {
+          ...options,
+          bindings: [binding],
+        });
+
+        expect(mockStripeSubscriptions.list).toHaveBeenCalledTimes(1);
+        const [params] = mockStripeSubscriptions.list.mock.calls[0];
+        expect(params.customer).toBe("cus_123");
+        if (status) expect(params.status).toBe(status);
+        else expect(params).not.toHaveProperty("status");
+        expect(params.expand).toEqual(expect.arrayContaining([...expand]));
+        expect(
+          mockIPaidCustomerModel.findByUserIdAndClientId,
+        ).not.toHaveBeenCalled();
+      },
+    );
     it.each([
       { customer: "cus_foreign", livemode: true },
       { customer: "cus_123", livemode: false },
@@ -1210,9 +1481,12 @@ describe("StripeService", () => {
       expect(result.success).toBe(true);
       expect(result.sessionId).toBe("session_123");
       expect(result.sessionUrl).toBe("https://billing.stripe.com/session/123");
+      // Pinned, so the portal offers no plan switch or cancellation.
       expect(mockStripeBillingPortal.sessions.create).toHaveBeenCalledWith({
         customer: "cus_123",
-        return_url: expect.any(String),
+        return_url: "https://beancount.io/settings/billing",
+        configuration:
+          SUBSCRIPTION_CONFIG[BILLING_CLIENT_ID].portalConfigurationId,
       });
     });
 

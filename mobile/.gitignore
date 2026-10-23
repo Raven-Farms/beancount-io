@@ -73,6 +73,9 @@ expo-env.d.ts
 # @end expo-cli
 
 ios
+# The app's own iOS permission strings (app.json expo.locales), not the
+# generated native project the pattern above is for (w21/359).
+!locales/ios/
 android
 !fastlane/metadata/android
 dist

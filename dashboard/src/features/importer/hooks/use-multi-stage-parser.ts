@@ -9,6 +9,7 @@ import { useState, useCallback, useRef } from "react";
 import { useCSVParser } from "./use-csv-parser";
 import { useLLMParser } from "./use-llm-parser";
 import { detectFileFormat } from "../utils/file-format-detector";
+import { CsvEncodingError } from "../utils/decode-csv-bytes";
 import type { CSVParseResult, ParseStage, FileFormat } from "../types";
 
 export function useMultiStageParser() {
@@ -57,14 +58,21 @@ export function useMultiStageParser() {
       try {
         const result = await csvParser.parseFile(file);
 
-        // Keep recognized CSV rows for repair when any amount failed the
-        // representability guard — even if validCount is 0. AI parsing
-        // would re-stringify already-rounded Numbers.
+        // Keep CSV rows for repair even if validCount is 0 when the parser
+        // read their columns (w4/961) or an amount failed the
+        // representability guard, which AI parsing would re-stringify.
         if (result.validCount > 0 || result.blockLlmFallback) {
           setStage("complete");
           return result;
         }
       } catch (err) {
+        // Bytes in another encoding are not the AI's to guess either: the
+        // user re-saves the file as UTF-8 (w4/278).
+        if (err instanceof CsvEncodingError) {
+          setError(err);
+          setStage("error");
+          throw err;
+        }
         console.warn("Client-side CSV parsing failed", err);
       }
       // Never spend AI tokens on a CSV without asking (w3/643).

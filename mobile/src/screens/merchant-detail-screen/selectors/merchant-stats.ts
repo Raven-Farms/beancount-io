@@ -5,12 +5,13 @@
  * Free of `@/` value imports so the jest-lite runner can require it.
  */
 
-import { escapeBqlString } from "./escape-bql-string";
+import { bqlPayeeEquals } from "./escape-bql-string";
 import {
   asCount,
   asNumber,
   asString,
   columnIndex,
+  moneyRootsBqlFilter,
   type QueryResultTableLike,
 } from "../../merchants-screen/selectors/bql-table";
 
@@ -32,25 +33,40 @@ export interface MerchantStats {
  * so multi-posting transactions are not overstated (posting-default `count(*)`
  * matched the Merchants directory bug).
  */
-export function buildMerchantMetaBql(payee: string): string {
-  const lit = escapeBqlString(payee);
+export function buildMerchantMetaBql(
+  payees: string | readonly string[],
+): string {
   return (
     "SELECT count(*) as transaction_count, " +
     "min(date) as first_date, max(date) as last_date " +
-    `FROM #entries WHERE payee = ${lit}`
+    `FROM #entries WHERE ${anyPayee(payees)}`
   );
+}
+
+/**
+ * A predicate matching any of a merchant's spellings exactly. The directory
+ * merges case variants into one row, so its detail must count all of them
+ * (w21/046); one spelling keeps the plain comparison.
+ */
+function anyPayee(payees: string | readonly string[]): string {
+  const list = typeof payees === "string" ? [payees] : payees;
+  return list.length === 1
+    ? bqlPayeeEquals(list[0]!)
+    : `(${list.map(bqlPayeeEquals).join(" OR ")})`;
 }
 
 /**
  * Per-currency signed totals from Expenses/Income legs only — balance-sheet
  * counterparts would cancel. Never summed across currencies by the selector.
  */
-export function buildMerchantCurrencyTotalsBql(payee: string): string {
-  const lit = escapeBqlString(payee);
+export function buildMerchantCurrencyTotalsBql(
+  payees: string | readonly string[],
+  roots?: { expenses?: string; income?: string },
+): string {
   return (
     "SELECT currency, sum(number) as total " +
-    `WHERE payee = ${lit} ` +
-    "AND (account ~ '^Expenses' OR account ~ '^Income') " +
+    `WHERE ${anyPayee(payees)} ` +
+    `AND ${moneyRootsBqlFilter(roots)} ` +
     "GROUP BY currency ORDER BY currency"
   );
 }

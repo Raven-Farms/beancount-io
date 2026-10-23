@@ -6,6 +6,7 @@ import {
 import {
   customerId,
   subscriptionPeriodEnd,
+  holdsPaidTier,
   subscriptionTier,
   type ClientSubscription,
 } from "../src/features/stripe/service/subscription-plan";
@@ -72,7 +73,7 @@ export async function planUserRepair(
           !sub.livemode ||
           sub.clientId !== row.clientId ||
           customerId(sub.customer) !== row.stripeCustomerId ||
-          (sub.status === "active" &&
+          (holdsPaidTier(sub) &&
             subscriptionTier(sub) === SubscriptionTier.FREE),
       )
     ) {

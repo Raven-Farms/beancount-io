@@ -5,10 +5,12 @@ from __future__ import annotations
 import datetime
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Context, Decimal
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 from beancount.core import account as beancount_account
 from beancount.core.amount import Amount as BcAmount
@@ -28,7 +30,7 @@ from beancount.core.data import (
     Query,
     Transaction,
 )
-from beancount.core.position import CostSpec, cost_to_str
+from beancount.core.position import Cost, CostSpec, cost_to_str
 from beancount.core.number import MISSING
 from beancount.parser.printer import EntryPrinter
 from beancount.utils import misc_utils
@@ -114,12 +116,29 @@ class DirectivePrinter(EntryPrinter):
         return str(super().__call__(entry))  # type: ignore[no-untyped-call]
 
     def render_posting_strings(self, posting: Any) -> tuple[str, str, str]:
+        units = posting.units
+        if units is not None and units is not MISSING and getattr(units, "currency", None) is MISSING:
+            # A stated number with its currency left to interpolation: upstream
+            # prints the sentinel class, which no ledger can hold (w5/926).
+            placeholder = " \u0000currency"
+            flag_account, position_str, weight_str = super().render_posting_strings(  # type: ignore[no-untyped-call]
+                posting._replace(units=BcAmount(units.number, placeholder.strip()))
+            )
+            return flag_account, position_str.replace(placeholder, "", 1), weight_str
         flag_account, position_str, weight_str = super().render_posting_strings(posting)  # type: ignore[no-untyped-call]
         if isinstance(posting.cost, CostSpec):
             dropped = cost_to_str(posting.cost, self.dformat, True)  # type: ignore[no-untyped-call]
             faithful = _cost_spec_text(posting.cost, self.dformat)
             if faithful != dropped:
                 position_str = position_str.replace(f"{{{dropped}}}", f"{{{faithful}}}", 1)
+        elif isinstance(posting.cost, Cost) and posting.cost.label == "":
+            # A booked cost is what a loaded ledger holds, so query exports and
+            # a native importer's resolved lots reach here; upstream drops its
+            # empty label, merging a lot the ledger kept apart (w5/915).
+            booked = posting.cost
+            spec = CostSpec(booked.number, None, booked.currency, booked.date, booked.label, False)
+            dropped = cost_to_str(booked, self.dformat, True)  # type: ignore[no-untyped-call]
+            position_str = position_str.replace(f"{{{dropped}}}", f"{{{_cost_spec_text(spec, self.dformat)}}}", 1)
         total = (posting.meta or {}).get(TOTAL_PRICE_META)
         if total is None:
             return flag_account, position_str, weight_str
@@ -162,18 +181,25 @@ class _CustomValueDecimal(Decimal):
 
     def __str__(self) -> str:
         text = Decimal.__format__(self, "f")
-        return f"({text})" if self.is_signed() and text != "-0" else text
+        return f"({text})" if self.is_signed() else text
 
     def __format__(self, spec: str, context: Context | None = None, /) -> str:
         del spec, context  # Every custom value is written at its own exact precision.
         return self.__str__()
 
 
+def _unsigned_zero(value: Decimal) -> Decimal:
+    """Zero without a sign: `-0.00` renders parenthesized but reloads as `0.00` (w5/729)."""
+    return value.copy_abs() if value.is_zero() else value
+
+
 def _custom_value(value: Any) -> Any:
     """One custom value, rendered so the written line reloads as the same value."""
     if isinstance(value, BcAmount) and isinstance(value.number, Decimal):
-        return value._replace(number=_CustomValueDecimal(value.number))
-    return _CustomValueDecimal(value) if isinstance(value, Decimal) else value
+        return value._replace(number=_CustomValueDecimal(_unsigned_zero(value.number)))
+    if isinstance(value, Decimal):
+        return _CustomValueDecimal(_unsigned_zero(value))
+    return value
 
 
 def _cost_spec_text(cost: Any, dformat: Any) -> str:
@@ -202,7 +228,7 @@ def _cost_spec_text(cost: Any, dformat: Any) -> str:
         parts.append(" ".join(amounts))
     if cost.date:
         parts.append(cost.date.isoformat())
-    if cost.label:
+    if cost.label is not None:
         parts.append(f'"{cost.label}"')
     if cost.merge:
         parts.append("*")
@@ -211,6 +237,48 @@ def _cost_spec_text(cost: Any, dformat: Any) -> str:
 
 def _fixed_point_metadata(meta: dict[str, Any] | None) -> dict[str, Any]:
     return {key: _fixed_point(value) for key, value in (meta or {}).items()}
+
+
+#: Asks which `(account, label)` short lots the ledger being written holds; set around a write.
+_SHORT_LOT_LABELS: ContextVar[Callable[[], frozenset[tuple[str, str]]]] = ContextVar(
+    "short_lot_labels", default=lambda: frozenset()
+)
+
+
+def held_short_lot_labels(entries: Iterable[Any]) -> frozenset[tuple[str, str]]:
+    """The labelled lots the entries leave short: net negative units per account, commodity and label."""
+    nets: dict[tuple[str, str, str], Decimal] = {}
+    for entry in entries:
+        if not isinstance(entry, Transaction):
+            continue
+        for posting in entry.postings:
+            label = getattr(posting.cost, "label", None)
+            if not label or posting.units is None or posting.units.number is None:
+                continue
+            key = (posting.account, posting.units.currency, label)
+            nets[key] = nets.get(key, Decimal(0)) + posting.units.number
+    return frozenset((account, label) for (account, _, label), net in nets.items() if net < 0)
+
+
+@contextmanager
+def short_lot_labels(entries: Callable[[], Iterable[Any]]) -> Any:
+    """Make the ledger's short labelled lots known to `normalize_entry_strings` for one write (w5/925).
+
+    `entries` is called at most once, and only when a positive posting carries a
+    lot label, so a write that has none never reads the ledger for this.
+    """
+    memo: list[frozenset[tuple[str, str]]] = []
+
+    def labels() -> frozenset[tuple[str, str]]:
+        if not memo:
+            memo.append(held_short_lot_labels(entries()))
+        return memo[0]
+
+    token = _SHORT_LOT_LABELS.set(labels)
+    try:
+        yield
+    finally:
+        _SHORT_LOT_LABELS.reset(token)
 
 
 def normalize_entry_strings(entry: Any) -> Any:
@@ -231,8 +299,27 @@ def normalize_entry_strings(entry: Any) -> Any:
     def posting_strings(posting: Posting) -> Posting:
         # A lot label sits right before `@ price`, where a bidi override would
         # reorder how the rest of the row reads; it was written raw (w5/542).
+        # A reduction's label is the exception: it selects an existing lot,
+        # so escaping it would select nothing — it is matched, and written,
+        # exactly as typed (w5/733).
         cost: Any = posting.cost
-        if isinstance(getattr(cost, "label", None), str):
+        units: Any = posting.units
+        known = units is not None and units is not MISSING and getattr(units, "number", MISSING) is not MISSING
+        label = getattr(cost, "label", None)
+        # Negative units sell a lot; positive units cover one only when the
+        # ledger holds that short lot, which only the ledger can say (w5/925).
+        # Asked only for a labelled positive posting: any other write never
+        # reads the ledger for this.
+        reduction = known and (
+            units.number < 0
+            or (
+                units.number > 0
+                and isinstance(label, str)
+                and bool(label)
+                and (posting.account, label) in _SHORT_LOT_LABELS.get()()
+            )
+        )
+        if not reduction and isinstance(getattr(cost, "label", None), str):
             posting = posting._replace(cost=cost._replace(label=single_line(cost.label)))
         return posting._replace(meta=metadata(posting.meta))
 
@@ -321,11 +408,20 @@ def _append(
     allow_errors: bool = False,
     into: Path | None = None,
     snapshot: ledger_write.LedgerSnapshot | None = None,
+    stages_pad: bool = False,
 ) -> list[str]:
-    return ledger_write.append(file_path, list(texts), allow_errors=allow_errors, into=into, snapshot=snapshot)
+    return ledger_write.append(
+        file_path, list(texts), allow_errors=allow_errors, into=into, snapshot=snapshot, stages_pad=stages_pad
+    )
 
 
-def format_transaction(directive: TransactionHeader) -> str:
+def format_transaction(directive: TransactionHeader, *, loaded: bool = False) -> str:
+    """A transaction model as Beancount text.
+
+    `loaded` renders an entry the ledger already holds as it holds it: the
+    write sanitizer turned a TAB into a literal `\\x09` and a line break into
+    a space, so `list --details` showed strings that parse back as others (w5/834).
+    """
     postings = []
     for p in directive.postings:
         # The schema forbids price and price_total together; a total travels
@@ -346,7 +442,13 @@ def format_transaction(directive: TransactionHeader) -> str:
         postings.append(
             Posting(
                 account=p.account,
-                units=BcAmount(p.units.number, p.units.currency) if p.units else None,
+                # A null number interpolates at booking, as the flag spelling
+                # does; the printer reads MISSING, not None (w5/801).
+                units=BcAmount(
+                    cast(Decimal, p.units.number if p.units.number is not None else MISSING), p.units.currency
+                )
+                if p.units
+                else None,
                 cost=cost,
                 price=price,
                 flag=p.flag,
@@ -363,6 +465,8 @@ def format_transaction(directive: TransactionHeader) -> str:
         links=frozenset(directive.links),
         postings=postings,
     )
+    if loaded:
+        return str(DirectivePrinter()(entry))  # type: ignore[no-untyped-call]
     return str(format_entry(entry))
 
 
@@ -409,10 +513,15 @@ def write_open(
 
 
 def write_close(
-    file_path: Path, directive: CloseDirective, *, allow_errors: bool = False, into: Path | None = None
+    file_path: Path,
+    directive: CloseDirective,
+    *,
+    allow_errors: bool = False,
+    into: Path | None = None,
+    snapshot: ledger_write.LedgerSnapshot | None = None,
 ) -> list[str]:
     entry = Close(meta={}, date=directive.date, account=directive.account)
-    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into)
+    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into, snapshot=snapshot)
 
 
 def write_balance(
@@ -438,7 +547,7 @@ def write_pad(
     file_path: Path, directive: PadDirective, *, allow_errors: bool = False, into: Path | None = None
 ) -> list[str]:
     entry = Pad(meta={}, date=directive.date, account=directive.account, source_account=directive.source_account)
-    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into)
+    return _append(file_path, format_entry(entry), allow_errors=allow_errors, into=into, stages_pad=True)
 
 
 def write_note(
@@ -500,9 +609,9 @@ def write_custom(
         if isinstance(v, CustomDirectiveValueText):
             values.append(_ValueType(value=v.value, dtype=str))
         elif isinstance(v, CustomDirectiveValueNumber):
-            values.append(_ValueType(value=v.value, dtype=Decimal))
+            values.append(_ValueType(value=_unsigned_zero(v.value), dtype=Decimal))
         elif isinstance(v, CustomDirectiveValueAmount):
-            values.append(_ValueType(value=BcAmount(v.number, v.currency), dtype=BcAmount))
+            values.append(_ValueType(value=BcAmount(_unsigned_zero(v.number), v.currency), dtype=BcAmount))
         elif isinstance(v, CustomDirectiveValueAccount):
             values.append(_ValueType(value=v.value, dtype=beancount_account.TYPE))  # type: ignore[arg-type]
         elif isinstance(v, CustomDirectiveValueBoolean):

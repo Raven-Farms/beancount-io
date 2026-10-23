@@ -31,6 +31,14 @@ function isAmountCell(cell: CellValue): cell is AmountValue {
   );
 }
 
+/** Digits after the decimal point as written, an exponent moving the point. */
+function writtenScale(source: string): number {
+  const match = /^[+-]?(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/u.exec(source);
+  if (!match) return 0;
+  const fraction = match[2]?.length ?? 0;
+  return Math.max(0, fraction - Number(match[3] ?? 0));
+}
+
 /**
  * Port of fava's `simple_units`: reduce a list of `{ number, currency }` units
  * to a `{ currency: number }` map, summing per currency and **dropping zero
@@ -50,8 +58,13 @@ function unitsToCurrencyMap(units: AmountValue[]): CurrencyMap {
     if (total.isZero()) return; // fava drops zero-net balances
     // Preserve the original decimal formatting (e.g. "2950.00") when a currency
     // has a single position — the common case for these grouped holdings rows;
-    // only a repeated currency needs BigNumber's summed (re-normalised) form.
-    out[currency] = numbers.length === 1 ? numbers[0] : total.toString();
+    // a repeated currency is summed at the widest scale written, as the tree and
+    // series serializers do: `toString()` sent `5e-7` and dropped trailing zeros
+    // (`1250.50` → `1250.5`) (w21/125, w21/329).
+    out[currency] =
+      numbers.length === 1
+        ? numbers[0]
+        : total.toFixed(Math.max(...numbers.map(writtenScale)));
   });
   return out;
 }

@@ -235,6 +235,12 @@ const ruReceipt: Record<string, TranslationEntry> = {
     message: "Не удалось записать транзакцию по чеку",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "Возможно, она всё же была записана — проверьте Журнал, прежде чем записывать её снова.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default ruReceipt;

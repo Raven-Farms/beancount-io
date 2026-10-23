@@ -11,13 +11,17 @@ import {
   isPreviewableTextContent,
 } from "../../../shared/lib/utils";
 import { TextFileView } from "./text-file-view";
+import { isStrictUtf8 } from "@/common/lib/utils/encode";
+
+type FileRevision = NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
 
 export interface FileContentViewProps {
   filePath: string;
-  fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
-  onSave: (content: string) => Promise<void>;
+  fileContent: FileRevision;
+  /** Saves `content` against `base`, the revision it was edited from. */
+  onSave: (content: string, base: FileRevision) => Promise<void>;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   isSaving: boolean;
   isEditMode?: boolean;
   lineNumber?: number;
@@ -56,6 +60,13 @@ export function FileContentView({
     [fileType, fileContent.content, fileContent.size],
   );
 
+  // A known text type is only editable when its bytes really are UTF-8;
+  // otherwise saving would replace them with U+FFFD (w4/276).
+  const decodableText = useMemo(
+    () => fileType !== "text" || isStrictUtf8(fileContent.content),
+    [fileType, fileContent.content],
+  );
+
   // Delegate to appropriate view component based on file type
   if (fileType === "image") {
     return (
@@ -73,6 +84,17 @@ export function FileContentView({
         filePath={filePath}
         fileContent={fileContent}
         onDelete={onDelete}
+      />
+    );
+  }
+
+  if (!decodableText) {
+    return (
+      <UnknownFileView
+        filePath={filePath}
+        fileContent={fileContent}
+        onDelete={onDelete}
+        reason="notUtf8"
       />
     );
   }

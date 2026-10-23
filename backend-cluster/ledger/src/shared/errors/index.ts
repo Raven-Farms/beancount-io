@@ -35,6 +35,7 @@ export {
   NotFoundError,
   BadUserInputError,
   UnbalancedTransactionError,
+  LedgerNameReservedError,
   ValidationError,
   ConflictError,
   RateLimitedError,
@@ -44,4 +45,5 @@ export {
   OperationNotAllowedError,
   PremiumRequiredError,
   NewLedgerErrorsError,
+  type LedgerWriteAction,
 } from "./domain-errors";

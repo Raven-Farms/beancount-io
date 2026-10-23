@@ -235,6 +235,12 @@ const deReceipt: Record<string, TranslationEntry> = {
     message: "Belegbuchung konnte nicht erfasst werden",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "Möglicherweise wurde sie trotzdem erfasst. Prüfen Sie das Journal, bevor Sie sie erneut erfassen.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default deReceipt;

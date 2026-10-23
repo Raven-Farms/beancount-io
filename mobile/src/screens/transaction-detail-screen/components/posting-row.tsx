@@ -16,7 +16,11 @@ import {
 } from "@/common/theme";
 import { AmountText } from "@/components/amount-text";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
-import { PostingDisplayRow } from "../selectors/select-transaction-detail";
+import {
+  PostingDisplayRow,
+  postingBasisText,
+} from "../selectors/select-transaction-detail";
+import { useTranslations } from "@/common/hooks/use-translations";
 import {
   directionalIcon,
   LEADING_TEXT_ALIGN,
@@ -66,11 +70,49 @@ const getStyles = (theme: ColorTheme) =>
       fontFamily: fonts.mono,
       color: theme.text01,
       textAlign: LEADING_TEXT_ALIGN,
+      flexShrink: 1,
+    },
+    metaLine: {
+      fontSize: fontSizes.xs,
+      fontFamily: fonts.mono,
+      color: theme.black80,
+      marginTop: 2,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
+    accountLine: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    // The list row's pending "P", on the leg the `!` is on (w21/161).
+    badge: {
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 4,
+      backgroundColor: theme.warning,
+    },
+    badgeText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.medium,
+      color: theme.onWarning,
     },
     amount: {
       fontSize: fontSizes.md,
       flexShrink: 0,
       color: theme.text01,
+    },
+    amountColumn: {
+      flexShrink: 0,
+      alignItems: "flex-end",
+      // The basis line wraps here instead of squeezing the account name to
+      // an ellipsis (w21/160).
+      maxWidth: "60%",
+    },
+    basis: {
+      fontSize: fontSizes.xs,
+      color: theme.black80,
+      marginTop: 2,
+      textAlign: "right",
     },
     stackedAmountLine: {
       flexDirection: "row",
@@ -97,11 +139,16 @@ export function PostingRow({
   const theme = useTheme().colorTheme;
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
+  const { t } = useTranslations();
+  const basis = postingBasisText(posting, t);
 
   const amount = (
-    <AmountText mono="medium" style={styles.amount}>
-      {posting.amount}
-    </AmountText>
+    <View style={styles.amountColumn}>
+      <AmountText mono="medium" style={styles.amount}>
+        {posting.amount}
+      </AmountText>
+      {basis ? <Text style={styles.basis}>{basis}</Text> : null}
+    </View>
   );
   const chevron = (
     <Ionicons
@@ -121,7 +168,7 @@ export function PostingRow({
       onPress={onPress}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}`}
+      accessibilityLabel={`${directionLabel ? `${directionLabel}: ` : ""}${posting.account}, ${posting.amount}${basis ? `, ${basis}` : ""}${posting.pending ? `, ${t("pending")}` : ""}${posting.meta ? `, ${posting.meta.join(", ")}` : ""}`}
     >
       <View
         style={[styles.accountColumn, stacked && styles.accountColumnStacked]}
@@ -133,9 +180,23 @@ export function PostingRow({
             {directionLabel}
           </Text>
         ) : null}
-        <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
-          {posting.account}
-        </Text>
+        <View style={styles.accountLine}>
+          <Text style={styles.account} numberOfLines={1} ellipsizeMode="middle">
+            {posting.account}
+          </Text>
+          {posting.pending ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>!</Text>
+            </View>
+          ) : null}
+        </View>
+        {posting.meta?.map((line) => (
+          // Whole and selectable: a posting's `receipt: "https://…"` of 120
+          // characters ended in "…" and could not be copied (w21/604).
+          <Text style={styles.metaLine} key={line} selectable>
+            {line}
+          </Text>
+        ))}
       </View>
       {stacked ? (
         <View style={styles.stackedAmountLine}>

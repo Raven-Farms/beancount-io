@@ -69,13 +69,15 @@ def ask(
     # The missing extra is checked before the credential: without it the
     # command cannot run at all, and "log in first" would be misleading advice.
     try:
-        from cli.ask.agent import CUT_OFF_NOTICE, BqlDeps, cut_off, make_agent, translated_failures, usage_limits
+        from cli.ask.agent import BqlDeps, cut_off_notice, make_agent, translated_failures, usage_limits
     except ImportError as exc:
         raise UsageError(_MISSING_EXTRA) from exc
 
     from cli.auth.credentials import require_credentials
 
     creds = require_credentials()
+
+    from httpx import InvalidURL
 
     from cli.ask.skills import load_skills, project_skills_notice
     from cli.config import settings
@@ -90,11 +92,11 @@ def ask(
             api_key=creds.token,
             skills=skills,
         )
-    except ImportError as exc:
-        # A SOCKS proxy in the environment, as for the cloud commands (w5/518).
-        from cli.errors import socks_proxy_refusal
+    except (ImportError, ValueError, InvalidURL) as exc:
+        # Proxy configuration fails before a model request, as for cloud.
+        from cli.errors import proxy_refusal
 
-        refusal = socks_proxy_refusal(exc)
+        refusal = proxy_refusal(exc)
         if refusal is None:
             raise
         raise refusal from None
@@ -103,15 +105,16 @@ def ask(
     if print_mode or ctx.no_input:
         from rich.console import Console
 
-        from cli.ask.render import answer_markdown
+        from cli.ask.render import answer_console, answer_markdown
 
         console = Console()
         with console.status("[dim]Thinking…[/dim]", spinner="dots"), translated_failures(deps):
             result = agent.run_sync(question, deps=deps, usage_limits=usage_limits())
-        console.print(answer_markdown(result.output))
-        if cut_off(result):
+        answer_console(result.output).print(answer_markdown(result.output))
+        notice = cut_off_notice(result)
+        if notice is not None:
             # Part of an answer is not the answer: a nonzero exit says so (w5/546).
-            raise BeaError(CUT_OFF_NOTICE)
+            raise BeaError(notice)
     else:
         from cli.ask.repl import print_welcome, run_repl
 

@@ -41,6 +41,15 @@ PLAIN = """option "operating_currency" "USD"
   Assets:Cash  5.00 USD
   Equity:Opening
 """
+RAW = """option "operating_currency" "USD"
+option "plugin_processing_mode" "raw"
+2026-01-01 open Assets:Cash USD
+2026-01-01 open Equity:Opening
+2026-01-02 * "funding"
+  Assets:Cash  1000.00 USD
+  Equity:Opening
+2026-01-03 balance Assets:Cash 999.00 USD
+"""
 
 
 def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -77,8 +86,9 @@ def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
                 'option "inferred_tolerance_default" "USD:0.05"',
             ],
         ),
+        (RAW, ['option "plugin_processing_mode" "raw"']),
     ],
-    ids=["renamed-roots", "tolerance"],
+    ids=["renamed-roots", "tolerance", "raw-mode"],
 )
 def test_the_export_of_a_valid_ledger_rechecks(tmp_path: Path, ledger: str, options: list[str]) -> None:
     (tmp_path / "main.bean").write_text(ledger)

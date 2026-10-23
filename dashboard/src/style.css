@@ -6,6 +6,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The selected look of a pressed, highlighted or chosen control in forced
+   colors (w4/m43). Add it behind the control's own state variant, such as
+   `aria-pressed:forced-selected` or `data-[state=active]:forced-selected`.
+   The user's palette replaces author colours, so a selected fill or shadow
+   painted like its neighbours; system colours survive, so the selection
+   claims Highlight. The browser still drew a Canvas backplate behind text,
+   which hid the label on that fill, so this element alone opts out of
+   adjustment and paints what forced colors would, with the system pair. Its
+   descendants no longer adjust either, so they lose their author fills and
+   take HighlightText. Important, so `dark:` and hover rules cannot bring
+   author colours back. */
+@utility forced-selected {
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    border-color: Highlight !important;
+    background-color: Highlight !important;
+    color: HighlightText !important;
+    box-shadow: none !important;
+
+    & * {
+      background-color: transparent !important;
+      color: HighlightText !important;
+    }
+  }
+}
+
 /* Brand: #5FC535 — a vivid green, at oklch(0.7344 0.2016 138.3122).
    It is used VERBATIM in dark mode, where it sits at 8.8:1 on the dark ground.
    Light mode CANNOT use it as-is: at L=0.73 it gives only 2.2:1 against white,

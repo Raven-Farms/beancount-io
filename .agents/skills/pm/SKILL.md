@@ -2,6 +2,7 @@
 name: pm
 description: Arrange the repository's public .pm adoption board — show status, create workstreams, capture inbox notes, promote notes into milestones, add tasks, mark work done, park blocked work with its unblock condition, and drop work that should no longer be done. Use only when the user explicitly invokes $pm or asks to update, arrange, or check the .pm board. Do not use for proposing or brainstorming new work (that is pm-brainstorm) or for ordinary code edits.
 allowed-tools: Read, Write, Edit, Bash(ls:*), Bash(find:*), Bash(cat:*)
+metadata: {"internal": true}
 ---
 
 # Task: Arrange the `.pm` board

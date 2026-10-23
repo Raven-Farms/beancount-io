@@ -53,8 +53,10 @@ export default function PRReviewPage() {
             t("pullRequests.approveError"),
         );
       }
-    } catch {
-      toast.error(t("pullRequests.approveError"));
+    } catch (error) {
+      // A refusal the app has words for (a plan limit, missing permission, an
+      // outage) is named; anything else keeps the action's own failure text.
+      toast.error(t(getErrorMessageKey(error, "pullRequests.approveError")));
     }
   };
 
@@ -73,8 +75,8 @@ export default function PRReviewPage() {
             t("pullRequests.rejectError"),
         );
       }
-    } catch {
-      toast.error(t("pullRequests.rejectError"));
+    } catch (error) {
+      toast.error(t(getErrorMessageKey(error, "pullRequests.rejectError")));
     }
   };
 

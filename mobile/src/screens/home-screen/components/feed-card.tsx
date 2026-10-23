@@ -1,16 +1,35 @@
 import { useEffect } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, fontWeights } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { LoadingTile } from "@/components/loading-tile";
+import { FeedSkeleton } from "./home-skeletons";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components/dashboard-card";
 import { useGetFeedQuery } from "@/generated-graphql/graphql";
 import { FeedSource } from "@/generated-graphql/types";
 import { formatFeedDate } from "@/common/date-format";
-import { feedSourceLabelKey } from "./feed-logic";
+import {
+  feedQueryVariables,
+  feedDateIsCalendarDay,
+  feedRowAction,
+  feedSourceLabelKey,
+  feedCardIsEmpty,
+  feedRowDetail,
+  sortFeedItems,
+} from "./feed-logic";
+import { useApolloClient } from "@apollo/client";
+import { useCurrentUser } from "@/common/hooks/use-current-user";
+import { getServerUrl } from "@/common/vars/server-url";
+import { openAppLinkTarget } from "@/common/app-links/open-app-link";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
 
@@ -37,7 +56,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     metaText: {
       fontSize: fontSizes.xs,
-      color: theme.black60,
+      color: theme.black80,
     },
   });
 
@@ -46,34 +65,71 @@ type FeedRowProps = {
   link: string;
   publishedAt: unknown;
   source: FeedSource;
+  subtitle: string | null;
+  byline: string | null;
   isFirst: boolean;
 };
 
-function FeedRow({ title, link, publishedAt, source, isFirst }: FeedRowProps) {
+function FeedRow({
+  title,
+  link,
+  publishedAt,
+  source,
+  subtitle,
+  byline,
+  isFirst,
+}: FeedRowProps) {
+  // Keyed on the text size: iOS keeps a Text's old measurement when it
+  // changes with the app open (mobile/AGENTS.md; w21/015).
+  const { fontScale } = useWindowDimensions();
   const styles = useThemeStyle(getStyles);
   const { t, locale } = useTranslations();
-  const isExternal = link.startsWith("http");
+  const client = useApolloClient();
+  const action = feedRowAction(link, getServerUrl());
 
   const handlePress = () => {
-    if (isExternal) {
-      Linking.openURL(link);
+    if (action?.kind === "external") {
+      void Linking.openURL(action.url);
+    } else if (action?.kind === "ledger") {
+      void openAppLinkTarget({
+        client,
+        target: action.target,
+        sourceUrl: action.sourceUrl,
+        isCurrentSession: () => true,
+        navigation: "push",
+      });
     }
   };
 
   const sourceLabel = t(feedSourceLabelKey(source));
-  const date = formatFeedDate(publishedAt, locale);
-  const metaText = date ? `${sourceLabel} · ${date}` : sourceLabel;
+  const date = formatFeedDate(publishedAt, locale, {
+    calendarDay: feedDateIsCalendarDay(source),
+  });
+  const metaText = [sourceLabel, date, byline].filter(Boolean).join(" · ");
 
   return (
     <Pressable
-      onPress={handlePress}
+      onPress={action ? handlePress : undefined}
+      disabled={!action}
+      accessibilityRole={action ? "button" : undefined}
       style={[styles.row, isFirst && styles.firstRow]}
     >
-      <Text style={styles.title} numberOfLines={2}>
+      <Text key={`title-${fontScale}`} style={styles.title} numberOfLines={2}>
         {title}
       </Text>
+      {subtitle ? (
+        <Text
+          key={`subtitle-${fontScale}`}
+          style={styles.metaText}
+          numberOfLines={2}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
       <View style={styles.meta}>
-        <Text style={styles.metaText}>{metaText}</Text>
+        <Text key={`meta-${fontScale}`} style={styles.metaText}>
+          {metaText}
+        </Text>
       </View>
     </Pressable>
   );
@@ -83,11 +139,13 @@ type FeedCardProps = {
   refreshSignal?: number;
 };
 
-export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
-  const { t } = useTranslations();
+export function FeedCard({
+  refreshSignal = 0,
+}: FeedCardProps): JSX.Element | null {
+  const { t, locale } = useTranslations();
 
   const { data, loading, error, refetch } = useGetFeedQuery({
-    variables: { offset: 0, limit: FEED_LIMIT, locale: "en" },
+    variables: feedQueryVariables(FEED_LIMIT, locale),
     fetchPolicy: "cache-and-network",
   });
 
@@ -97,34 +155,29 @@ export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
     }
   }, [refreshSignal, refetch]);
 
-  const items = data?.getFeed?.items ?? [];
+  const { user, displayName } = useCurrentUser();
+  const items = sortFeedItems(data?.getFeed?.items ?? []);
+  const loadState = selectCardLoadState({
+    loading: loading,
+    hasData: data !== undefined,
+    error: error,
+  });
+  if (
+    feedCardIsEmpty({
+      failed: loadState === "failed",
+      loading,
+      itemCount: items.length,
+    })
+  ) {
+    return null;
+  }
 
   return (
     <DashboardCard title={t("latestUpdates")} bleed>
-      {selectCardLoadState({
-        loading: loading,
-        hasData: data !== undefined,
-        error: error,
-      }) === "failed" ? (
+      {loadState === "failed" ? (
         <CardLoadFailure onRetry={() => void refetch()} />
       ) : loading && items.length === 0 ? (
-        <>
-          <LoadingTile
-            height={18}
-            mx={16}
-            style={{ marginBottom: 10, width: "90%" }}
-          />
-          <LoadingTile
-            height={18}
-            mx={16}
-            style={{ marginBottom: 10, width: "75%" }}
-          />
-          <LoadingTile
-            height={18}
-            mx={16}
-            style={{ marginBottom: 10, width: "85%" }}
-          />
-        </>
+        <FeedSkeleton />
       ) : (
         <FadeInView style={{ paddingHorizontal: 16 }}>
           {items.map((item, index) => (
@@ -134,6 +187,10 @@ export function FeedCard({ refreshSignal = 0 }: FeedCardProps): JSX.Element {
               link={item.link}
               publishedAt={item.publishedAt}
               source={item.source}
+              {...feedRowDetail(item, {
+                username: user?.username,
+                names: [displayName, user?.email?.split("@")[0]],
+              })}
               isFirst={index === 0}
             />
           ))}

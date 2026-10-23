@@ -235,6 +235,12 @@ const ptReceipt: Record<string, TranslationEntry> = {
     message: "Falha ao registrar a transação do recibo",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "É possível que tenha sido registrada mesmo assim; verifique o Diário antes de registrá-la novamente.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default ptReceipt;

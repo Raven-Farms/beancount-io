@@ -1,7 +1,17 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { breakableAccount } from "@/common/account-util";
 import {
-  Alert,
+  currencyMinorUnits,
+  ledgerPrimaryCurrency,
+} from "@/common/currency-util";
+import { routeText } from "@/common/route-text";
+import { InlineError } from "@/components/inline-error";
+import { memo, useEffect, useRef, useState } from "react";
+import { createSingleFlight, type SingleFlight } from "@/common/single-flight";
+import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
+import { isOpenOn, isSeedableOn } from "@/common/account-close-dates";
+import {
   AccessibilityInfo,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,13 +19,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
-import {
-  Stack,
-  useLocalSearchParams,
-  useNavigation,
-  useRouter,
-} from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Swipeable } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,16 +33,15 @@ import {
   fontWeights,
   headerActionMaxFontSizeMultiplier,
   headerActionStyle,
+  prefersStackedLayout,
   useTheme,
 } from "@/common/theme";
 import { AmountText } from "@/components/amount-text";
 import { useThemeStyle, useToast } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
 import { getFormatDate, parseFormatDate } from "@/common/format-util";
-import {
-  formatMoneyWithCurrency,
-  formatSignedMoneyWithCurrency,
-} from "@/common/number-utils";
+import { formatMoneyWithCurrency } from "@/common/number-utils";
 import { ColorTheme } from "@/types/theme-props";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { LoadingTile } from "@/components/loading-tile";
@@ -57,21 +62,30 @@ import {
   addPosting,
   buildEntryInput,
   createInitialPostings,
+  createRootForPosting,
   createPrefilledPostings,
-  formatExactAmount,
+  defaultPostingAccounts,
+  formatRemainderAmount,
   hasNonZeroAmount,
+  hasUnparsedAmount,
   isRemainderBalanced,
   lastPostingAutoToggle,
   makePosting,
   postingAmountAccessibility,
   removePosting,
   remainder,
+  shouldReseed,
   toggleLastPostingAuto,
   updatePostingAccount,
   updatePostingAmount,
   validatePostings,
 } from "./postings-utils";
 import { isTransactionDraftDirty, TransactionDraft } from "./draft-dirty";
+import { inlineSaveError } from "./inline-save-error";
+import { seedPostingsFromPayee } from "./payee-seed";
+import { useTwoPostingSuggestions } from "@/screens/add-transaction-screen/hooks/use-two-posting-suggestions";
+import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const SIGN_TOGGLE_SIZE = 28;
 const POSTING_ROW_PADDING_V = 14;
@@ -108,6 +122,15 @@ const getStyles = (theme: ColorTheme) =>
       alignItems: "center",
       gap: 12,
     },
+    // Accessibility text sizes: the account takes its own lines and the amount
+    // controls sit under it at the trailing edge.
+    postingRowStacked: {
+      flexDirection: "column",
+      alignItems: "stretch",
+    },
+    postingAmountWrapStacked: {
+      alignSelf: "flex-end",
+    },
     postingRowDivider: {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: theme.black10,
@@ -120,8 +143,9 @@ const getStyles = (theme: ColorTheme) =>
       fontWeight: fontWeights.medium,
       color: theme.text01,
     },
+    // The input placeholder token, not the hairline one (1.34:1, w21/128).
     postingAccountPlaceholder: {
-      color: theme.black40,
+      color: theme.controlPlaceholder,
       fontWeight: fontWeights.regular,
     },
     postingAmountWrap: {
@@ -159,7 +183,8 @@ const getStyles = (theme: ColorTheme) =>
     // filled and weighted, the disabled one a plain outline.
     postingAutoTag: {
       fontSize: fontSizes.xs,
-      color: theme.black40,
+      // Secondary text: the hairline colour read 1.34:1 (w21/128).
+      color: theme.black80,
       marginStart: 2,
       paddingHorizontal: 4,
       paddingVertical: 1,
@@ -193,6 +218,13 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.primary,
       fontWeight: fontWeights.medium,
     },
+    saveError: {
+      fontSize: fontSizes.sm,
+      color: theme.error,
+      lineHeight: 18,
+      marginHorizontal: 20,
+      marginBottom: 12,
+    },
     balanceRow: {
       marginHorizontal: 20,
       marginBottom: 12,
@@ -202,7 +234,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     balanceLabel: {
       fontSize: fontSizes.sm,
-      color: theme.black60,
+      color: theme.black80,
     },
     balanceAmount: {
       fontSize: fontSizes.sm,
@@ -253,18 +285,27 @@ const PostingRow = ({
 }) => {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
+  // At AX2 the account shared its row with the amount controls and read
+  // "Asse…cking" / "Ex…ries" (w21/029).
+  const { fontScale } = useWindowDimensions();
+  const stacked = prefersStackedLayout(fontScale);
   const { t } = useTranslations();
 
-  const isNegative = posting.amountInput.startsWith("-");
-  const absValue = isNegative
-    ? posting.amountInput.slice(1)
-    : posting.amountInput;
+  // The sign is read from the trimmed text, as the parser reads it: a pasted
+  // " -12.50" was saved as negative but shown positive, and the toggle then
+  // wrote a second minus (w21/232).
+  const typed = posting.amountInput.trim();
+  const isNegative = typed.startsWith("-");
+  const absValue = isNegative ? typed.slice(1) : typed;
   const hasAmount = hasNonZeroAmount(posting);
-  const amountColor = !hasAmount
-    ? theme.black60
-    : isNegative
-      ? theme.error
-      : theme.success;
+  const unparsed = hasUnparsedAmount(posting);
+  const amountColor = unparsed
+    ? theme.error
+    : !hasAmount
+      ? theme.black60
+      : isNegative
+        ? theme.error
+        : theme.success;
   const toggleBg = !hasAmount
     ? theme.black10
     : isNegative
@@ -308,35 +349,72 @@ const PostingRow = ({
       renderRightActions={canRemove ? renderDeleteAction : undefined}
       overshootRight={false}
     >
-      <View style={[styles.postingRow, index > 0 && styles.postingRowDivider]}>
+      <View
+        style={[
+          styles.postingRow,
+          stacked && styles.postingRowStacked,
+          index > 0 && styles.postingRowDivider,
+        ]}
+      >
         <TouchableOpacity
-          style={styles.postingAccountWrap}
+          style={stacked ? undefined : styles.postingAccountWrap}
           activeOpacity={0.6}
           onPress={onPickAccount}
           accessibilityRole="button"
           accessibilityLabel={posting.account || t("postingAccount")}
+          // The swipe-to-remove has no VoiceOver equivalent: a swipe moves
+          // focus there. The row offers it as an action instead (w21/557).
+          accessibilityActions={
+            canRemove
+              ? [{ name: "delete", label: t("removePosting") }]
+              : undefined
+          }
+          onAccessibilityAction={(event) => {
+            if (event.nativeEvent.actionName === "delete") onRemove();
+          }}
         >
           <Text
+            // Remeasured on a live size change (mobile/AGENTS.md).
+            key={`posting-account-${fontScale}`}
             style={[
               styles.postingAccount,
               !posting.account && styles.postingAccountPlaceholder,
             ]}
-            numberOfLines={1}
-            ellipsizeMode="middle"
+            numberOfLines={stacked ? 2 : 1}
+            // Stacked, the leaf is what tells two accounts apart.
+            ellipsizeMode={stacked ? "head" : "middle"}
           >
-            {posting.account || t("postingAccount")}
+            {posting.account
+              ? stacked
+                ? breakableAccount(posting.account)
+                : posting.account
+              : t("postingAccount")}
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.postingAmountWrap}>
+        <View
+          style={[
+            styles.postingAmountWrap,
+            stacked && styles.postingAmountWrapStacked,
+          ]}
+        >
           {hasAmount ? (
             <TouchableOpacity
               style={[styles.signToggle, { backgroundColor: toggleBg }]}
               onPress={handleToggleSign}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={t("toggleAmountSign")}
-              accessibilityState={{ selected: isNegative }}
+              // Which posting, and the sign it has now as a value: every toggle
+              // sounded alike, and "Selected" was the only clue that the sign
+              // was negative (w21/561).
+              accessibilityLabel={
+                posting.account
+                  ? t("postingSignToggle", { account: posting.account })
+                  : t("toggleAmountSign")
+              }
+              accessibilityValue={{
+                text: isNegative ? t("signMinus") : t("signPlus"),
+              }}
             >
               <Text style={[styles.signToggleText, { color: amountColor }]}>
                 {isNegative ? "−" : "+"}
@@ -356,7 +434,9 @@ const PostingRow = ({
             selectTextOnFocus
             accessibilityLabel={amountA11y.label}
             accessibilityValue={{ text: amountA11y.value }}
-            accessibilityHint={t("postingAmountHint")}
+            accessibilityHint={
+              unparsed ? t("multiPostingsAmountFormat") : t("postingAmountHint")
+            }
           />
           {/* Mounted for the whole life of the final row, not only while it is
               automatic: gating the mount on `isAuto` made the switch vanish the
@@ -393,9 +473,11 @@ const MultiPostingsTransactionScreenComponent = () => {
   const router = useRouter();
   const toast = useToast();
   const confirmWrite = useLedgerWrite();
+  const isHere = useIsHere();
   const ledgerId = useLedgerGuard();
   const { userId } = useSession();
   const {
+    data: ledgerMeta,
     assets,
     expenses,
     currencies,
@@ -412,7 +494,7 @@ const MultiPostingsTransactionScreenComponent = () => {
     prefillSourceAccount,
     prefillTargetAccount,
     prefillAmount,
-  } = useLocalSearchParams<{
+  } = useRouteParams<{
     prefillDate?: string;
     prefillPayee?: string;
     prefillNarration?: string;
@@ -421,7 +503,14 @@ const MultiPostingsTransactionScreenComponent = () => {
     prefillAmount?: string;
   }>();
 
-  const currency = currencies.length > 0 ? currencies[0] : "USD";
+  // A ledger without an operating currency is in the currency it holds, not
+  // in USD (w21/415, w21/520).
+  const currency = ledgerPrimaryCurrency(
+    currencies,
+    ledgerMeta?.currencies ?? [],
+  );
+  // Amounts are written at the currency's own minor unit (w21/231).
+  const minorUnits = currencyMinorUnits(currency);
 
   const [postings, setPostings] = useState<Posting[]>(() => [
     makePosting({ isAuto: false }),
@@ -445,43 +534,114 @@ const MultiPostingsTransactionScreenComponent = () => {
   // A committed save disables Done: a cold-link form that fails to leave must
   // never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
-  const navigation = useNavigation();
+  // Closed from the first Done until the write settles, so a second tap
+  // during "Saving…" cannot post the entry again (w21/044).
+  const [saving, setSaving] = useState(false);
+  const saveFlightRef = useRef<SingleFlight | null>(null);
+  saveFlightRef.current ??= createSingleFlight(setSaving);
+  // Why the last save failed, until the draft changes (w21/001): the toast
+  // alone was gone before a refusal could be read.
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    setSaveError(null);
+  }, [date, payee, narration, postings]);
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
+  // A picked payee brings its usual accounts while the postings are still as
+  // the form opened (w21/023). A receipt's parsed accounts are kept.
+  const [seedPayee, setSeedPayee] = useState("");
+  const { closeDates, settled: closeDatesSettled } =
+    useAccountCloseDatesState(ledgerId);
+  const payeeHistory = useTwoPostingSuggestions({
+    ledgerId: ledgerId ?? "",
+    payee: seedPayee,
+  });
+  // The accounts the last payee fill produced: picking another payee replaces
+  // them unless the user changed one (w21/411).
+  const lastPayeeSeedRef = useRef<string[] | null>(null);
   useEffect(() => {
-    if (!seeded && !metaLoading && assets.length > 0) {
-      const secondAccount =
-        expenses.length > 0
-          ? expenses[0]
-          : assets.length > 1
-            ? assets[1]
-            : assets[0];
-      // The parser may return no account at all; fall back to the same defaults
-      // a blank transaction would get rather than showing empty account rows.
+    if (!seedPayee || payeeHistory.loading) return;
+    const seededPostings = seedPostingsFromPayee(
+      postings,
+      initialDraft.postings,
+      payeeHistory,
+      (account) => isOpenOn(account, date, closeDates),
+      lastPayeeSeedRef.current,
+    );
+    if (seededPostings) {
+      lastPayeeSeedRef.current = seededPostings.map((p) => p.account);
+      setPostings(seededPostings);
+    }
+    setSeedPayee("");
+  }, [
+    seedPayee,
+    payeeHistory,
+    postings,
+    initialDraft.postings,
+    date,
+    closeDates,
+  ]);
+
+  useEffect(() => {
+    // Waits for the close dates too, so a cold start cannot seed a closed
+    // account (w21/103).
+    if (!metaLoading && closeDatesSettled && assets.length > 0) {
+      const isOpen = (account: string) => isOpenOn(account, date, closeDates);
+      const isSeedable = (account: string) =>
+        isSeedableOn(account, date, closeDates);
+      const { source, target } = defaultPostingAccounts(
+        assets,
+        expenses,
+        isOpen,
+      );
+      // The parser may return no account at all, a closed one or one the
+      // ledger never opened; fall back
+      // to the same defaults a blank transaction would get.
       const seededPostings = prefillAmount
         ? createPrefilledPostings(
-            prefillSourceAccount || assets[0],
-            prefillTargetAccount || secondAccount,
+            prefillSourceAccount && isSeedable(prefillSourceAccount)
+              ? prefillSourceAccount
+              : source,
+            prefillTargetAccount && isSeedable(prefillTargetAccount)
+              ? prefillTargetAccount
+              : target,
             prefillAmount,
+            minorUnits,
           )
-        : createInitialPostings(assets[0], secondAccount);
+        : createInitialPostings(source, target, minorUnits);
+      // Seeded once, then again only while untouched: the first seed can come
+      // from last session's persisted ranking (w21/110).
+      if (
+        seeded &&
+        !shouldReseed(postings, initialDraft.postings, seededPostings)
+      ) {
+        return;
+      }
       setPostings(seededPostings);
       setInitialDraft((draft) => ({ ...draft, postings: seededPostings }));
       setSeeded(true);
     }
+    // `postings` and the seed are read only to compare; a reseed is driven by
+    // the ledger's ranking, the close dates and the date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     seeded,
     metaLoading,
+    closeDatesSettled,
+    closeDates,
+    date,
     assets,
     expenses,
     prefillAmount,
     prefillSourceAccount,
     prefillTargetAccount,
+    minorUnits,
   ]);
 
   const rem = remainder(postings);
   const isBalanced = isRemainderBalanced(rem);
   const validationError = validatePostings(postings);
+  const amountUnreadable = validationError === "invalidAmount";
   const canSave = validationError === null && !saved;
   const hasUnsavedChanges = isTransactionDraftDirty(initialDraft, {
     date,
@@ -492,30 +652,13 @@ const MultiPostingsTransactionScreenComponent = () => {
 
   // Back on a dirty draft asks first, like the file and transaction editors.
   // A successful Done leaves the screen itself and is not a discard.
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      if (savedOutRef.current || !hasUnsavedChanges) return;
-      e.preventDefault();
-      Alert.alert(
-        t("ledgerEditorUnsavedTitle"),
-        t("ledgerEditorUnsavedMessage"),
-        [
-          { text: t("cancel"), style: "cancel" },
-          {
-            text: t("ledgerEditorDiscardChanges"),
-            style: "destructive",
-            onPress: () => navigation.dispatch(e.data.action),
-          },
-        ],
-      );
-    });
-    return unsubscribe;
-  }, [navigation, hasUnsavedChanges, t]);
+  useUnsavedChangesGuard(hasUnsavedChanges, savedOutRef);
 
   const handleSave = async () => {
-    // The write already committed; stay silent instead of toasting a
-    // validation message for a form that is no longer submittable.
-    if (savedOutRef.current) {
+    // The write already committed, or is running; stay silent instead of
+    // toasting a validation message or writing a second time.
+    const flight = saveFlightRef.current!;
+    if (savedOutRef.current || flight.busy()) {
       return;
     }
     if (!canSave) {
@@ -525,7 +668,7 @@ const MultiPostingsTransactionScreenComponent = () => {
       else if (validationError === "zeroAmount")
         msg = t("multiPostingsZeroAmount");
       else if (validationError === "invalidAmount")
-        msg = t("multiPostingsInvalidBalance");
+        msg = t("multiPostingsAmountFormat");
       toast.showToast({ message: msg, type: "error" });
       AccessibilityInfo.announceForAccessibility(msg);
       return;
@@ -538,22 +681,31 @@ const MultiPostingsTransactionScreenComponent = () => {
       currency,
     });
 
-    const outcome = await confirmWrite({
-      perform: () => mutate({ variables: { entriesInput: [entry], ledgerId } }),
-      // The mutation reports rejection in its payload. The hook's `error` field
-      // is a render behind at this point, so a server-rejected split used to
-      // toast success — branch on what the server actually returned.
-      didSucceed: (result) => Boolean(result.data?.addEntries?.success),
-      loadingMessage: t("saving"),
-      successMessage: t("saveSuccess"),
-      failureMessage: t("saveFailed"),
-      afterSuccess: runAddTransactionCallback,
-      goBackOnSuccess: false,
-    });
+    const outcome = await flight.run(() =>
+      confirmWrite({
+        perform: () =>
+          mutate({ variables: { entriesInput: [entry], ledgerId } }),
+        // The mutation reports rejection in its payload. The hook's `error` field
+        // is a render behind at this point, so a server-rejected split used to
+        // toast success — branch on what the server actually returned.
+        didSucceed: (result) => Boolean(result.data?.addEntries?.success),
+        loadingMessage: t("saving"),
+        successMessage: t("saveSuccess"),
+        failureMessage: t("saveFailed"),
+        afterSuccess: runAddTransactionCallback,
+        goBackOnSuccess: false,
+      }),
+    );
+    // Another press already owns the write.
+    if (outcome === undefined) return;
+    setSaveError(inlineSaveError(outcome));
     if (outcome.ok) {
       // Mark the draft saved before leaving, so the discard guard stays quiet.
       savedOutRef.current = true;
       setSaved(true);
+      // The user left during "Saving…": the toast says it saved, and the
+      // screen they are on now stays put (w21/194).
+      if (!isHere()) return;
       if (router.canGoBack()) {
         router.back();
       } else {
@@ -568,17 +720,14 @@ const MultiPostingsTransactionScreenComponent = () => {
     pushAccountPicker(router, {
       type: "posting",
       current: postings[index]?.account,
+      // A new account opens by this entry's date, not today (w21/008).
+      entryDate: date,
+      // A new account starts under the root this row calls for (w21/259).
+      createRoot: createRootForPosting(postings, index),
       onSelect: (account) =>
         setPostings((prev) => updatePostingAccount(prev, index, account)),
     });
   };
-
-  const formatRemainder = (exact: string) =>
-    formatSignedMoneyWithCurrency(
-      Number(formatExactAmount(exact)),
-      currency,
-      true,
-    );
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -588,15 +737,21 @@ const MultiPostingsTransactionScreenComponent = () => {
           headerRight: () => (
             <Pressable
               onPress={handleSave}
+              // Still pressable on an invalid draft, which is how the form
+              // says what is wrong; never while a save runs or after it.
+              disabled={saving || saved}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={t("done")}
-              accessibilityState={{ disabled: !canSave }}
+              accessibilityState={{
+                disabled: !canSave || saving,
+                busy: saving,
+              }}
             >
               <Text
                 style={[
                   styles.doneButton,
-                  !canSave && styles.doneButtonDisabled,
+                  (!canSave || saving) && styles.doneButtonDisabled,
                 ]}
                 numberOfLines={1}
                 maxFontSizeMultiplier={headerActionMaxFontSizeMultiplier}
@@ -609,6 +764,12 @@ const MultiPostingsTransactionScreenComponent = () => {
       />
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        // With four or more postings the number pad covered Add posting, the
+        // Remainder line and the save errors, and the form was too short to
+        // scroll (w21/146). The inset makes it scroll; a downward drag puts
+        // the pad, which has no return key, away.
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="interactive"
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.card}>
@@ -622,10 +783,15 @@ const MultiPostingsTransactionScreenComponent = () => {
             content={payee}
             showDivider
             onPress={() => {
-              SelectedPayee.setFn((v: string) => setPayee(v));
+              SelectedPayee.setFn((v: string) => {
+                setPayee(v);
+                if (!prefillSourceAccount && !prefillTargetAccount) {
+                  setSeedPayee(v);
+                }
+              });
               router.navigate({
                 pathname: "/(app)/payee-input",
-                params: { payee },
+                params: { payee: routeText(payee) },
               });
             }}
           />
@@ -637,7 +803,7 @@ const MultiPostingsTransactionScreenComponent = () => {
               SelectedNarration.setFn((v: string) => setNarration(v));
               router.navigate({
                 pathname: "/(app)/narration-input",
-                params: { narration },
+                params: { narration: routeText(narration) },
               });
             }}
           />
@@ -672,12 +838,18 @@ const MultiPostingsTransactionScreenComponent = () => {
                   currency={currency}
                   onPickAccount={() => pickAccountForPosting(i)}
                   onChangeAmount={(input) =>
-                    setPostings((prev) => updatePostingAmount(prev, i, input))
+                    setPostings((prev) =>
+                      updatePostingAmount(prev, i, input, minorUnits),
+                    )
                   }
                   onToggleAuto={() =>
-                    setPostings((prev) => toggleLastPostingAuto(prev))
+                    setPostings((prev) =>
+                      toggleLastPostingAuto(prev, minorUnits),
+                    )
                   }
-                  onRemove={() => setPostings((prev) => removePosting(prev, i))}
+                  onRemove={() =>
+                    setPostings((prev) => removePosting(prev, i, minorUnits))
+                  }
                 />
               ))}
             </FadeInView>
@@ -685,7 +857,7 @@ const MultiPostingsTransactionScreenComponent = () => {
           <TouchableOpacity
             style={styles.addPostingRow}
             activeOpacity={0.6}
-            onPress={() => setPostings((prev) => addPosting(prev))}
+            onPress={() => setPostings((prev) => addPosting(prev, minorUnits))}
             accessibilityRole="button"
             accessibilityLabel={t("addPosting")}
           >
@@ -700,17 +872,41 @@ const MultiPostingsTransactionScreenComponent = () => {
 
         <View style={styles.balanceRow}>
           <Text style={styles.balanceLabel}>{t("remainderLabel")}</Text>
+          {/* An unparsed amount counts as nothing, so the sum is not a
+              verdict: neutral, never a green check (w21/031). */}
           <AmountText
             style={[
               styles.balanceAmount,
-              { color: isBalanced ? theme.success : theme.error },
+              {
+                color: amountUnreadable
+                  ? theme.black60
+                  : isBalanced
+                    ? theme.success
+                    : theme.error,
+              },
             ]}
           >
-            {isBalanced
-              ? `✓  ${formatMoneyWithCurrency(0, currency)}`
-              : formatRemainder(rem)}
+            {amountUnreadable
+              ? "—"
+              : isBalanced
+                ? `✓  ${formatMoneyWithCurrency(0, currency)}`
+                : formatRemainderAmount(rem, currency)}
           </AmountText>
         </View>
+        {amountUnreadable ? (
+          <InlineError
+            style={styles.saveError}
+            testID="new-transaction-amount-format"
+            message={t("multiPostingsAmountFormat")}
+          />
+        ) : null}
+        {saveError ? (
+          <InlineError
+            style={styles.saveError}
+            testID="new-transaction-save-error"
+            message={saveError}
+          />
+        ) : null}
       </ScrollView>
 
       <DatePickerModal

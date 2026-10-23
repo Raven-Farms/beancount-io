@@ -23,7 +23,7 @@ export interface CounterResult {
 /**
  * Increment `key` within a fixed window, returning the new count.
  *
- * The expiry is set only when the counter is created (`count === 1`), so a
+ * The expiry is set when the counter is created or lacks an expiry, so a
  * steady stream of requests cannot keep pushing the window out and turn a
  * per-minute budget into a permanent one.
  *
@@ -35,21 +35,25 @@ export async function incrementInWindow(
   key: string,
   windowMs: number,
 ): Promise<CounterResult | undefined> {
+  if (!Number.isSafeInteger(windowMs) || windowMs <= 0) return undefined;
   const client = getRedisClient();
   if (!client) return undefined;
-
   try {
-    const count = await client.incr(key);
-    if (count === 1) {
-      await client.pExpire(key, windowMs);
-      return { count, resetInMs: windowMs };
-    }
-    const ttl = await client.pTTL(key);
-    return { count, resetInMs: ttl > 0 ? ttl : windowMs };
-  } catch (err) {
-    counterLogger.error("Redis counter unavailable", {
-      error: err instanceof Error ? err.message : String(err),
-    });
+    const result = (await client.eval(
+      `
+      local count = redis.call('INCR', KEYS[1])
+      local ttl = redis.call('PTTL', KEYS[1])
+      if ttl < 0 then
+        redis.call('PEXPIRE', KEYS[1], ARGV[1])
+        ttl = tonumber(ARGV[1])
+      end
+      return { count, ttl }
+      `,
+      { keys: [key], arguments: [String(windowMs)] },
+    )) as [number, number];
+    return { count: Number(result[0]), resetInMs: Number(result[1]) };
+  } catch {
+    counterLogger.error("Redis counter unavailable");
     return undefined;
   }
 }

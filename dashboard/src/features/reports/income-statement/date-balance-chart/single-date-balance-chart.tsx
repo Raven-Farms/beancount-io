@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ReactECharts } from "@/common/components/react-echarts";
-import { useFormatQuantity } from "@/common/hooks/use-format-quantity";
+import { useFormatNumber } from "@/common/hooks/use-format-number";
 import { fractionDigitsOf } from "@/common/lib/format/format-number";
 import type {
   EChartsOption,
@@ -33,7 +33,7 @@ export function SingleDateBalanceChart({
   inverted,
   labelledBy,
 }: BaseChartProps) {
-  const formatQty = useFormatQuantity();
+  const formatNum = useFormatNumber();
   const { chartOption, periodSeries } = useMemo((): {
     chartOption: EChartsOption;
     periodSeries: ChartPeriodSeries[];
@@ -110,8 +110,8 @@ export function SingleDateBalanceChart({
             const formattedValue =
               typeof value === "number"
                 ? value >= 0
-                  ? `+${formatQty(value, digits)}`
-                  : formatQty(value, digits)
+                  ? `+${formatNum(value, param.seriesName, digits)}`
+                  : formatNum(value, param.seriesName, digits)
                 : "0";
             result += `<div style="color: ${param.color}">
               <span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>
@@ -162,7 +162,7 @@ export function SingleDateBalanceChart({
         animationEasing: "cubicOut",
       },
     };
-  }, [data, interval, primarySeries, inverted, formatQty]);
+  }, [data, interval, primarySeries, inverted, formatNum]);
 
   return (
     <div className="w-full">

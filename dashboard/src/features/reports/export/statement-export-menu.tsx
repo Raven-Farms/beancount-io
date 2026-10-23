@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   ChevronDown,
   FileSpreadsheet,
@@ -81,8 +82,11 @@ export function StatementExportMenu({
   // without freezing period/filter/values from an earlier mount.
   useEffect(() => {
     if (!ready) return;
+    // Commit synchronously: the browser captures the page as soon as this
+    // handler returns, before a batched update would reach the printable
+    // portal, so the first native print kept the old time (w4/290).
     const onBeforePrint = () => {
-      setPrintGeneratedAt(new Date().toISOString());
+      flushSync(() => setPrintGeneratedAt(new Date().toISOString()));
     };
     window.addEventListener("beforeprint", onBeforePrint);
     return () => window.removeEventListener("beforeprint", onBeforePrint);

@@ -91,6 +91,8 @@ async function fixture(caller = identity) {
     /** Errors the projected check reports for the overlaid ledger. */
     projectedErrors: [] as { message: string; source?: null }[],
     routeTransactionsTo: null as string | null,
+    /** The ledger's include closure; every fixture file unless narrowed. */
+    sourceFiles: undefined as string[] | undefined,
   };
   const commits: Commit[] = [];
 
@@ -108,6 +110,35 @@ async function fixture(caller = identity) {
     async (_o, _n, body: { files: unknown[] }) =>
       // No overlay is the baseline read; an overlay is the projection.
       envelope(body.files.length === 0 ? [] : state.projectedErrors),
+  );
+
+  // The projected include closure: the narrowed closure when a test sets one
+  // (a new file stays out of it), otherwise every file and overlay (w23/062).
+  const getProjectedSourceFiles = jest.fn(
+    async (_o, _n, body: { files: { path: string }[] }) =>
+      envelope(
+        state.sourceFiles ?? [
+          ...state.files.keys(),
+          ...body.files.map((file) => file.path),
+        ],
+      ),
+  );
+
+  // The ledger's entry IDs, scripted as the location each was asked for.
+  const getProjectedEntryIds = jest.fn(
+    async (
+      _o,
+      _n,
+      body: {
+        files: { path: string; content: string }[];
+        locations: { path: string; line: number }[];
+      },
+    ) =>
+      envelope({
+        entry_hashes: body.locations.map(
+          ({ path, line }) => `hash-${path}:${line}`,
+        ),
+      }),
   );
 
   const fava = {
@@ -131,6 +162,10 @@ async function fixture(caller = identity) {
             transaction_file: state.routeTransactionsTo,
           }),
         checkProjectedErrors,
+        getProjectedEntryIds,
+        getProjectedSourceFiles,
+        getLedgerSourceFiles: async () =>
+          envelope(state.sourceFiles ?? [...state.files.keys()]),
       },
       ledgers: {
         getLedgerFile: async (_o: string, _n: string, q: { path: string }) =>
@@ -214,6 +249,7 @@ async function fixture(caller = identity) {
     commits,
     changeLedgerFiles,
     checkProjectedErrors,
+    getProjectedEntryIds,
     call: async (surface: "rest" | "gql" | "mcp", args: Args) => {
       if (surface === "rest") {
         const response = await fetch(
@@ -232,7 +268,7 @@ async function fixture(caller = identity) {
       if (surface === "gql") {
         const result = await graphql({
           schema,
-          source: `mutation { appendLedgerText(ledgerId: "alice/main", text: ${JSON.stringify(args.text)}${args.path ? `, path: ${JSON.stringify(args.path)}` : ""}${args.dryRun ? ", dryRun: true" : ""}${args.allowInvalid ? ", allowInvalid: true" : ""}) { success message dryRun count wrote { path line } diff { path diff } errorsBefore errorsAfter newErrors { message } appendedUnsorted } }`,
+          source: `mutation { appendLedgerText(ledgerId: "alice/main", text: ${JSON.stringify(args.text)}${args.path ? `, path: ${JSON.stringify(args.path)}` : ""}${args.dryRun ? ", dryRun: true" : ""}${args.allowInvalid ? ", allowInvalid: true" : ""}) { success message dryRun count wrote { path line } entryHashes diff { path diff } errorsBefore errorsAfter newErrors { message } appendedUnsorted } }`,
           contextValue: {
             identity: caller,
             getCurrentIdentity: () => caller,
@@ -283,6 +319,12 @@ describe("appending Beancount text through the real adapters", () => {
         expect(f.state.files.get("main.bean")!.split("\n")[6]).toBe(
           '2026-02-05 * "Cafe" "Coffee"',
         );
+        // Its hash, located in the committed text (w23/060).
+        expect(data.entryHashes).toEqual(["hash-main.bean:7"]);
+        const [, , located] = f.getProjectedEntryIds.mock.calls[0]!;
+        expect(
+          Buffer.from(located.files[0]!.content, "base64").toString("utf8"),
+        ).toBe(f.state.files.get("main.bean"));
         expect(data.appendedUnsorted).toEqual([]);
 
         const dates = [
@@ -352,6 +394,70 @@ describe("appending Beancount text through the real adapters", () => {
     );
   });
 
+  /** w4/m38: years 0001–0099 are real dates, not 1900s, on every surface. */
+  describe("early-year dates", () => {
+    const early = (date: string) => TXN.replace("2026-02-05", date);
+
+    it.each(["rest", "gql", "mcp"] as const)(
+      "routes and writes a 0099 directive once, after a non-writing dry run, via %s",
+      async (surface) => {
+        const f = await fixture();
+        f.state.routeTransactionsTo = "txns/{year}/{date}.bean";
+        try {
+          const dry = await f.call(surface, {
+            text: early("0099-08-11"),
+            dryRun: true,
+          });
+          expect(dry.ok).toBe(true);
+          const preview = dry.ok ? (dry.data as Record<string, never>) : {};
+          expect((preview.diff as { path: string; diff: string }[])[0]).toEqual(
+            {
+              path: "txns/0099/0099-08-11.bean",
+              diff: expect.stringContaining('+0099-08-11 * "Cafe" "Coffee"'),
+            },
+          );
+          expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+
+          const result = await f.call(surface, { text: early("0099-08-11") });
+          expect(result.ok).toBe(true);
+          const data = result.ok ? (result.data as Record<string, never>) : {};
+          expect(data.wrote).toEqual([
+            { path: "txns/0099/0099-08-11.bean", line: 1 },
+          ]);
+          expect(f.commits).toHaveLength(1);
+          expect(
+            f.state.files.get("txns/0099/0099-08-11.bean")!.split("\n")[0],
+          ).toBe('0099-08-11 * "Cafe" "Coffee"');
+        } finally {
+          await f.close();
+        }
+      },
+    );
+
+    it.each(["rest", "gql", "mcp"] as const)(
+      "still refuses year 0000 as bad input, writing nothing, via %s",
+      async (surface) => {
+        const f = await fixture();
+        try {
+          const result = await f.call(surface, { text: early("0000-08-11") });
+          expect(result.ok).toBe(false);
+          const error = (result.ok === false ? result.error : {}) as {
+            code?: string;
+            message?: string;
+            originalError?: { category?: string };
+          };
+          expect(error.code ?? error.originalError?.category).toBe(
+            "BAD_USER_INPUT",
+          );
+          expect(error.message).toContain("0000-08-11");
+          expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+        } finally {
+          await f.close();
+        }
+      },
+    );
+  });
+
   it("names the UNBALANCED code and a hint on the MCP surface", async () => {
     const f = await fixture();
     f.state.projectedErrors = [
@@ -410,6 +516,8 @@ describe("appending Beancount text through the real adapters", () => {
         ).toContain('+2026-02-05 * "Cafe" "Coffee"');
         expect(f.changeLedgerFiles).not.toHaveBeenCalled();
         expect(f.state.files.get("main.bean")).toBe(EXISTING);
+        expect(data.entryHashes).toEqual([]);
+        expect(f.getProjectedEntryIds).not.toHaveBeenCalled();
       } finally {
         await f.close();
       }
@@ -469,6 +577,33 @@ describe("appending Beancount text through the real adapters", () => {
     },
   );
 
+  // w23/018: ledger configuration is not an entry to append.
+  describe.each(["rest", "gql", "mcp"] as const)(
+    "refuses ledger configuration via %s",
+    (surface) => {
+      it.each([
+        'option "operating_currency" "EUR"',
+        'plugin "beancount.plugins.auto_accounts"',
+        'include "other.bean"',
+      ])("%s, previewed or not, before any check or write", async (line) => {
+        const f = await fixture();
+        try {
+          for (const dryRun of [true, false]) {
+            const result = await f.call(surface, { text: line, dryRun });
+            expect(result.ok).toBe(false);
+            expect(JSON.stringify(result.error)).toContain(
+              "configures the ledger",
+            );
+          }
+          expect(f.checkProjectedErrors).not.toHaveBeenCalled();
+          expect(f.changeLedgerFiles).not.toHaveBeenCalled();
+        } finally {
+          await f.close();
+        }
+      });
+    },
+  );
+
   it("refuses more than fifty directives in one call", async () => {
     const f = await fixture();
     try {
@@ -505,6 +640,80 @@ describe("appending Beancount text through the real adapters", () => {
       await f.close();
     }
   });
+
+  // w23/035: an explicit path outside the include closure committed an entry
+  // no read would ever show.
+  it.each(["rest", "gql", "mcp"] as const)(
+    "refuses an explicit path the ledger does not load on %s",
+    async (surface) => {
+      const f = await fixture();
+      f.state.files.set("2026/03.bean", "");
+      f.state.files.set("notes.txt", "");
+      f.state.sourceFiles = ["main.bean", "2026/02.bean"];
+      try {
+        for (const path of ["2026/03.bean", "qa-new.bean", "notes.txt"]) {
+          for (const dryRun of [true, false]) {
+            const result = await f.call(surface, { text: TXN, path, dryRun });
+            expect(result.ok).toBe(false);
+            expect(JSON.stringify(result.ok ? null : result.error)).toContain(
+              `${path} is not included by the ledger`,
+            );
+          }
+        }
+        expect(f.commits).toEqual([]);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  it.each(["rest", "gql", "mcp"] as const)(
+    "still writes to an included file in a subdirectory on %s",
+    async (surface) => {
+      const f = await fixture();
+      f.state.files.set("2026/02.bean", "");
+      f.state.sourceFiles = ["main.bean", "2026/02.bean"];
+      try {
+        const result = await f.call(surface, {
+          text: TXN,
+          path: "2026/02.bean",
+        });
+        expect(result.ok).toBe(true);
+        expect(f.commits[0].files[0]).toMatchObject({ path: "2026/02.bean" });
+      } finally {
+        await f.close();
+      }
+    },
+  );
+
+  // w23/062: a routed write to a year file nothing included committed an
+  // entry no report loaded, and said it added no bean-check errors.
+  it.each(["rest", "gql", "mcp"] as const)(
+    "includes a routed file the ledger does not load, in the same commit, on %s",
+    async (surface) => {
+      const f = await fixture();
+      f.state.routeTransactionsTo = "txns/{year}.bean";
+      f.state.sourceFiles = ["main.bean"];
+      try {
+        const result = await f.call(surface, { text: TXN });
+        expect(result.ok).toBe(true);
+        const data = result.ok ? (result.data as Record<string, never>) : {};
+        expect(JSON.stringify(data)).toContain(
+          "Added 1 directive to txns/2026.bean; main.bean now includes txns/2026.bean",
+        );
+        expect(f.commits).toHaveLength(1);
+        expect(f.commits[0].files.map(({ path }) => path)).toEqual([
+          "txns/2026.bean",
+          "main.bean",
+        ]);
+        expect(f.state.files.get("main.bean")).toBe(
+          `${EXISTING.trimEnd()}\ninclude "txns/2026.bean"\n`,
+        );
+      } finally {
+        await f.close();
+      }
+    },
+  );
 
   it("honours an explicit path over the routing rules", async () => {
     const f = await fixture();

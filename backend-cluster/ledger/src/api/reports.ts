@@ -15,6 +15,10 @@ import {
   parseFavaOptions,
   resolveConversion,
 } from "@/foundation/rustledger";
+import { BadUserInputError } from "@/shared/errors";
+
+/** An append writes at most 50 directives; this leaves room, not a ledger. */
+const MAX_LOCATIONS = 200;
 
 /** The shared `time`/`filter`/`account` selector triple. */
 function selectors(ctx: Parameters<typeof ledgerIdOf>[0]) {
@@ -84,6 +88,80 @@ export function setReportsHandler(router: Router): void {
         userId: undefined,
         overlays: body.files ?? [],
       }),
+    );
+  });
+
+  // operationId: getProjectedSourceFiles — POST /reports/{o}/{r}/source-files
+  // The files the projected ledger loads (base64 text; null deletes): how a
+  // write tells whether a file it routes to would be read at all (w23/062).
+  router.post(`${base}/source-files`, authMiddleware, async (ctx) => {
+    const { data } = servicesForRequest(ctx);
+    const body = (ctx.request.body ?? {}) as {
+      files?: { path: string; content: string | null }[];
+    };
+    ctx.body = successResponse(
+      await data.projectedSourceFiles({
+        ledgerId: ledgerIdOf(ctx),
+        userId: undefined,
+        overlays: body.files ?? [],
+      }),
+    );
+  });
+
+  // operationId: getProjectedEntryIds — POST /reports/{o}/{r}/entry-ids
+  // The entry ID of the directive starting on each `{path, line}` (1-based)
+  // of the projected ledger, `null` where none does: how a write that
+  // commits these files tells its caller the hashes it created (w23/060).
+  router.post(`${base}/entry-ids`, authMiddleware, async (ctx) => {
+    const { data } = servicesForRequest(ctx);
+    const body = (ctx.request.body ?? {}) as {
+      files?: { path: string; content: string | null }[];
+      locations?: { path: string; line: number }[];
+    };
+    const locations = body.locations ?? [];
+    if (!Array.isArray(locations) || locations.length > MAX_LOCATIONS) {
+      throw new BadUserInputError(
+        `at most ${MAX_LOCATIONS} locations may be resolved at once`,
+      );
+    }
+    const ranges = locations.map((location, index) => {
+      if (
+        location === null ||
+        typeof location !== "object" ||
+        typeof location.path !== "string" ||
+        !Number.isInteger(location.line) ||
+        location.line < 1
+      ) {
+        throw new BadUserInputError(
+          `locations[${index}] must name a path and a 1-based line`,
+        );
+      }
+      return {
+        file: location.path,
+        startLine: location.line - 1,
+        lineCount: 1,
+      };
+    });
+    ctx.body = successResponse({
+      entry_hashes: await data.projectedEntryIds({
+        ledgerId: ledgerIdOf(ctx),
+        userId: undefined,
+        overlays: body.files ?? [],
+        ranges,
+      }),
+    });
+  });
+
+  // operationId: checkLedgerFiles — POST /reports/check-files
+  // bean-check over a complete set of files that is not a repository yet:
+  // the ledger a guided setup would create, before it is created (w23/048).
+  router.post("/reports/check-files", authMiddleware, async (ctx) => {
+    const { data } = servicesForRequest(ctx);
+    const body = (ctx.request.body ?? {}) as {
+      files?: { path: string; content: string }[];
+    };
+    ctx.body = successResponse(
+      await data.checkLedgerFiles({ files: body.files ?? [] }),
     );
   });
 

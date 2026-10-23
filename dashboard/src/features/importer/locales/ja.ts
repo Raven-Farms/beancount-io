@@ -133,9 +133,15 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "現在のファイル形式にはAI解析が必要です",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "プレミアムにアップグレード",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "{plan}にアップグレード",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "プランをアップグレード",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "AIでPDF、OFX、画像ファイルを自動解析",
@@ -164,6 +170,15 @@ const jaImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "ファイルの解析に失敗しました",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "ファイルが UTF-8 テキストではありません",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "この CSV には有効な UTF-8 ではない文字が含まれているため、インポートすると支払先や説明のテキストが変わってしまいます。銀行または表計算アプリで CSV UTF-8 として保存し直し、そのファイルをアップロードしてください。",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -307,6 +322,18 @@ const jaImporter: Record<string, TranslationEntry> = {
     message: "すべてのトランザクションの通貨",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} 行（{rows}）は {symbol}（{currencies}）で記載されていますが、このインポートでは {currency} として記帳されます。",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "1 回のインポートで記帳できる通貨は 1 つです。これらの行の通貨を選択するか、選択を解除して別にインポートしてください。まだ何もインポートされていません。",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "ターゲット口座を割り当て",
     description: "Heading for account mapping section",
@@ -431,6 +458,11 @@ const jaImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count}件のトランザクションを正常にカテゴリ分類しました",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "対象勘定を入力できるほど確度の高い提案はありませんでした。",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AIカテゴリ分類に失敗しました",

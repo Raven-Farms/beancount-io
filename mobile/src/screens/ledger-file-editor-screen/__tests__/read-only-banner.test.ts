@@ -13,15 +13,22 @@ describe("file editor read-only indicator", () => {
   );
 
   it("shows the translated read-only message when the ledger cannot be written", () => {
-    const start = source.indexOf(
-      '{!canWrite && fileErrors.length === 0 && editorState === "content" ? (',
-    );
+    const start = source.indexOf("{!canWrite &&");
     expect(start === -1).toBe(false);
+    const banner = source.slice(start, source.indexOf(") : null}", start));
+    // A file that is not UTF-8 says so, even beside the error banner
+    // (w21/042); a read-only ledger keeps its own message.
+    // A file too large to open does the same (w21/185).
     expect(
-      source
-        .slice(start, source.indexOf(") : null}", start))
-        .includes('t("ledgerReadOnly")'),
+      banner.includes(
+        "(lossy || tooLarge || overLimit || fileErrors.length === 0)",
+      ),
     ).toBe(true);
+    expect(
+      banner.replace(/\s+/g, " ").includes('tooLarge ? "ledgerEditorTooLarge"'),
+    ).toBe(true);
+    expect(banner.includes('"ledgerEditorNotUtf8"')).toBe(true);
+    expect(banner.includes('"ledgerReadOnly"')).toBe(true);
   });
 
   it("still hides Save on a read-only ledger", () => {

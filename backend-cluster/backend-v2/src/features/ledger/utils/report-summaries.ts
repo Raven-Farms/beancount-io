@@ -1,3 +1,4 @@
+import BigNumber from "bignumber.js";
 import type {
   BalanceSheetDataPublic,
   DateAndBalanceWithAccountBalancePublic,
@@ -23,13 +24,24 @@ import type {
  *
  * Amounts are numbers in one stated currency. A statement in three currencies
  * cannot be added up, and pretending otherwise would be worse than reporting
- * the one the caller asked to convert to.
+ * the one the caller asked to convert to. What the other currencies hold is
+ * not dropped silently: each summary's `otherCurrencies` gives it, on the same
+ * basis as the headline number (w23/050).
  *
  * Those numbers are JSON numbers, not the decimal strings Fava sends, because
  * an agent asked for a total wants something it can compare and add without
  * parsing. The cost is real and bounded: a magnitude past 2^53 rounds. Any
  * caller that needs the exact decimal has `shape=fava`, which never converts.
  */
+
+/**
+ * Per currency other than the summary's, the amount its headline number
+ * leaves out — net worth, net profit, or an interval's total. Present only
+ * when the stated currency does not carry everything. Under `units`, or a conversion the
+ * ledger has no prices for, stocks and funds stay in their own commodities
+ * and appear here rather than vanishing from the totals (w23/050).
+ */
+type OtherCurrencies = Readonly<Record<string, number>>;
 
 /** One account and what it holds, in the summary's currency. */
 export interface AccountBalance {
@@ -46,9 +58,12 @@ export interface BalanceSheetSummary {
    * positions count; it does not date the prices. `units` reports positions
    * unconverted, `cost` at their booked cost, and `latest-price` — a currency
    * conversion or `at_value` — at the ledger's most recent price, not the
-   * price on `asOf`.
+   * price on `asOf`. A conversion to a currency the ledger has no prices for
+   * converts nothing, so it reads `units` (w23/050).
    */
   readonly valuation: "units" | "cost" | "latest-price";
+  /** What `netWorth` leaves out, per other currency. */
+  readonly otherCurrencies?: OtherCurrencies;
   readonly assets: number;
   readonly liabilities: number;
   readonly equity: number;
@@ -78,18 +93,24 @@ export interface IncomeStatementSummary {
   readonly income: number;
   readonly expenses: number;
   readonly net: number;
+  /** What `net` leaves out, per other currency. */
+  readonly otherCurrencies?: OtherCurrencies;
   readonly byAccount: readonly AccountBalance[];
 }
 
 export interface OverviewSummary {
   readonly currency: string;
   readonly netWorth: number;
+  /** What the latest `netWorth` leaves out, per other currency. */
+  readonly otherCurrencies?: OtherCurrencies;
   readonly series: readonly { date: string; netWorth: number }[];
 }
 
 interface IntervalTotal {
   readonly period: string;
   readonly total: number;
+  /** What `total` leaves out, per other currency. */
+  readonly otherCurrencies?: OtherCurrencies;
   readonly byAccount: readonly AccountBalance[];
 }
 
@@ -146,6 +167,39 @@ function amount(balance: Balance | null | undefined, currency: string): number {
   if (raw === undefined) return 0;
   const value = Number(raw);
   return Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * `{ otherCurrencies }` with the sum of `balances` in every currency but
+ * `currency`, zeros dropped — or nothing, when no other currency remains.
+ */
+function otherCurrencies(
+  balances: readonly (Balance | null | undefined)[],
+  currency: string,
+  sign = 1,
+): { otherCurrencies?: OtherCurrencies } {
+  const totals = new Map<string, BigNumber>();
+  for (const balance of balances) {
+    for (const [code, raw] of Object.entries(balance ?? {})) {
+      const value = Number(raw);
+      if (code === currency || !Number.isFinite(value)) continue;
+      totals.set(code, (totals.get(code) ?? new BigNumber(0)).plus(raw));
+    }
+  }
+  const entries = [...totals]
+    .filter(([, value]) => !value.isZero())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([code, value]) => [code, value.times(sign).toNumber()]);
+  return entries.length > 0
+    ? { otherCurrencies: Object.fromEntries(entries) }
+    : {};
+}
+
+/** A hierarchy root's own and children's balances, which sum to its total. */
+function rootBalances(
+  node: SerializableTreeNodePublic | null | undefined,
+): Balance[] {
+  return node ? [node.balance_children, node.balance] : [];
 }
 
 /**
@@ -213,14 +267,29 @@ export function flattenHierarchy(
   return into;
 }
 
+/**
+ * The exact decimal sum of amounts, as a JSON number.
+ *
+ * Each amount is the ledger's decimal string read as a number, and
+ * `String(n)` gives that decimal back exactly, so summing those strings
+ * loses nothing: `3609.87 + -2703.29` is `906.58`, where float addition
+ * printed `906.5799999999999` (w23/013).
+ */
+function sum(...values: number[]): number {
+  return values
+    .reduce((acc, value) => acc.plus(String(value)), new BigNumber(0))
+    .toNumber();
+}
+
 /** A hierarchy root's total, which is what its children sum to. */
 function total(
   node: SerializableTreeNodePublic | null | undefined,
   currency: string,
 ): number {
   if (!node) return 0;
-  return (
-    amount(node.balance_children, currency) + amount(node.balance, currency)
+  return sum(
+    amount(node.balance_children, currency),
+    amount(node.balance, currency),
   );
 }
 
@@ -249,15 +318,23 @@ export function summarizeBalanceSheet(
   const assets = total(data.assets_hierarchy_data, currency);
   const liabilities = total(data.liabilities_hierarchy_data, currency);
   const equity = total(data.equity_hierarchy_data, currency);
+  const requested = requestedCurrency(conversion);
   return {
     asOf: lastDate(data.net_worth_data),
     currency,
     valuation:
-      conversion === "units"
+      conversion === "units" || (requested && currency !== requested)
         ? "units"
         : conversion === "at_cost"
           ? "cost"
           : "latest-price",
+    ...otherCurrencies(
+      [
+        ...rootBalances(data.assets_hierarchy_data),
+        ...rootBalances(data.liabilities_hierarchy_data),
+      ],
+      currency,
+    ),
     assets,
     liabilities,
     equity,
@@ -265,7 +342,7 @@ export function summarizeBalanceSheet(
     // series point at its interval end but the trees at the latest price, so
     // under a historical filter the series point belongs to a different
     // snapshot than the accounts this summary reports (w6/009).
-    netWorth: assets + liabilities,
+    netWorth: sum(assets, liabilities),
     byAccount: [
       ...flattenHierarchy(data.assets_hierarchy_data, currency),
       ...flattenHierarchy(data.liabilities_hierarchy_data, currency),
@@ -299,7 +376,15 @@ export function summarizeIncomeStatement(
     expenses,
     // Beancount signs income negative and expenses positive, so the profit is
     // their sum — not their difference, which would double the loss.
-    net: -(income + expenses),
+    net: -sum(income, expenses),
+    ...otherCurrencies(
+      [
+        ...rootBalances(data.income_hierarchy_data),
+        ...rootBalances(data.expenses_hierarchy_data),
+      ],
+      currency,
+      -1,
+    ),
     byAccount: [
       ...flattenHierarchy(data.income_hierarchy_data, currency),
       ...flattenHierarchy(data.expenses_hierarchy_data, currency),
@@ -322,6 +407,7 @@ export function summarizeOverview(
   return {
     currency,
     netWorth: series.length > 0 ? series[series.length - 1].netWorth : 0,
+    ...otherCurrencies([data.net_worth_data.at(-1)?.balance], currency),
     series,
   };
 }
@@ -343,6 +429,7 @@ export function summarizeIntervalTotals(
     intervals: data.map((point) => ({
       period: point.date,
       total: amount(point.balance, currency),
+      ...otherCurrencies([point.balance], currency),
       byAccount: Object.entries(point.account_balances ?? {})
         .map(([account, balance]) => ({
           account,

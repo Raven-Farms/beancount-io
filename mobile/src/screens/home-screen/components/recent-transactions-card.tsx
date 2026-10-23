@@ -5,7 +5,14 @@ import { ColorTheme } from "@/types/theme-props";
 import { fontSizes } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { LoadingTile } from "@/components/loading-tile";
+import { useToday } from "@/common/hooks/use-today";
+import { RecentTransactionsSkeleton } from "./home-skeletons";
+import { journalRowKeys } from "@/screens/transactions-screen/utils/merge-journal-page";
+import {
+  RECENT_FUTURE_BUFFER,
+  recentTransactionsUpTo,
+  recentTransactionsWindow,
+} from "../selectors/recent-window";
 import { FadeInView } from "@/components/crossfade";
 import { DashboardCard } from "@/components";
 import { useGetLedgerJournalQuery } from "@/generated-graphql/graphql";
@@ -49,6 +56,8 @@ export function RecentTransactionsCard({
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
   const router = useRouter();
+  // The day each row's date is judged against, kept current past midnight.
+  const today = useToday();
   const guest = useGuest();
 
   const { data, loading, error, refetch } = useGetLedgerJournalQuery({
@@ -56,8 +65,12 @@ export function RecentTransactionsCard({
       ledgerId: ledgerId!,
       query: {
         offset: 0,
-        limit: RECENT_LIMIT,
+        limit: RECENT_LIMIT + RECENT_FUTURE_BUFFER,
         directiveTypes: [DirectiveType.TRANSACTION],
+        // What has happened, not what is booked for later (w21/471); the
+        // window holds still through the month so the offline copy keeps its
+        // key (w21/513).
+        time: recentTransactionsWindow(today),
       },
     },
     skip: !ledgerId,
@@ -70,8 +83,33 @@ export function RecentTransactionsCard({
     }
   }, [refreshSignal, ledgerId, refetch]);
 
-  const entries = (data?.getLedgerJournal.data ??
-    []) as unknown as JournalDirectiveType[];
+  const entries = recentTransactionsUpTo(
+    (data?.getLedgerJournal.data ?? []) as unknown as JournalDirectiveType[],
+    today,
+    RECENT_LIMIT,
+  );
+
+  // Nothing up to today may still be a ledger with entries booked for later (the
+  // rent of the next months), not a new one: the newest entry says which
+  // (w21/573). Read only when the card would otherwise show the first-run copy.
+  const emptyUpToToday = data !== undefined && !error && entries.length === 0;
+  const { data: newestData } = useGetLedgerJournalQuery({
+    variables: {
+      ledgerId: ledgerId!,
+      query: {
+        offset: 0,
+        limit: 1,
+        directiveTypes: [DirectiveType.TRANSACTION],
+      },
+    },
+    skip: !ledgerId || !emptyUpToToday,
+    fetchPolicy: "cache-and-network",
+  });
+  const newest = newestData?.getLedgerJournal.data?.[0]?.date;
+  const upcomingOnly = emptyUpToToday && newest !== undefined && newest > today;
+
+  // Twin entries share a hash: their keys carry the ordinal (w21/419, w21/524).
+  const rowKeys = journalRowKeys(entries);
 
   const onSeeAll = () => {
     if (guest) {
@@ -92,15 +130,21 @@ export function RecentTransactionsCard({
           onRetry={() => void refetch().catch(() => undefined)}
         />
       ) : loading && entries.length === 0 ? (
-        <LoadingTile height={160} mx={16} />
+        <RecentTransactionsSkeleton />
       ) : (
         <FadeInView>
           {entries.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                {t("recentTransactionsEmpty")}
+                {upcomingOnly
+                  ? t("recentTransactionsUpcoming")
+                  : t("recentTransactionsEmpty")}
               </Text>
-              {ledgerId && data && !error && onAddTransaction ? (
+              {!upcomingOnly &&
+              ledgerId &&
+              data &&
+              !error &&
+              onAddTransaction ? (
                 <Button
                   testID="home-empty-add-transaction"
                   onPress={onAddTransaction}
@@ -112,8 +156,9 @@ export function RecentTransactionsCard({
           ) : (
             entries.map((entry, index) => (
               <EntryRow
-                key={entry.entry_hash || index}
+                key={rowKeys.get(entry) ?? index}
                 entry={entry}
+                dateToday={today}
                 onPress={
                   isJournalTransaction(entry)
                     ? () =>

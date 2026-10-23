@@ -726,3 +726,66 @@ diff --git a/file2.bean b/file2.bean
     expect(scrollToRow).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Git writes a TAB after a `---`/`+++` path that contains whitespace; the
+ * parsed path must not keep it, or the file's section and its link differ
+ * (w4/263). These patches carry the recorded separator byte.
+ */
+describe("DiffViewer header tab separator", () => {
+  const spaced = "qa-20261020-diff spaced.txt";
+  const unicode = "qa-20261020-中文 & ?# +.txt";
+  const added = (name: string, separator = "\t") =>
+    [
+      `diff --git a/${name} b/${name}`,
+      "new file mode 100644",
+      "index 0000000..1111111",
+      "--- /dev/null",
+      `+++ b/${name}${separator}`,
+      "@@ -0,0 +1,2 @@",
+      "+line 1",
+      "+line 2",
+      "",
+    ].join("\n");
+  const deleted = (name: string) =>
+    [
+      `diff --git a/${name} b/${name}`,
+      "deleted file mode 100644",
+      "index 1111111..0000000",
+      `--- a/${name}\t`,
+      "+++ /dev/null",
+      "@@ -1,1 +0,0 @@",
+      "-line 1",
+      "",
+    ].join("\n");
+
+  it.each([
+    ["an added spaced name", spaced, added(spaced)],
+    ["a deleted spaced name", spaced, deleted(spaced)],
+    ["an added Unicode/punctuation name", unicode, added(unicode)],
+    [
+      "a plain-name control",
+      "qa-20261020-diff-plain.txt",
+      added("qa-20261020-diff-plain.txt", ""),
+    ],
+  ])("anchors %s at its real file name", (_case, name, diff) => {
+    const scrollIntoView = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockClear();
+    try {
+      render(
+        <DiffViewer
+          diff={diff}
+          focusRequest={{ fileId: getDiffFileId(name), token: 263 }}
+        />,
+      );
+      const section = document.getElementById(getDiffFileId(name));
+      expect(section).not.toBeNull();
+      expect(section?.firstElementChild).toHaveTextContent(name);
+      expect(document.getElementById(getDiffFileId(`${name}\t`))).toBeNull();
+      expect(scrollIntoView.mock.contexts).toEqual([section]);
+    } finally {
+      scrollIntoView.mockRestore();
+    }
+  });
+});

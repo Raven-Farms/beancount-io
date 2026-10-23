@@ -116,12 +116,28 @@
               "file",
               "dir"
             ]
+          },
+          "size": {
+            "type": "integer",
+            "description": "Size in bytes"
+          },
+          "sha": {
+            "type": "string",
+            "description": "Blob SHA: send it back as the optimistic lock of a delete or update"
+          },
+          "lastCommitSha": {
+            "type": "string",
+            "nullable": true,
+            "description": "The commit that last touched the entry, when known"
           }
         },
         "required": [
           "path",
           "name",
-          "type"
+          "type",
+          "size",
+          "sha",
+          "lastCommitSha"
         ],
         "description": "One file or directory at a level of the repository"
       },
@@ -136,6 +152,13 @@
           },
           "sha": {
             "type": "string"
+          },
+          "lossy": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Present when the file is not valid UTF-8: `content` shows U+FFFD for its undecodable bytes, so writing it back would replace them."
           }
         },
         "required": [
@@ -174,8 +197,7 @@
           },
           "message": {
             "type": "string",
-            "minLength": 1,
-            "description": "Commit message; defaults to a generated one",
+            "description": "Commit message; \"Create <path>\" or \"Update <path>\" when omitted or empty",
             "example": "Add January transactions"
           },
           "sha": {
@@ -192,8 +214,7 @@
         "type": "object",
         "properties": {
           "message": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "sha": {
             "type": "string",
@@ -1299,15 +1320,19 @@
                   "name": {
                     "type": "string",
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$"
+                    "pattern": "^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$",
+                    "description": "Lowercase letters, numbers, and underscores, joined by single hyphens."
                   },
                   "description": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "maxLength": 2048,
+                    "description": "A short description shown with the ledger, up to 2048 characters."
                   },
                   "private": {
                     "type": "boolean",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone."
                   },
                   "template": {
                     "type": "string",
@@ -1316,7 +1341,92 @@
                       "STARTER",
                       "SAMPLE",
                       null
-                    ]
+                    ],
+                    "description": "STARTER (the default) has options and accounts without transactions; SAMPLE has demonstration transactions."
+                  },
+                  "setup": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "preset": {
+                        "type": "string",
+                        "enum": [
+                          "personal@1",
+                          "freelance@1",
+                          "business@1",
+                          "portfolio@1",
+                          "rental@1",
+                          "shared-expenses@1",
+                          "community@1",
+                          "blank@1"
+                        ],
+                        "description": "Setup preset id (ADR021)."
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "operatingCurrency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      "historyStart": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "capabilities": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string",
+                          "enum": [
+                            "enabled",
+                            "declined",
+                            "deferred"
+                          ]
+                        }
+                      },
+                      "accounts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "pattern": "^[A-Z]{3}$"
+                            },
+                            "openingState": {
+                              "type": "string",
+                              "enum": [
+                                "unknown",
+                                "zero",
+                                "known"
+                              ]
+                            },
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?\\d+(\\.\\d+)?$"
+                            }
+                          },
+                          "required": [
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "preset"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "nullable": true,
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": [
@@ -1733,19 +1843,26 @@
         "parameters": [
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number",
+              "example": 1
             },
             "required": false,
+            "description": "1-based page number",
             "name": "page",
             "in": "query"
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size, at most 100",
+              "example": 20
             },
             "required": false,
+            "description": "Page size, at most 100",
             "name": "limit",
             "in": "query"
           },
@@ -1783,8 +1900,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "uid",
@@ -1792,8 +1909,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "priorityOwnerId",
@@ -1801,8 +1918,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "teamId",
@@ -1810,8 +1927,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "starredBy",
@@ -1895,7 +2012,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
             },
             "required": false,
             "name": "order",
@@ -2083,7 +2204,7 @@
       "get": {
         "operationId": "getLedger",
         "summary": "Get one ledger",
-        "description": "Metadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions when available.",
+        "description": "Metadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions and `isStarred` when available.",
         "tags": [
           "Ledger v1"
         ],
@@ -2345,15 +2466,19 @@
                     "type": "string",
                     "nullable": true,
                     "maxLength": 100,
-                    "pattern": "^[a-z0-9_-]+$"
+                    "pattern": "^(?=[a-z0-9_-]*[a-z0-9])[a-z0-9_]+(?:-[a-z0-9_]+)*$",
+                    "description": "Lowercase letters, numbers, and underscores, joined by single hyphens."
                   },
                   "description": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "maxLength": 2048,
+                    "description": "A short description shown with the ledger, up to 2048 characters."
                   },
                   "private": {
                     "type": "boolean",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is."
                   }
                 },
                 "additionalProperties": false
@@ -4534,7 +4659,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/approve": {
       "post": {
         "summary": "Merge a pull request",
-        "description": "Applies immediately using current repository write authority. Repository failures retain the GraphQL success/message result; a pull request number that does not exist is NOT_FOUND.",
+        "description": "Applies immediately using current repository write authority. Repository failures retain the GraphQL success/message result; a pull request number that does not exist is NOT_FOUND. A merge that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count.",
         "tags": [
           "Ledger v1"
         ],
@@ -5253,6 +5378,278 @@
         }
       }
     },
+    "/api-gateway/v1/ledgers/preview": {
+      "post": {
+        "operationId": "previewLedgerSetup",
+        "summary": "Preview a ledger setup without creating it",
+        "description": "Return the files, account list, and validation result a setup specification (ADR021) would create, without creating anything. Uses the same LEDGER_CREATE authority as creation.",
+        "tags": [
+          "Ledger v1"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "setup": {
+                    "type": "object",
+                    "properties": {
+                      "preset": {
+                        "type": "string",
+                        "enum": [
+                          "personal@1",
+                          "freelance@1",
+                          "business@1",
+                          "portfolio@1",
+                          "rental@1",
+                          "shared-expenses@1",
+                          "community@1",
+                          "blank@1"
+                        ],
+                        "description": "Setup preset id (ADR021)."
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "operatingCurrency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      "historyStart": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "capabilities": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string",
+                          "enum": [
+                            "enabled",
+                            "declined",
+                            "deferred"
+                          ]
+                        }
+                      },
+                      "accounts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "currency": {
+                              "type": "string",
+                              "pattern": "^[A-Z]{3}$"
+                            },
+                            "openingState": {
+                              "type": "string",
+                              "enum": [
+                                "unknown",
+                                "zero",
+                                "known"
+                              ]
+                            },
+                            "amount": {
+                              "type": "string",
+                              "pattern": "^-?\\d+(\\.\\d+)?$"
+                            }
+                          },
+                          "required": [
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "preset"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "setup"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setup preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "preset": {
+                      "type": "string"
+                    },
+                    "operatingCurrency": {
+                      "type": "string"
+                    },
+                    "historyStart": {
+                      "type": "string"
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "files": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "validation": {
+                      "type": "object",
+                      "properties": {
+                        "ok": {
+                          "type": "boolean"
+                        },
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "message": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "message"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "ok",
+                        "errors"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "preset",
+                    "operatingCurrency",
+                    "historyStart",
+                    "accounts",
+                    "files",
+                    "validation"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request failed validation against the documented schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No credential, or a credential that no longer resolves",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "The action needs a paid plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The credential lacks the permission this business action requires",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such ledger, or no access to it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The change conflicts with the resource's current state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server failed; the request may be retried",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is unavailable; retry later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api-gateway/v1/ledgers/{owner}/{name}/latest-commit": {
       "get": {
         "summary": "Read the latest commit on a ledger branch",
@@ -5470,6 +5867,7 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
+              "maximum": 50,
               "default": 30
             },
             "required": false,
@@ -5776,8 +6174,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true,
+              "type": "integer",
+              "minimum": 1,
               "default": 1
             },
             "required": false,
@@ -5786,8 +6184,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
               "default": 10
             },
             "required": false,
@@ -6662,8 +7061,8 @@
         "parameters": [
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -6671,8 +7070,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",
@@ -7903,10 +8303,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
+              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
             },
             "required": false,
-            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
+            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
             "name": "directiveTypes",
             "in": "query"
           },
@@ -8109,6 +8509,28 @@
             "required": false,
             "description": "Fava time expression: a day (2026-09-05), month (2026-09), year, or range. It bounds transactions only — undated structural directives such as `open` and `close` carry the epoch date and appear in every window, so a single-day journal still lists them. Use directiveTypes to ask for transactions alone.",
             "name": "time",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Entries per page. Omitted, REST and GraphQL return every entry; MCP returns 200."
+            },
+            "required": false,
+            "description": "Entries per page. Omitted, REST and GraphQL return every entry; MCP returns 200.",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "minimum": 0
+            },
+            "required": false,
+            "name": "offset",
             "in": "query"
           }
         ],
@@ -8333,10 +8755,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
+              "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window."
             },
             "required": false,
-            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
+            "description": "JSON-encoded directive kinds to include, e.g. [\"Transaction\"]: any of Transaction, Balance, Commodity, Close, Custom, Document, Event, Note, Open, Pad, Price, in any case. Omitted, every kind is returned — including the epoch-dated `open`/`close` directives that fall inside any time window.",
             "name": "directiveTypes",
             "in": "query"
           },
@@ -8863,12 +9285,11 @@
           {
             "schema": {
               "type": "string",
-              "default": "USD",
-              "description": "Convert amounts to this currency",
+              "description": "Convert amounts to this currency (default: the ledger's operating currency)",
               "example": "USD"
             },
             "required": false,
-            "description": "Convert amounts to this currency",
+            "description": "Convert amounts to this currency (default: the ledger's operating currency)",
             "name": "conversion",
             "in": "query"
           },
@@ -9907,10 +10328,18 @@
                     "message": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "entryHashes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The hash each committed entry now carries, in request order — what getEntryContext, the source-slice update and delete take. Empty on a dry run, or when the hashes could not be resolved after the commit."
                     }
                   },
                   "required": [
-                    "success"
+                    "success",
+                    "entryHashes"
                   ],
                   "additionalProperties": false
                 }
@@ -10099,6 +10528,13 @@
                         "additionalProperties": false
                       }
                     },
+                    "entryHashes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The hash each committed entry now carries, in request order — what getEntryContext, the source-slice update and delete take. Empty on a dry run, or when the hashes could not be resolved after the commit."
+                    },
                     "diff": {
                       "type": "array",
                       "items": {
@@ -10155,6 +10591,7 @@
                     "dryRun",
                     "count",
                     "wrote",
+                    "entryHashes",
                     "diff",
                     "errorsBefore",
                     "errorsAfter",
@@ -10470,7 +10907,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete": {
       "post": {
         "summary": "Delete one entry source slice",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update or delete that would add bean-check errors the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED, naming each new error in newLedgerErrors; errors the ledger already had never block, and `allowInvalid: true` commits anyway. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -10519,6 +10956,10 @@
                   },
                   "sha256sum": {
                     "type": "string"
+                  },
+                  "allowInvalid": {
+                    "type": "boolean",
+                    "description": "Commit even when the write would add bean-check errors (VALIDATION_FAILED with newLedgerErrors), instead of refusing it."
                   }
                 },
                 "required": [
@@ -10649,7 +11090,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source/delete-many": {
       "post": {
         "summary": "Delete multiple entry source slices",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update or delete that would add bean-check errors the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED, naming each new error in newLedgerErrors; errors the ledger already had never block, and `allowInvalid: true` commits anyway. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -10711,6 +11152,10 @@
                       ],
                       "additionalProperties": false
                     }
+                  },
+                  "allowInvalid": {
+                    "type": "boolean",
+                    "description": "Commit even when the write would add bean-check errors (VALIDATION_FAILED with newLedgerErrors), instead of refusing it."
                   }
                 },
                 "required": [
@@ -10840,7 +11285,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-source": {
       "put": {
         "summary": "Update an entry source slice",
-        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. No preview.",
+        "description": "Modify entry source using the current sha256sum from entry context. Ledger content-write authority is checked before delegation. Stale source hashes are refused by the ledger service. An update returns the entry's new hash — the request's entryHash is stale after the commit. An update or delete that would add bean-check errors the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED, naming each new error in newLedgerErrors; errors the ledger already had never block, and `allowInvalid: true` commits anyway. An update that would take a free ledger past its directive limit is refused with RESOURCE_LIMIT_REACHED, naming the limit and the projected count; deletes always pass. No preview.",
         "tags": [
           "Ledger v1"
         ],
@@ -10889,6 +11334,10 @@
                   },
                   "sha256sum": {
                     "type": "string"
+                  },
+                  "allowInvalid": {
+                    "type": "boolean",
+                    "description": "Commit even when the write would add bean-check errors (VALIDATION_FAILED with newLedgerErrors), instead of refusing it."
                   },
                   "newContent": {
                     "type": "string"
@@ -12490,7 +12939,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/errors": {
       "get": {
         "summary": "List the ledger's parse and validation errors",
-        "description": "What `bean-check` reports for this ledger. An empty list means the ledger is currently valid.",
+        "description": "What `bean-check` reports for this ledger. An empty list means the ledger is currently valid. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed: `bean-check` does not fail on them.",
         "tags": [
           "Ledger v1"
         ],
@@ -13305,12 +13754,11 @@
           {
             "schema": {
               "type": "string",
-              "default": "USD",
-              "description": "Convert amounts to this currency",
+              "description": "Convert amounts to this currency (default: the ledger's operating currency)",
               "example": "USD"
             },
             "required": false,
-            "description": "Convert amounts to this currency",
+            "description": "Convert amounts to this currency (default: the ledger's operating currency)",
             "name": "conversion",
             "in": "query"
           },
@@ -15265,7 +15713,7 @@
     "/api-gateway/v1/ledgers/{owner}/{name}/entry-context": {
       "get": {
         "summary": "Get the source context around one entry",
-        "description": "The ledger text surrounding a directive, addressed by its hash — what to read before editing it.",
+        "description": "The ledger text surrounding a directive, addressed by its hash — what to read before editing it. A result with `generated_from` is a copy a plugin or a pad generated from that source entry: it shares the source's slice and sha256sum, so editing or deleting it would change the source and every other copy.",
         "tags": [
           "Ledger v1"
         ],
@@ -19891,7 +20339,7 @@
     "/api-gateway/v1/account/feed": {
       "get": {
         "summary": "Read your activity feed",
-        "description": "Merged blog, release, and ledger activity, newest first. Requires a session or account-wide OAuth credential with ledger.read. Source accepts BLOG, CHANGELOG, or LEDGER_RSS case-insensitively; omitted or empty means all sources. Locale defaults to the caller's profile then English. Offset defaults to 0 and limit to 10.",
+        "description": "Merged blog, release, and ledger activity, newest first. Requires a session or account-wide OAuth credential with ledger.read. Source accepts BLOG, CHANGELOG, or LEDGER_RSS case-insensitively; omitted or empty means all sources. Locale defaults to the caller's profile then English. Offset defaults to 0 and limit to 10, at most 100.",
         "tags": [
           "Ledger v1"
         ],
@@ -19906,8 +20354,9 @@
         "parameters": [
           {
             "schema": {
-              "type": "number",
+              "type": "integer",
               "nullable": true,
+              "minimum": 0,
               "default": 0
             },
             "required": false,
@@ -19916,8 +20365,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
               "default": 10
             },
             "required": false,
@@ -20130,8 +20580,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -20139,8 +20589,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",
@@ -20310,8 +20761,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -20319,8 +20770,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",
@@ -20490,8 +20942,8 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1
             },
             "required": false,
             "name": "page",
@@ -20499,8 +20951,9 @@
           },
           {
             "schema": {
-              "type": "number",
-              "nullable": true
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
             },
             "required": false,
             "name": "limit",

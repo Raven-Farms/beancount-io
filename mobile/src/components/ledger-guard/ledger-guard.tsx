@@ -14,8 +14,14 @@ import { ColorTheme } from "@/types/theme-props";
 import { Ionicons } from "@expo/vector-icons";
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
-import { useListLedgersQuery } from "@/generated-graphql/graphql";
+import {
+  useLedgerReadContextQuery,
+  useListLedgersQuery,
+} from "@/generated-graphql/graphql";
+import { isLedgerGone } from "@/common/graphql-error-codes";
+import { useOptionalLedgerDirectory } from "@/common/ledger-directory/ledger-directory-provider";
 import { useGuest } from "@/common/guest/guest-context";
+import { InlineError } from "@/components/inline-error";
 
 interface LedgerGuardContextValue {
   ledgerId: string;
@@ -50,7 +56,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     message: {
       fontSize: 16,
-      color: theme.black60,
+      color: theme.black80,
       marginBottom: 24,
       textAlign: "center",
       lineHeight: 24,
@@ -105,7 +111,9 @@ const LedgerGuardProviderComponent = ({
 
   // Self-heal an empty selection (fresh install, or splash-time validation
   // cleared a stale id) by defaulting to the user's first ledger.
-  const { data, loading } = useListLedgersQuery({ skip: !!ledgerId });
+  const { data, loading, error, refetch } = useListLedgersQuery({
+    skip: !!ledgerId,
+  });
   const firstLedgerId = data?.listLedgers?.[0]?.id;
 
   useEffect(() => {
@@ -114,11 +122,75 @@ const LedgerGuardProviderComponent = ({
     }
   }, [ledgerId, firstLedgerId]);
 
+  // The selected ledger may have been deleted elsewhere. Say so once, here,
+  // instead of a "Try again" on every card, and drop it from the drawer
+  // (w21/054). Shares the read context Home already makes.
+  const readContext = useLedgerReadContextQuery({
+    variables: { ledgerId: ledgerId ?? "" },
+    skip: !ledgerId,
+  });
+  const gone = Boolean(ledgerId) && isLedgerGone(readContext.error);
+  const directory = useOptionalLedgerDirectory();
+  useEffect(() => {
+    if (gone) void directory?.refresh().catch(() => {});
+  }, [gone, directory]);
+
   if (!ledgerId) {
     if (loading || firstLedgerId) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      );
+    }
+    // A list that failed to load is not an empty account: "No ledger selected"
+    // with Create invited a duplicate ledger, and the only way out was leaving
+    // the app (w21/295).
+    if (error && !data) {
+      return (
+        <View style={styles.container} testID="ledger-guard-load-error">
+          <View style={styles.content}>
+            <Ionicons
+              name="cloud-offline-outline"
+              size={64}
+              color={theme.black40}
+              style={styles.icon}
+            />
+            <InlineError
+              style={styles.message}
+              message={t("discoveryLoadError")}
+            />
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => void refetch().catch(() => undefined)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("discoveryRetry")}
+              >
+                <Text style={styles.buttonText}>{t("discoveryRetry")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="ledger-guard-settings"
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={() => {
+                  router.push("/(app)/settings");
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t("settings")}
+              >
+                <Ionicons
+                  name="settings-outline"
+                  size={20}
+                  color={theme.black}
+                />
+                <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                  {t("settings")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       );
     }
@@ -164,6 +236,69 @@ const LedgerGuardProviderComponent = ({
               <Ionicons name="search-outline" size={20} color={theme.black} />
               <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
                 {t("createLedgerEmptyDiscover")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="ledger-guard-settings"
+              style={[styles.button, styles.buttonSecondary]}
+              onPress={() => {
+                router.push("/(app)/settings");
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("settings")}
+            >
+              <Ionicons name="settings-outline" size={20} color={theme.black} />
+              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                {t("settings")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (gone) {
+    return (
+      <View style={styles.container} testID="ledger-guard-gone">
+        <View style={styles.content}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={64}
+            color={theme.black40}
+            style={styles.icon}
+          />
+          <Text style={styles.title}>{t("ledgerGoneTitle")}</Text>
+          <Text style={styles.message}>{t("ledgerGoneMessage")}</Text>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => {
+                router.push("/(app)/ledger-selection");
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("createLedgerEmptyDiscover")}
+            >
+              <Ionicons name="search-outline" size={20} color={theme.white} />
+              <Text style={styles.buttonText}>
+                {t("createLedgerEmptyDiscover")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="ledger-guard-settings"
+              style={[styles.button, styles.buttonSecondary]}
+              onPress={() => {
+                router.push("/(app)/settings");
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t("settings")}
+            >
+              <Ionicons name="settings-outline" size={20} color={theme.black} />
+              <Text style={[styles.buttonText, styles.buttonTextSecondary]}>
+                {t("settings")}
               </Text>
             </TouchableOpacity>
           </View>

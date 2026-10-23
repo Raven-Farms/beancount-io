@@ -68,23 +68,58 @@ describe("reportUrlIncludes", () => {
     ]);
   });
 
-  it("leaves a missing repository include and other errors untouched", () => {
-    const missing = readFailure("typo.bean");
-    const other = { ...readFailure("x"), code: "E1001", message: "other" };
+  // w21/189: a missing plain include read "failed to read file X: file not
+  // found in virtual filesystem: X", with no file or line.
+  it("locates a missing repository include and quotes it as written", () => {
     const files = {
-      "main.bean": 'include "typo.bean"\ninclude "https://example.com/a"\n',
+      "main.bean":
+        '2020-01-01 open Assets:Cash USD\ninclude "qa-missing.bean"\n',
     };
-    const out = reportUrlIncludes([missing, other], files, ORIGINS);
-
-    expect(out[0]).toBe(missing);
-    expect(out[1]).toBe(other);
+    const [error] = reportUrlIncludes(
+      [readFailure("qa-missing.bean")],
+      files,
+      ORIGINS,
+    );
+    expect([error.message, error.file, error.line]).toEqual([
+      "Included file not found: qa-missing.bean",
+      "main.bean",
+      2,
+    ]);
+    expect(error.message.includes("virtual filesystem")).toBe(false);
   });
 
-  it("returns the engine's errors as they are when no include is a URL", () => {
+  it("names a nested include as written, not as the engine resolved it", () => {
+    const files = {
+      "main.bean": 'include "books/jan.bean"\n',
+      "books/jan.bean": 'include "../typo.bean"\n',
+    };
+    const [error] = reportUrlIncludes(
+      [readFailure("typo.bean")],
+      files,
+      ORIGINS,
+    );
+    expect([error.message, error.file, error.line]).toEqual([
+      "Included file not found: ../typo.bean",
+      "books/jan.bean",
+      1,
+    ]);
+  });
+
+  it("leaves other errors, and a missing file nothing includes, untouched", () => {
+    const other = { ...readFailure("x"), code: "E1001", message: "other" };
+    const stray = readFailure("not-included.bean");
+    const files = { "main.bean": 'include "typo.bean"\n' };
+    const out = reportUrlIncludes([other, stray], files, ORIGINS);
+
+    expect(out[0]).toBe(other);
+    expect(out[1]).toBe(stray);
+  });
+
+  it("returns the engine's errors as they are when nothing is included", () => {
     const errors = [readFailure("typo.bean")];
-    expect(
-      reportUrlIncludes(errors, { "main.bean": 'include "typo.bean"\n' }, ORIGINS),
-    ).toBe(errors);
+    expect(reportUrlIncludes(errors, { "main.bean": "" }, ORIGINS)).toBe(
+      errors,
+    );
   });
 
   it("says why a URL on an allowed origin is still not a managed price source", () => {
@@ -107,7 +142,9 @@ describe("reportUrlIncludes", () => {
   });
 
   it("reports every URL as disallowed when managed prices are disabled", () => {
-    const files = { "main.bean": 'include "https://beancount.io/prices/BTC-USD"\n' };
+    const files = {
+      "main.bean": 'include "https://beancount.io/prices/BTC-USD"\n',
+    };
     const [error] = reportUrlIncludes(
       [readFailure("https:/beancount.io/prices/BTC-USD")],
       files,

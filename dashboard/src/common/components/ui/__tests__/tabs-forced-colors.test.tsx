@@ -1,8 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { beforeAll, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { compile } from "tailwindcss";
+import { compileAppCss, parseRules } from "@/test/tailwind";
 import { Tabs, TabsList, TabsTrigger } from "../tabs";
 
 /**
@@ -29,30 +27,6 @@ let ruleFor: (className: string) => string;
 /** The whole sheet, for assertions that span several utilities. */
 let sheet = "";
 
-/**
- * Split a Tailwind sheet into `class name -> rule body`. `compiler.build` is
- * incremental and returns the accumulated sheet, so every class is compiled in
- * one pass and looked up here rather than built one at a time.
- */
-function parseRules(css: string): Map<string, string> {
-  const rules = new Map<string, string>();
-  const selector = /\.((?:[^\s{},\\]|\\.)+)\s*\{/g;
-  let match: RegExpExecArray | null;
-  while ((match = selector.exec(css)) !== null) {
-    let depth = 1;
-    let i = selector.lastIndex;
-    for (; i < css.length && depth > 0; i++) {
-      if (css[i] === "{") depth++;
-      else if (css[i] === "}") depth--;
-    }
-    rules.set(
-      match[1].replace(/\\/g, ""),
-      css.slice(selector.lastIndex, i - 1),
-    );
-  }
-  return rules;
-}
-
 beforeAll(async () => {
   render(
     <>
@@ -76,17 +50,6 @@ beforeAll(async () => {
   selectedUnderline = screen.getByText("Underlined").className;
   unselectedUnderline = screen.getByText("Plain").className;
 
-  const require = createRequire(`${process.cwd()}/`);
-  const compiler = await compile(`@import "tailwindcss";`, {
-    base: process.cwd(),
-    loadStylesheet: async (id: string, base: string) => {
-      const path = require.resolve(
-        id === "tailwindcss" ? "tailwindcss/index.css" : id,
-      );
-      return { path, base, content: readFileSync(path, "utf8") };
-    },
-  });
-
   const every = [
     selectedPill,
     unselectedPill,
@@ -96,7 +59,7 @@ beforeAll(async () => {
     .join(" ")
     .split(/\s+/)
     .filter(Boolean);
-  sheet = compiler.build([...new Set(every)]);
+  sheet = await compileAppCss(every);
   const rules = parseRules(sheet);
   ruleFor = (className: string) => rules.get(className) ?? "";
 });
@@ -109,7 +72,7 @@ beforeAll(async () => {
 function declarations(classes: string) {
   return classes
     .split(/\s+/)
-    .filter((name) => name.startsWith("forced-colors:"))
+    .filter((name) => ruleFor(name).includes("forced-colors: active"))
     .map((name) => {
       const css = ruleFor(name);
       return {
@@ -143,6 +106,21 @@ describe("pill tabs under forced colors", () => {
         (rule) => rule.onlyWhenSelected,
       ),
     ).toBe(true);
+  });
+
+  it("keeps the selected label readable, and only the selected one", () => {
+    // Forced colors paints a Canvas plate behind text, which hid the selected
+    // pill's label on its Highlight fill (w4/m43). The opt-out is scoped to
+    // the selected tab, and its colours are important so the dark theme's
+    // more specific active fill cannot return once adjustment is off.
+    const optOut = matching(selectedPill, /forced-color-adjust:\s*none/);
+
+    expect(optOut.length).toBe(1);
+    expect(optOut[0]!.onlyWhenSelected).toBe(true);
+    expect(
+      matching(selectedPill, /background-color:\s*Highlight !important/).length,
+    ).toBeGreaterThan(0);
+    expect(matching(selectedUnderline, /forced-color-adjust/).length).toBe(0);
   });
 
   it("hides the otherwise-transparent border on every tab", () => {

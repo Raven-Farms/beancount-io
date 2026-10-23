@@ -92,10 +92,7 @@ export async function executeAppendLedgerText(
         diff: [...result.diff],
         appendedUnsorted: [...result.appendedUnsorted],
         wrote: [...result.wrote],
-        // Directive text is addressed by file and line, not by entry hash —
-        // the hash is assigned by the ledger when it reloads, and inventing
-        // one here would be a value the caller could not use.
-        entryHashes: [],
+        entryHashes: [...result.entryHashes],
         validation,
       };
     },

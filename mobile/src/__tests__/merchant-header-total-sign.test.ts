@@ -72,7 +72,10 @@ describe("merchant header totals keep their direction", () => {
   });
 
   it("renders every header total through the signed helper", () => {
-    expect(SCREEN.includes("{formatMerchantTotal(row)}")).toBe(true);
+    // The header formats its lines together, so currencies sharing a symbol can
+    // be told apart (w21/535); each is the signed helper's.
+    expect(SCREEN.includes("{totalLines[index]}")).toBe(true);
+    expect(SCREEN.includes("formatMerchantTotals(")).toBe(true);
     expect(SCREEN.includes("formatMoneyWithCurrency")).toBe(false);
   });
 });

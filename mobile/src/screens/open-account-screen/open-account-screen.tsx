@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { formatLedgerDate } from "@/common/date-format";
+import { InlineError } from "@/components/inline-error";
+import { useUnsavedChangesGuard } from "@/common/hooks/use-unsaved-changes-guard";
+import { CardLoadFailure } from "@/components/card-load-failure";
+import { useEffect, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -9,12 +14,13 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   AccountCreated,
   runAccountCreatedCallback,
 } from "@/common/globalFnFactory";
+import { useLedgerRootNames } from "@/common/hooks/use-ledger-root-names";
 import { useLedgerMeta } from "@/common/hooks/use-ledger-meta";
 import { useSession } from "@/common/hooks/use-session";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
@@ -32,6 +38,7 @@ import {
 import { DatePickerModal } from "@/components/date-picker-modal";
 import { useLedgerGuard } from "@/components/ledger-guard";
 import { Picker } from "@/components/picker";
+import { TextInputModal } from "@/components/text-input-modal";
 import { getRootIcon } from "@/components/account-type-icon/root-icon";
 import type { AccountRoot } from "@/common/account-root";
 import type { ColorTheme } from "@/types/theme-props";
@@ -39,6 +46,11 @@ import {
   ACCOUNT_ROOT_PREFIXES,
   composeAccountName,
   typedSubPathIssue,
+  ledgerRootName,
+  openAccountCurrencyChoices,
+  typedCurrencyCode,
+  peelTypedRoot,
+  rootButtonLabel,
   splitPrefillAccountName,
   type AccountNameValidationReason,
   type AccountRootPrefix,
@@ -47,7 +59,11 @@ import {
 } from "./account-name";
 import { useOpenAccount } from "./use-open-account";
 import { getFormatDate } from "@/common/format-util";
+import { initialOpenDate } from "./open-date";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
+import { revealAccountVar } from "@/common/vars/reveal-account";
+import { useIsHere } from "@/common/hooks/use-is-here";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const VALIDATION_KEYS: Record<AccountNameValidationReason, string> = {
   invalidRoot: "openAccountInvalidRoot",
@@ -181,7 +197,7 @@ const getStyles = (theme: ColorTheme) =>
     // The composed name, once it is valid: what will actually be written.
     preview: {
       marginTop: space.sm,
-      color: theme.black60,
+      color: theme.black80,
       fontSize: fontSizes.sm,
       lineHeight: 20,
     },
@@ -195,8 +211,14 @@ const getStyles = (theme: ColorTheme) =>
 
 type PickerKind = "root" | "currency" | null;
 
+/** A code shown in the empty typed-currency field; a code, not copy. */
+const EXAMPLE_CURRENCY = "EUR";
+
+/** The currency picker's row that opens the typed entry (w21/234). */
+const OTHER_CURRENCY = "__other_currency__";
+
 export function OpenAccountScreenComponent(): JSX.Element {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
@@ -205,25 +227,33 @@ export function OpenAccountScreenComponent(): JSX.Element {
   const {
     data: meta,
     currencies,
-    loading: metaLoading,
+    error: metaError,
+    refetch: refetchMeta,
   } = useLedgerMeta(userId, ledgerId);
   const { openAccount, loading } = useOpenAccount(ledgerId);
+  const isHere = useIsHere();
 
   // The account picker's "Create <typed>" row lands here with the typed query
   // as `prefill` and its context root (destination pickers suggest Expenses)
   // as `prefillRoot`; `pushOpenAccount` registers who receives the account.
   // `prefillRoot` is validated because route params can arrive from any deep
   // link, not just the picker.
-  const { prefill, prefillRoot } = useLocalSearchParams<{
+  const { prefill, prefillRoot, openDate } = useRouteParams<{
     prefill?: string;
     prefillRoot?: string;
+    openDate?: string;
   }>();
+  // The ledger may rename its roots (`option "name_assets" "Activos"`); the
+  // state keeps the canonical root, which picks the icon and colour, and the
+  // name written is the ledger's own (w21/073).
+  const roots = useLedgerRootNames();
   const [seed] = useState(() =>
     splitPrefillAccountName(
       prefill ?? "",
       ACCOUNT_ROOT_PREFIXES.includes(prefillRoot as AccountRootPrefix)
         ? (prefillRoot as AccountRootPrefix)
         : "Assets",
+      roots,
     ),
   );
 
@@ -236,23 +266,40 @@ export function OpenAccountScreenComponent(): JSX.Element {
   useEffect(() => () => AccountCreated.deleteFn(), []);
   const [currency, setCurrency] = useState("");
   const [currencyInitialized, setCurrencyInitialized] = useState(false);
-  const [date, setDate] = useState(() => new Date());
+  const [date, setDate] = useState(() => initialOpenDate(openDate, new Date()));
   const [picker, setPicker] = useState<PickerKind>(null);
+  // Currencies typed through "Other…" this visit, offered with the rest.
+  const [typedCurrencies, setTypedCurrencies] = useState<string[]>([]);
+  const [otherCurrencyVisible, setOtherCurrencyVisible] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // A committed save disables submit: a cold-link form that fails to leave
   // must never invite a duplicate resubmit (w1/032).
   const [saved, setSaved] = useState(false);
+  // Set as the save lands, before it navigates away: leaving after a save is not
+  // a discard. A typed name asks before Back drops it, as the other write forms
+  // do (w21/631).
+  const savedOutRef = useRef(false);
+  useUnsavedChangesGuard(!saved && subPath !== seed.subPath, savedOutRef);
 
+  // Defaults once the meta has actually arrived: a failed first read used to
+  // settle it on "No currency" for good (w21/085).
+  const metaLoaded = meta !== undefined;
   useEffect(() => {
-    if (!currencyInitialized && !metaLoading) {
+    if (!currencyInitialized && metaLoaded) {
       setCurrency(currencies[0] ?? "");
       setCurrencyInitialized(true);
     }
-  }, [currencies, currencyInitialized, metaLoading]);
+  }, [currencies, currencyInitialized, metaLoaded]);
 
-  const account = composeAccountName(rootPrefix, subPath);
-  const validation = validateAccountName(account);
+  const account = composeAccountName(
+    ledgerRootName(rootPrefix, roots),
+    subPath,
+  );
+  const validation = validateAccountName(
+    account,
+    ACCOUNT_ROOT_PREFIXES.map((root) => ledgerRootName(root, roots)),
+  );
   // The typed text, before composition tidies it: "Investments:" is a name
   // still being typed, not a request for `Assets:Investments`.
   const typedIssue = typedSubPathIssue(subPath);
@@ -265,6 +312,8 @@ export function OpenAccountScreenComponent(): JSX.Element {
     busy: loading,
   });
   const { alreadyOpen } = submitState;
+  const closeDates = useAccountCloseDates(ledgerId);
+  const closedAt = alreadyOpen ? closeDates.get(account) : undefined;
   const canSubmit = submitState.canSubmit && !saved;
   const rootKey = rootPrefix.toLowerCase() as AccountRoot;
   const rootIcon = getRootIcon(rootKey);
@@ -274,9 +323,12 @@ export function OpenAccountScreenComponent(): JSX.Element {
     const key = prefix.toLowerCase() as AccountRoot;
     const icon = getRootIcon(key);
     const tone = icon.tone(theme);
+    const name = ledgerRootName(prefix, roots);
     return {
       value: prefix,
-      label: t(key),
+      // A renamed root reads as the ledger names it; the canonical ones keep
+      // their translated label.
+      label: name === prefix ? t(key) : name,
       icon: (
         <View
           style={[styles.rootIcon, { backgroundColor: withAlpha(tone, 0.18) }]}
@@ -288,21 +340,37 @@ export function OpenAccountScreenComponent(): JSX.Element {
   });
   const currencyItems = [
     { value: "", label: t("openAccountNoCurrency") },
-    ...currencies.map((value) => ({ value, label: value })),
+    ...openAccountCurrencyChoices(
+      currencies,
+      meta?.currencies ?? [],
+      typedCurrencies,
+    ).map((value) => ({ value, label: value })),
+    // A commodity the ledger has not posted yet (a first EUR or stock
+    // account) is typed, not picked (w21/234).
+    { value: OTHER_CURRENCY, label: t("openAccountOtherCurrency") },
   ];
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
     setSubmitError(null);
+    // Taken before the save: leaving during it unmounts the screen, which
+    // discards the registration (w21/581).
+    const onCreated = AccountCreated.getFn();
     const result = await openAccount({
       account,
       currencies: currency ? [currency] : [],
       date,
     });
 
+    // An open was already running: this press did nothing (w21/193).
+    if (!result) return;
+
     if (result.ok) {
+      savedOutRef.current = true;
       setSaved(true);
+      // Accounts opens its ancestors and scrolls to it (w21/175).
+      revealAccountVar({ ledgerId, account });
       // Pop only this screen, then hand the account to whatever registered via
       // `pushOpenAccount` — the picker's callback delivers the pick and pops
       // its own frame, so no screen ever pops a frame it doesn't own. A plain
@@ -311,12 +379,16 @@ export function OpenAccountScreenComponent(): JSX.Element {
       // instead of raising an unhandled GO_BACK (w1/032). Nothing can be
       // registered for the created callback without a pushing picker, so the
       // delivery below is a no-op on that path.
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace("/(app)/(tabs)/accounts");
+      // Left during the save: pop nothing, but a picker still gets its account
+      // (w21/194).
+      if (isHere()) {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace("/(app)/(tabs)/accounts");
+        }
       }
-      runAccountCreatedCallback(account);
+      runAccountCreatedCallback(account, onCreated);
       return;
     }
 
@@ -374,7 +446,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 activeOpacity={0.7}
                 onPress={() => setPicker("root")}
                 accessibilityRole="button"
-                accessibilityLabel={`${t("accountType")}: ${t(rootKey)}`}
+                accessibilityLabel={rootButtonLabel(
+                  t("accountType"),
+                  rootPrefix,
+                  roots,
+                )}
               >
                 <View
                   style={[
@@ -384,7 +460,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
                 >
                   <Ionicons name={rootIcon.glyph} size={14} color={rootTone} />
                 </View>
-                <Text style={styles.prefixText}>{rootPrefix}:</Text>
+                <Text style={styles.prefixText}>
+                  {ledgerRootName(rootPrefix, roots)}:
+                </Text>
                 <Ionicons
                   style={styles.prefixChevron}
                   name="chevron-down"
@@ -395,9 +473,12 @@ export function OpenAccountScreenComponent(): JSX.Element {
               <View style={styles.inputDivider} />
               <TextInput
                 testID="open-account-name-input"
+                accessibilityLabel={t("account")}
                 value={subPath}
                 onChangeText={(value) => {
-                  setSubPath(value);
+                  const typed = peelTypedRoot(value, rootPrefix, roots);
+                  setRootPrefix(typed.rootPrefix);
+                  setSubPath(typed.subPath);
                   setSubmitError(null);
                 }}
                 style={styles.input}
@@ -410,18 +491,22 @@ export function OpenAccountScreenComponent(): JSX.Element {
               />
             </View>
             {validationMessage ? (
-              <Text style={styles.error} accessibilityLiveRegion="polite">
-                {validationMessage}
-              </Text>
+              <InlineError style={styles.error} message={validationMessage} />
             ) : null}
             {alreadyOpen ? (
-              <Text
+              <InlineError
                 style={styles.error}
-                accessibilityRole="alert"
-                accessibilityLiveRegion="polite"
-              >
-                {t("openAccountAlreadyOpen", { account })}
-              </Text>
+                // A closed account can't be reopened; "already open"
+                // contradicted the picker that hid it (w21/122).
+                message={
+                  closedAt
+                    ? t("openAccountClosed", {
+                        account,
+                        date: formatLedgerDate(closedAt, locale),
+                      })
+                    : t("openAccountAlreadyOpen", { account })
+                }
+              />
             ) : null}
             {namePreview ? (
               <Text style={styles.preview}>{namePreview}</Text>
@@ -433,6 +518,11 @@ export function OpenAccountScreenComponent(): JSX.Element {
             activeOpacity={0.7}
             onPress={() => setPicker("currency")}
             accessibilityRole="button"
+            // The chevron glyph read as "U+F…" in the name (w21/141).
+            accessibilityLabel={t("currency")}
+            accessibilityValue={{
+              text: currency || t("openAccountNoCurrency"),
+            }}
           >
             <Text style={styles.label}>{t("currency")}</Text>
             <Text style={styles.value}>
@@ -451,6 +541,8 @@ export function OpenAccountScreenComponent(): JSX.Element {
             activeOpacity={0.7}
             onPress={() => setDatePickerVisible(true)}
             accessibilityRole="button"
+            accessibilityLabel={t("openDate")}
+            accessibilityValue={{ text: getFormatDate(date) }}
           >
             <Text style={styles.label}>{t("openDate")}</Text>
             <Text style={styles.value}>{getFormatDate(date)}</Text>
@@ -464,10 +556,17 @@ export function OpenAccountScreenComponent(): JSX.Element {
         </View>
 
         {submitError ? (
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {submitError}
-          </Text>
+          <InlineError style={styles.error} message={submitError} />
         ) : null}
+        {
+          // Without the ledger's accounts the form cannot tell whether the name
+          // is taken, and Done stayed grey with nothing said (w21/630).
+          meta === undefined && metaError ? (
+            <CardLoadFailure
+              onRetry={() => void refetchMeta().catch(() => {})}
+            />
+          ) : null
+        }
       </ScrollView>
 
       <Picker
@@ -480,6 +579,9 @@ export function OpenAccountScreenComponent(): JSX.Element {
         onSelect={(item) => {
           if (picker === "root") {
             setRootPrefix(item.value as AccountRootPrefix);
+          } else if (item.value === OTHER_CURRENCY) {
+            setPicker(null);
+            setOtherCurrencyVisible(true);
           } else {
             setCurrency(item.value);
             setCurrencyInitialized(true);
@@ -487,6 +589,32 @@ export function OpenAccountScreenComponent(): JSX.Element {
           setSubmitError(null);
         }}
         onCancel={() => setPicker(null)}
+      />
+      <TextInputModal
+        visible={otherCurrencyVisible}
+        title={t("openAccountOtherCurrencyTitle")}
+        message={t("openAccountOtherCurrencyMessage")}
+        placeholder={EXAMPLE_CURRENCY}
+        confirmButtonText={t("done")}
+        cancelButtonText={t("cancel")}
+        validateInput={(input) =>
+          input.trim() === ""
+            ? false
+            : typedCurrencyCode(input) !== null ||
+              t("openAccountCurrencyInvalid")
+        }
+        onConfirm={(input) => {
+          const code = typedCurrencyCode(input);
+          if (code === null) return;
+          setTypedCurrencies((known) =>
+            known.includes(code) ? known : [...known, code],
+          );
+          setCurrency(code);
+          setCurrencyInitialized(true);
+          setSubmitError(null);
+          setOtherCurrencyVisible(false);
+        }}
+        onCancel={() => setOtherCurrencyVisible(false)}
       />
       <DatePickerModal
         isVisible={datePickerVisible}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { SubscriptionSection } from "../subscription-section";
 import {
   MOCK_TIER_QUOTAS,
@@ -37,6 +37,10 @@ const {
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -174,16 +178,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: "en" },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -239,6 +233,9 @@ beforeEach(() => {
   setUserLimits();
 });
 
+/** The plan banner, apart from the plan row that names every tier too. */
+const banner = () => within(screen.getByTestId("current-plan-banner"));
+
 describe("Billing Section", () => {
   it("should show billing section only when Stripe subscription exists", () => {
     setUserLimits("PREMIUM", {
@@ -259,7 +256,8 @@ describe("Billing Section", () => {
 
     expect(screen.getByText("userSettings.billing")).toBeInTheDocument();
     expect(screen.getByText("Pro Plan")).toBeInTheDocument();
-    expect(screen.getByText(/29\.00/)).toBeInTheDocument();
+    // The banner and the billing section both state the price.
+    expect(screen.getAllByText(/29\.00/)).toHaveLength(2);
   });
 
   it("should not show billing section when no Stripe subscription", () => {
@@ -309,8 +307,8 @@ describe("Billing Section", () => {
     expect(
       screen.queryByText("userSettings.noActiveSubscription"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("aiAgent.premiumTier")).toBeInTheDocument();
-    expect(screen.getByText("userSettings.currentPlan")).toBeInTheDocument();
+    expect(banner().getByText("aiAgent.premiumTier")).toBeInTheDocument();
+    expect(banner().getByText("userSettings.currentPlan")).toBeInTheDocument();
   });
 });
 
@@ -333,7 +331,8 @@ describe("Active Subscription Display", () => {
     render(<SubscriptionSection />);
 
     expect(screen.getByText("Pro Plan")).toBeInTheDocument();
-    expect(screen.getByText(/29\.00/)).toBeInTheDocument();
+    // The banner and the billing section both state the price.
+    expect(screen.getAllByText(/29\.00/)).toHaveLength(2);
   });
 
   it("should show subscription status", () => {
@@ -353,8 +352,12 @@ describe("Active Subscription Display", () => {
 
     render(<SubscriptionSection />);
 
-    // Status is shown as a badge — check the status value is present
-    expect(screen.getByText("active")).toBeInTheDocument();
+    // The badge names the status in the app language, not Stripe's raw
+    // `active` (w1/180).
+    expect(
+      screen.getByText("userSettings.subscriptionStatus.active"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("active")).not.toBeInTheDocument();
   });
 
   it("should show renewal date", () => {
@@ -440,9 +443,13 @@ describe("Canceled Subscription Display", () => {
 
     const { container } = render(<SubscriptionSection />);
 
-    expect(container.textContent).toContain(
-      "userSettings.subscriptionCanceled",
-    );
+    // A pending cancellation is reported, with Resume, in the Scheduled panel.
+    expect(
+      within(screen.getByTestId("scheduled-panel")).getByText(
+        /userSettings\.scheduledEnds/,
+      ),
+    ).toBeInTheDocument();
+    expect(container.textContent).toContain("userSettings.resumeSubscription");
   });
 
   it("should show access until date", () => {
@@ -462,7 +469,11 @@ describe("Canceled Subscription Display", () => {
 
     render(<SubscriptionSection />);
 
-    expect(screen.getByText(/userSettings.accessUntil/)).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("scheduled-panel")).getByText(
+        /userSettings\.scheduledEnds/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("should not show cancel button for canceled subscription", () => {

@@ -4,6 +4,7 @@ import { type IFavaClientFactory } from "@/foundation/clients/fava-client-factor
 import {
   BadUserInputError,
   ConflictError,
+  NotFoundError,
   ServiceUnavailableError,
 } from "@/shared/errors";
 import { unwrapFavaResponse } from "@/foundation/fava";
@@ -27,6 +28,7 @@ import type { CategorySuggestion } from "@/features/llm/api/ai-categorization-re
 import type { PlaidAccountMappingSuggestion } from "../api/resolvers/plaid-resolver.types";
 import type { PlaidTransaction } from "../data/plaid-transaction-model/types";
 import type { PlaidAccount } from "../data/plaid-account-model/types";
+import type { PlaidItem } from "../data/plaid-item-model/types";
 
 const itemServiceLogger = logger.child({ module: "plaid-item-service" });
 
@@ -119,7 +121,17 @@ export type PlaidUnlinkResult =
 
 export interface IPlaidItemService {
   getItems(identity: Identity, ledgerId: string): Promise<PlaidItemResult[]>;
-  getItem(identity: Identity, id: string): Promise<PlaidItemResult>;
+  /**
+   * One bank connection. With `ledgerId` (REST and MCP name it in the path)
+   * the item must belong to that ledger; without it (GraphQL) its own ledger
+   * is resolved. Either way a missing or foreign item is the concealed
+   * "Bank connection not found".
+   */
+  getItem(
+    identity: Identity,
+    id: string,
+    ledgerId?: string,
+  ): Promise<PlaidItemResult>;
   getAccounts(
     identity: Identity,
     itemId: string,
@@ -255,6 +267,51 @@ export class PlaidItemService implements IPlaidItemService {
     }
   }
 
+  /**
+   * One bank account, under the ledger the route names (w23/024).
+   *
+   * The action is authorized against the ledger before any lookup, so a
+   * credential without bank authority is FORBIDDEN whether or not the id
+   * exists. A missing account, or one on another ledger or user, then answers
+   * the same concealed "Bank connection not found" — the answer must not say
+   * which ids exist. These used to look the account up first and answer
+   * BAD_USER_INPUT "Account not found", sending an agent to fix an argument
+   * when what it lacked was a scope.
+   */
+  private async authorizedAccount(
+    identity: Identity,
+    action: AuthorizationAction,
+    ledgerId: string,
+    accountId: string,
+  ): Promise<{ account: PlaidAccount; item: PlaidItem; ledgerRepoId: number }> {
+    const { ledgerRepoId } = await this.authorizeBankAction(
+      identity,
+      action,
+      ledgerId,
+    );
+    const account = await this.models.plaidAccount.getById(this.db, accountId);
+    const item = account
+      ? await this.models.plaidItem.getById(this.db, account.plaidItemId)
+      : null;
+    if (
+      !account ||
+      !item ||
+      item.userId !== identity.userId ||
+      item.ledgerRepoId !== ledgerRepoId
+    ) {
+      throw new NotFoundError("Bank connection");
+    }
+    // The item-bound decision as well, so the PDP verifies the chain and the
+    // audit record names the connection acted on.
+    await this.authorizeBankAction(
+      identity,
+      action,
+      ledgerId,
+      account.plaidItemId,
+    );
+    return { account, item, ledgerRepoId };
+  }
+
   async getItems(
     identity: Identity,
     ledgerId: string,
@@ -272,27 +329,35 @@ export class PlaidItemService implements IPlaidItemService {
     return items.map(toItemResult);
   }
 
-  async getItem(identity: Identity, id: string): Promise<PlaidItemResult> {
-    const locatedItem = await this.models.plaidItem.getById(this.db, id);
-    if (!locatedItem) {
-      throw new BadUserInputError("Plaid Item not found");
+  async getItem(
+    identity: Identity,
+    id: string,
+    ledgerId?: string,
+  ): Promise<PlaidItemResult> {
+    // Authorization runs before any lookup when the path names the ledger, so
+    // a credential without bank authority is refused the same way whether or
+    // not the id exists (w23/004).
+    let targetLedgerId = ledgerId;
+    if (targetLedgerId === undefined) {
+      const located = await this.models.plaidItem.getById(this.db, id);
+      if (!located) throw new NotFoundError("Bank connection");
+      targetLedgerId = await this.resolveLedgerId(located.ledgerRepoId);
     }
-    const ledgerId = await this.resolveLedgerId(locatedItem.ledgerRepoId);
-    await this.authorizeBankAction(
+    // The PDP checks the item belongs to the caller and to this ledger, and
+    // conceals a mismatch as "Bank connection not found".
+    const { ledgerRepoId } = await this.authorizeBankAction(
       identity,
       AUTHORIZATION_ACTIONS.BANK_CONNECTION_READ,
-      ledgerId,
+      targetLedgerId,
       id,
     );
     const item = await this.models.plaidItem.getById(this.db, id);
-    if (!item) {
-      throw new BadUserInputError("Plaid Item not found");
-    }
     if (
+      !item ||
       item.userId !== identity.userId ||
-      item.ledgerRepoId !== locatedItem.ledgerRepoId
+      item.ledgerRepoId !== ledgerRepoId
     ) {
-      throw new BadUserInputError("Unauthorized access to Plaid Item");
+      throw new NotFoundError("Bank connection");
     }
     return toItemResult(item);
   }
@@ -367,30 +432,12 @@ export class PlaidItemService implements IPlaidItemService {
     >;
   }> {
     if (accountId) {
-      const account = await this.models.plaidAccount.getById(
-        this.db,
-        accountId,
-      );
-      if (!account) {
-        throw new BadUserInputError("Account not found");
-      }
-      const { ledgerRepoId } = await this.authorizeBankAction(
+      const { account, item } = await this.authorizedAccount(
         identity,
         action,
         ledgerId,
-        account.plaidItemId,
+        accountId,
       );
-      const item = await this.models.plaidItem.getById(
-        this.db,
-        account.plaidItemId,
-      );
-      if (
-        !item ||
-        item.userId !== identity.userId ||
-        item.ledgerRepoId !== ledgerRepoId
-      ) {
-        throw new BadUserInputError("Unauthorized access to account");
-      }
       const transactions =
         await this.models.plaidTransaction.getUnsyncedByAccountId(
           this.db,
@@ -553,14 +600,11 @@ export class PlaidItemService implements IPlaidItemService {
       accountId,
     });
 
-    const { suggestions } = await categorizeTransactions(
-      this.llmClient,
-      {
-        transactions: txsForCategorization,
-        existingAccounts,
-        autoAccounts: false,
-      },
-    );
+    const { suggestions } = await categorizeTransactions(this.llmClient, {
+      transactions: txsForCategorization,
+      existingAccounts,
+      autoAccounts: false,
+    });
 
     itemServiceLogger.info("AI categorization completed", {
       userId,
@@ -624,21 +668,18 @@ export class PlaidItemService implements IPlaidItemService {
       itemId,
     });
 
-    const { suggestions } = await suggestAccountMappingWithLLM(
-      this.llmClient,
-      {
-        institutionName: item.institutionName,
-        accounts: unmappedAccounts.map((a) => ({
-          accountId: a.id,
-          accountName: a.accountName,
-          accountType: a.accountType,
-          accountSubtype: a.accountSubtype,
-          mask: a.mask,
-        })),
-        existingAccounts,
-        autoAccounts,
-      },
-    );
+    const { suggestions } = await suggestAccountMappingWithLLM(this.llmClient, {
+      institutionName: item.institutionName,
+      accounts: unmappedAccounts.map((a) => ({
+        accountId: a.id,
+        accountName: a.accountName,
+        accountType: a.accountType,
+        accountSubtype: a.accountSubtype,
+        mask: a.mask,
+      })),
+      existingAccounts,
+      autoAccounts,
+    });
 
     itemServiceLogger.info("AI account mapping suggestion completed", {
       userId,
@@ -983,33 +1024,19 @@ export class PlaidItemService implements IPlaidItemService {
     ledgerAccount: string,
     ledgerId: string,
   ): Promise<boolean> {
-    const account = await this.models.plaidAccount.getById(this.db, accountId);
-    if (!account) {
-      throw new BadUserInputError("Account not found");
-    }
-    const item = await this.models.plaidItem.getById(
-      this.db,
-      account.plaidItemId,
-    );
-    if (!item) {
-      throw new BadUserInputError("Unauthorized access to account");
-    }
-    const { ledgerRepoId } = await this.authorizeBankAction(
+    const { item } = await this.authorizedAccount(
       identity,
       AUTHORIZATION_ACTIONS.BANK_ACCOUNT_MAPPING_UPDATE,
       ledgerId,
-      account.plaidItemId,
+      accountId,
     );
-    if (item.userId !== identity.userId || item.ledgerRepoId !== ledgerRepoId) {
-      throw new BadUserInputError("Unauthorized access to account");
-    }
     const updated = await this.models.plaidAccount.updateForItem(
       this.db,
       accountId,
       item.id,
       { ledgerAccount },
     );
-    if (!updated) throw new BadUserInputError("Unauthorized access to account");
+    if (!updated) throw new NotFoundError("Bank connection");
     itemServiceLogger.info("Account mapping updated", {
       identity,
       accountId,
@@ -1024,33 +1051,19 @@ export class PlaidItemService implements IPlaidItemService {
     currency: string,
     ledgerId: string,
   ): Promise<boolean> {
-    const account = await this.models.plaidAccount.getById(this.db, accountId);
-    if (!account) {
-      throw new BadUserInputError("Account not found");
-    }
-    const item = await this.models.plaidItem.getById(
-      this.db,
-      account.plaidItemId,
-    );
-    if (!item) {
-      throw new BadUserInputError("Unauthorized access to account");
-    }
-    const { ledgerRepoId } = await this.authorizeBankAction(
+    const { item } = await this.authorizedAccount(
       identity,
       AUTHORIZATION_ACTIONS.BANK_ACCOUNT_CURRENCY_UPDATE,
       ledgerId,
-      account.plaidItemId,
+      accountId,
     );
-    if (item.userId !== identity.userId || item.ledgerRepoId !== ledgerRepoId) {
-      throw new BadUserInputError("Unauthorized access to account");
-    }
     const updated = await this.models.plaidAccount.updateForItem(
       this.db,
       accountId,
       item.id,
       { currency },
     );
-    if (!updated) throw new BadUserInputError("Unauthorized access to account");
+    if (!updated) throw new NotFoundError("Bank connection");
     itemServiceLogger.info("Account currency updated", {
       identity,
       accountId,

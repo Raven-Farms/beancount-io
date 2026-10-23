@@ -140,9 +140,15 @@ const enImporter: Record<string, TranslationEntry> = {
     message: "Current file type requires AI-powered parsing",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Upgrade to Premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Upgrade to {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Upgrade your plan",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Parse PDF, OFX, and image files automatically with AI",
@@ -171,6 +177,15 @@ const enImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Failed to Parse File",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "File isn't UTF-8 text",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "This CSV has characters that aren't valid UTF-8, so importing it would change your payee and description text. Save it again as CSV UTF-8 from your bank or spreadsheet app, then upload that file.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -312,6 +327,24 @@ const enImporter: Record<string, TranslationEntry> = {
     message: "Currency for all transactions",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} row ({rows}) is written in {symbol} ({currencies}), but this import would post it as {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} rows ({rows}) are written in {symbol} ({currencies}), but this import would post them as {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "One import posts a single currency. Choose the currency those rows are written in, or deselect them and import them separately. Nothing has been imported.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "Assign Target Accounts",
     description: "Heading for account mapping section",
@@ -449,6 +482,11 @@ const enImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "Successfully categorized {count} transactions",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "No suggestion was confident enough to fill a target account.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AI categorization failed",

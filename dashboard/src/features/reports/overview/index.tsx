@@ -121,6 +121,7 @@ export default function LedgerOverviewPage() {
   // One customization panel for both entry points; see DashboardCustomizer.
   const [customizing, setCustomizing] = useState(false);
   const customizeOpener = useRef<HTMLElement | null>(null);
+  const overviewHeading = useRef<HTMLHeadingElement>(null);
   const ledgerFilters = useLedgerSearchParams();
   const invertIncomeLiabilitiesEquity =
     getInvertIncomeLiabilitiesEquity(ledgerData);
@@ -446,7 +447,9 @@ export default function LedgerOverviewPage() {
                 {t("common.overview")}
               </p>
               <h1
-                className={`mt-1 text-xl font-semibold tracking-tight sm:text-2xl ${publicReader ? "" : "truncate"}`}
+                ref={overviewHeading}
+                tabIndex={-1}
+                className={`mt-1 text-xl font-semibold tracking-tight outline-none sm:text-2xl ${publicReader ? "" : "truncate"}`}
               >
                 {displayName}
               </h1>
@@ -504,6 +507,7 @@ export default function LedgerOverviewPage() {
                   setCustomizing(open);
                 }}
                 returnFocus={customizeOpener}
+                closeFocusFallback={overviewHeading}
               />
             </div>
           </div>

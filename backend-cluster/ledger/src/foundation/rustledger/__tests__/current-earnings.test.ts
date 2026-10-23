@@ -95,11 +95,11 @@ describe("closeCurrentEarnings", () => {
     expect(
       accountHierarchy(closed, "Equity:Earnings:Current", "at_cost", prices)
         .balance,
-    ).toEqual({ USD: "-164.25" });
+    ).toEqual({ USD: "-164.250" });
     expect(
       accountHierarchy(closed, "Equity:Earnings:Current", "units", prices)
         .balance,
-    ).toEqual({ HOOL: "-2", USD: "4.95" });
+    ).toEqual({ HOOL: "-2.000", USD: "4.950" });
     expect(
       accountHierarchy(closed, "Income", "at_cost", prices).balance_children,
     ).toEqual({});
@@ -188,7 +188,7 @@ option "account_current_earnings" "Annual:Result"
     expect(
       accountHierarchy(closed, "Capital", "at_cost", buildPriceMap(closed))
         .balance_children,
-    ).toEqual({ USD: "-30" });
+    ).toEqual({ USD: "-30.00" });
   });
 
   it.each([
@@ -197,14 +197,14 @@ option "account_current_earnings" "Annual:Result"
       income: "-100.00",
       expenses: "70.00",
       cash: "30.00",
-      expected: { USD: "-30" },
+      expected: { USD: "-30.00" },
     },
     {
       name: "loss",
       income: "-70.00",
       expenses: "100.00",
       cash: "-30.00",
-      expected: { USD: "30" },
+      expected: { USD: "30.00" },
     },
     {
       name: "zero profit",
@@ -291,14 +291,14 @@ option "account_current_earnings" "Annual:Result"
     expect(
       accountHierarchy(closed, "Equity:Earnings:Current", "at_cost", prices)
         .balance,
-    ).toEqual({ USD: "-30" });
+    ).toEqual({ USD: "-30.00" });
     expect(
       accountHierarchy(closed, "Equity:Earnings:Previous", "at_cost", prices)
         .balance,
-    ).toEqual({ USD: "-50" });
+    ).toEqual({ USD: "-50.00" });
     expect(
       accountHierarchy(closed, "Equity", "at_cost", prices).balance_children,
-    ).toEqual({ USD: "-80" });
+    ).toEqual({ USD: "-80.00" });
     expect(closeCurrentEarnings(closed)).toEqual(closed);
     expect(closed).toHaveLength(3);
     expect(input[1].postings[0].account).toBe("Income:Sales");

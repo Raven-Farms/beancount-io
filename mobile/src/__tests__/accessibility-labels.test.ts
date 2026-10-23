@@ -34,6 +34,9 @@ type AllowlistEntry = {
   reason: string;
 };
 
+const VECTOR_ICON =
+  /\b(?:Ionicons|Feather|MaterialCommunityIcons|MaterialIcons|FontAwesome[56]?|AntDesign|Entypo|EvilIcons|Octicons|SimpleLineIcons|Foundation|Fontisto)\b/;
+
 // The app's own Button renders PressableScale, which `Pressable\b` does not
 // match (no word boundary between "e" and "S"), so each is named explicitly.
 const OPEN_TAG = /<(TouchableOpacity|Pressable(?:Scale)?|Button)\b/g;
@@ -81,6 +84,65 @@ function findOpeningTagEnd(source: string, start: number): number {
     }
   }
   return -1;
+}
+
+/** Where the element opened at `tagStart` closes: its children's end. */
+function findClosingTag(source: string, from: number, name: string): number {
+  const tag = new RegExp(`<${name}\\b|</${name}>`, "g");
+  tag.lastIndex = from;
+  let depth = 1;
+  let match: RegExpExecArray | null;
+  while ((match = tag.exec(source)) !== null) {
+    if (match[0].startsWith("</")) {
+      depth -= 1;
+      if (depth === 0) return match.index;
+      continue;
+    }
+    const end = findOpeningTagEnd(source, match.index + 1);
+    if (end < 0) return -1;
+    if (source[end - 2] !== "/") depth += 1;
+    tag.lastIndex = end;
+  }
+  return -1;
+}
+
+type Pressable = {
+  relFile: string;
+  line: number;
+  name: string;
+  openingTag: string;
+  children: string;
+};
+
+/** Every pressable element in the scanned trees, with its children's source. */
+function scanPressables(): Pressable[] {
+  const found: Pressable[] = [];
+  for (const { base, dir: rootDir } of SCAN_ROOTS) {
+    if (!fs.existsSync(rootDir)) continue;
+    for (const file of walkTsxFiles(rootDir)) {
+      const source = fs.readFileSync(file, "utf8");
+      const relFile = path.relative(base, file).split(path.sep).join("/");
+      const tags = new RegExp(OPEN_TAG.source, "g");
+      let match: RegExpExecArray | null;
+      while ((match = tags.exec(source)) !== null) {
+        const tagEnd = findOpeningTagEnd(source, match.index + 1);
+        if (tagEnd < 0) continue;
+        const openingTag = source.slice(match.index, tagEnd);
+        const selfClosing = openingTag.endsWith("/>");
+        const close = selfClosing
+          ? tagEnd
+          : findClosingTag(source, tagEnd, match[1]);
+        found.push({
+          relFile,
+          line: source.slice(0, match.index).split("\n").length,
+          name: match[1],
+          openingTag,
+          children: source.slice(tagEnd, close < 0 ? tagEnd : close),
+        });
+      }
+    }
+  }
+  return found;
 }
 
 function walkTsxFiles(dir: string): string[] {
@@ -167,8 +229,10 @@ describe("accessibility labels on icon-only pressables (w4/m7)", () => {
 
           const openingTag = source.slice(tagStart, tagEnd);
           const following = source.slice(tagEnd, tagEnd + 400);
+          // Any @expo/vector-icons family, not only Ionicons: the keypad's
+          // Delete key was a Feather glyph and slipped through (w21/358).
           const hasIcon =
-            /\bIonicons\b/.test(following) || /<Image\b/.test(following);
+            VECTOR_ICON.test(following) || /<Image\b/.test(following);
           const hasText = following.includes("<Text");
           const hasLabel = openingTag.includes("accessibilityLabel");
 
@@ -182,5 +246,106 @@ describe("accessibility labels on icon-only pressables (w4/m7)", () => {
     }
 
     expect(violations).toEqual([]);
+  });
+
+  // w21/141: with no label, iOS names a control by joining its children,
+  // icon glyphs included: "Currency, USD, U+F23B".
+  it("pressables holding an icon and text name themselves", () => {
+    const violations = scanPressables()
+      .filter(
+        ({ openingTag, children }) =>
+          /<Ionicons\b/.test(children) &&
+          children.includes("<Text") &&
+          !openingTag.includes("accessibilityLabel"),
+      )
+      .filter(({ relFile, line }) => !isAllowlisted(allowlist, relFile, line))
+      .map(({ relFile, line }) => `${relFile}:${line}`);
+    expect(violations).toEqual([]);
+  });
+
+  // A tappable without a role has no Button trait. A tap-outside backdrop is
+  // hidden instead, and a spread of props (a helper's) is trusted to set one.
+  it("pressables carry a role unless they are hidden", () => {
+    const violations = scanPressables()
+      .filter(
+        ({ name, openingTag }) =>
+          name !== "Button" &&
+          !openingTag.includes("accessibilityRole") &&
+          !openingTag.includes("accessible={false}") &&
+          !openingTag.includes("{..."),
+      )
+      .filter(({ relFile, line }) => !isAllowlisted(allowlist, relFile, line))
+      .map(({ relFile, line }) => `${relFile}:${line}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("the stricter checks catch what they are for", () => {
+    const sample = `<TouchableOpacity onPress={go}>
+  <Text>Currency</Text>
+  <Ionicons name="chevron-forward" />
+</TouchableOpacity>`;
+    const tagEnd = findOpeningTagEnd(sample, 1);
+    const children = sample.slice(
+      tagEnd,
+      findClosingTag(sample, tagEnd, "TouchableOpacity"),
+    );
+    expect(/<Ionicons\b/.test(children) && children.includes("<Text")).toBe(
+      true,
+    );
+    expect(sample.slice(0, tagEnd).includes("accessibilityRole")).toBe(false);
+  });
+});
+
+// w21/355: VoiceOver stops reading a placeholder once a field has text, and
+// the visible label is a sibling Text, so a field without its own label read
+// only its example or its value ("500", "Bank:Checking").
+describe("text fields name themselves (w21/355)", () => {
+  const fields = (): { relFile: string; line: number; tag: string }[] => {
+    const found: { relFile: string; line: number; tag: string }[] = [];
+    for (const { base, dir } of SCAN_ROOTS) {
+      if (!fs.existsSync(dir)) continue;
+      for (const file of walkTsxFiles(dir)) {
+        const source = fs.readFileSync(file, "utf8");
+        const open = /<TextInput\b/g;
+        let match: RegExpExecArray | null;
+        while ((match = open.exec(source)) !== null) {
+          const end = findOpeningTagEnd(source, match.index + 1);
+          if (end < 0) continue;
+          found.push({
+            relFile: path.relative(base, file).split(path.sep).join("/"),
+            line: source.slice(0, match.index).split("\n").length,
+            tag: source.slice(match.index, end),
+          });
+        }
+      }
+    }
+    return found;
+  };
+
+  it("finds the app's text fields", () => {
+    expect(fields().length >= 14).toBe(true);
+  });
+
+  it("every TextInput carries an accessibilityLabel", () => {
+    const unnamed = fields()
+      .filter(({ tag }) => !/accessibilityLabel(ledBy)?=/.test(tag))
+      .map(({ relFile, line }) => `${relFile}:${line}`);
+    expect(unnamed).toEqual([]);
+  });
+});
+
+describe("the icon guardrail covers every vector-icon family (w21/358)", () => {
+  it("recognises the families the app can import", () => {
+    for (const family of [
+      "Ionicons",
+      "Feather",
+      "MaterialCommunityIcons",
+      "MaterialIcons",
+      "FontAwesome5",
+      "AntDesign",
+    ]) {
+      expect(VECTOR_ICON.test(`<${family} name="x" />`)).toBe(true);
+    }
+    expect(VECTOR_ICON.test("<Text>Delete</Text>")).toBe(false);
   });
 });

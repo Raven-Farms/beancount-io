@@ -9,6 +9,17 @@ const bgLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Създаване на файл",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "Клонът „{branch}“ не е наличен тук. Файловете се показват от {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Разгледайте файловете в {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Файлове",
       description: "Ledger files management",
@@ -48,6 +59,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "Този тип файл не се поддържа за преглед",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Този файл не е текст в UTF-8, затова не може да се покаже или редактира тук, без да се променят байтовете му. Изтеглете го, за да го отворите в друга програма.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "Създаване на файл {path}",

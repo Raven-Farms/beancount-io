@@ -1,4 +1,9 @@
-import { dropRoot, leafName, splitAccountLeaf } from "../account-util";
+import {
+  breakableAccount,
+  dropRoot,
+  leafName,
+  splitAccountLeaf,
+} from "../account-util";
 
 describe("splitAccountLeaf", () => {
   test("should split the parent path from the leaf segment", () => {
@@ -47,5 +52,19 @@ describe("dropRoot", () => {
 
   test("should return the whole account when there is no separator", () => {
     expect(dropRoot("Expenses")).toBe("Expenses");
+  });
+});
+
+// w21/627: at AX2 an account wrapped mid-word ("Assets:Bank:Checkin" / "g").
+describe("breakableAccount", () => {
+  it("offers a break after each separator and changes nothing else", () => {
+    const shown = breakableAccount("Assets:Bank:Checking");
+    expect(shown).toBe("Assets:​Bank:​Checking");
+    expect(shown.replace(/​/g, "")).toBe("Assets:Bank:Checking");
+  });
+
+  it("leaves a single segment alone", () => {
+    expect(breakableAccount("Assets")).toBe("Assets");
+    expect(breakableAccount("")).toBe("");
   });
 });

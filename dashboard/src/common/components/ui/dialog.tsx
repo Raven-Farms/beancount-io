@@ -6,6 +6,7 @@ import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "@/common/lib/utils/utils.ts";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 
 function Dialog({
   ...props
@@ -51,6 +52,7 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
@@ -67,6 +69,16 @@ function DialogContent({
           className,
         )}
         {...props}
+        // Radix hears Escape at the document before any field does. An input
+        // method's Escape only cancels its composition, so it must not close
+        // the dialog and reset its draft (w4/292).
+        onEscapeKeyDown={(event) => {
+          if (isCompositionKey(event)) {
+            event.preventDefault();
+            return;
+          }
+          onEscapeKeyDown?.(event);
+        }}
       >
         {children}
         {showCloseButton && (

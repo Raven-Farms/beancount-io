@@ -1,7 +1,19 @@
 import Router from "@koa/router";
 import { BILLING_CLIENT_ID, SUBSCRIPTION_CONFIG } from "../service/stripe";
-import { customerId } from "../service/subscription-plan";
+import { customerId, expandableId } from "../service/subscription-plan";
+import {
+  changeAtRenewal,
+  emailScheduledChange,
+} from "../operations/plan-change-email";
 import { refreshSubscriptionPeriods } from "../operations/refresh-subscription-periods";
+import {
+  awaitsAuthentication,
+  emailFailedRenewal,
+  emailPlanEnded,
+  emailRenewalReminder,
+  invoicePlan,
+  isLongFailingRenewal,
+} from "../operations/renewal-email";
 import { type AppLayers } from "@/foundation/composition";
 import { logger } from "@/shared/logger";
 import { registerRoute } from "@/server/rest/openapi-registry";
@@ -52,6 +64,11 @@ export function setStripeWebhookHandler(
         return;
       }
       let processed = false;
+      const emailDeps = {
+        models: layers.database.models,
+        db: layers.database.db,
+        sendgrid: layers.clients.sendgrid,
+      };
       switch (event.type) {
         case "customer.subscription.created":
         case "customer.subscription.updated":
@@ -73,6 +90,14 @@ export function setStripeWebhookHandler(
               layers.database.db,
               binding.userId,
             );
+            if (event.type === "customer.subscription.deleted") {
+              await emailPlanEnded(
+                emailDeps,
+                binding.userId,
+                clientId,
+                event.data.object,
+              );
+            }
             processed = true;
           }
           break;
@@ -90,6 +115,94 @@ export function setStripeWebhookHandler(
             processed = true;
           }
           break;
+        case "invoice.upcoming": {
+          // Stripe's notice before a renewal: remind the subscriber of the
+          // scheduled plan change it brings (PRFAQ005 question 17), or of a
+          // yearly plan's renewal charge.
+          const invoice = event.data.object;
+          const { plans } = SUBSCRIPTION_CONFIG[clientId];
+          // The account serves other products too: leave their renewals
+          // before any lookup.
+          const subscriptionRef =
+            invoice.parent?.subscription_details?.subscription;
+          if (
+            !invoicePlan(invoice, plans) ||
+            !subscriptionRef ||
+            !invoice.customer
+          ) {
+            break;
+          }
+          const binding =
+            await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
+              layers.database.db,
+              customerId(invoice.customer),
+              clientId,
+            );
+          if (!binding) break;
+          const subscription = await stripe
+            .getStripeInstance(clientId)
+            .subscriptions.retrieve(expandableId(subscriptionRef), {
+              expand: ["schedule"],
+            });
+          const notice = changeAtRenewal(subscription, plans);
+          const sent = notice
+            ? await emailScheduledChange(
+                emailDeps,
+                "reminder",
+                binding.userId,
+                clientId,
+                notice,
+              )
+            : await emailRenewalReminder(
+                emailDeps,
+                binding.userId,
+                clientId,
+                invoice,
+                subscription,
+              );
+          processed = sent === "sent";
+          break;
+        }
+        case "invoice.payment_failed": {
+          // Stripe's own failed-payment email stays off: its card-update
+          // link is account-wide and would not lead to Beancount.io.
+          const invoice = event.data.object;
+          const plan = invoicePlan(
+            invoice,
+            SUBSCRIPTION_CONFIG[clientId].plans,
+          );
+          if (
+            !plan ||
+            !isLongFailingRenewal(invoice, event.created) ||
+            !invoice.customer
+          ) {
+            break;
+          }
+          const binding =
+            await layers.database.models.paidCustomer.findByStripeCustomerIdAndClientId(
+              layers.database.db,
+              customerId(invoice.customer),
+              clientId,
+            );
+          if (
+            !binding ||
+            (await awaitsAuthentication(
+              stripe.getStripeInstance(clientId),
+              invoice.id,
+            ))
+          ) {
+            break;
+          }
+          const sent = await emailFailedRenewal(
+            emailDeps,
+            binding.userId,
+            clientId,
+            invoice,
+            plan,
+          );
+          processed = sent === "sent";
+          break;
+        }
         case "checkout.session.completed":
           if (metadata?.userId) {
             await stripe.handleCheckoutSessionCompleted(

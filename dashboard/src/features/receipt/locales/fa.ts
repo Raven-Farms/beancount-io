@@ -234,6 +234,12 @@ const faReceipt: Record<string, TranslationEntry> = {
     message: "ثبت تراکنش رسید ناموفق بود",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "ممکن است با این حال ثبت شده باشد؛ پیش از ثبت دوباره، دفتر روزنامه را بررسی کنید.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default faReceipt;

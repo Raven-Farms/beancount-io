@@ -1,4 +1,4 @@
-"""A CSV in another code page is told to re-save as UTF-8, not to read as cp1252 (w5/529).
+"""Unknown legacy CSV encodings get conditional cp1252 advice (w5/529, w5/713).
 
 Almost any 8-bit file decodes as cp1252, so a cp1250 or cp1251 export got
 "pass --csv encoding=cp1252", and following it wrote `Wp³ata £ódŸ` with exit 0.
@@ -46,17 +46,19 @@ def _import(tmp_path: Path, text: str, codec: str) -> subprocess.CompletedProces
 
 
 @pytest.mark.parametrize(
-    ("text", "codec", "shown"),
-    [("Wpłata Łódź", "cp1250", "Wp³ata"), ("Пятёрочка", "cp1251", "Ïÿò¸ðî÷êà"), ("Tip 5€", "iso-8859-15", "5¤")],
+    ("text", "codec"),
+    [("Wpłata Łódź", "cp1250"), ("Пятёрочка", "cp1251"), ("Tip 5€", "iso-8859-15")],
     ids=["cp1250", "cp1251", "latin-9"],
 )
-def test_another_code_page_is_told_to_resave_as_utf8(tmp_path: Path, text: str, codec: str, shown: str) -> None:
+def test_another_code_page_is_told_to_resave_as_utf8(tmp_path: Path, text: str, codec: str) -> None:
     result = _import(tmp_path, text, codec)
 
     assert result.returncode == 2, result.stdout + result.stderr
     flat = " ".join(result.stderr.split())
-    assert f"Read as cp1252 it shows {shown!r}" in flat
     assert "Re-save the export as UTF-8 and import it again" in flat
+    assert "pass --csv encoding=cp1252 only if" in flat
+    assert "Western European Windows-1252 (cp1252)" in flat
+    assert "looks like another code page" not in flat
     assert "it decodes as cp1252 — pass --csv encoding=cp1252." not in flat
 
 
@@ -64,4 +66,7 @@ def test_a_western_cp1252_export_keeps_the_cp1252_hint(tmp_path: Path) -> None:
     result = _import(tmp_path, "Café Crème Œuvre Ærø Größe ¿Qué? £5", "cp1252")
 
     assert result.returncode == 2, result.stdout + result.stderr
-    assert "it decodes as cp1252 — pass --csv encoding=cp1252." in result.stderr
+    flat = " ".join(result.stderr.split())
+    assert "pass --csv encoding=cp1252 only if" in flat
+    assert "Western European Windows-1252 (cp1252)" in flat
+    assert "looks like another code page" not in flat

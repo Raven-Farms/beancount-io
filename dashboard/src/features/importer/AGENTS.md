@@ -30,12 +30,18 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
 ## Parser Hooks
 
 - **`use-csv-parser.ts`** — Client CSV parsing; the field delimiter (`,`, `;`,
-  tab) is detected from the first record, so EU bank exports parse for free
+  tab) is detected from the first record, so EU bank exports parse for free.
+  Bytes decode losslessly through `utils/decode-csv-bytes.ts` (UTF-8, or
+  UTF-16 by BOM); any other encoding is a `CsvEncodingError`, shown as re-save
+  guidance and never offered to AI
 - **`use-llm-parser.ts`** — LLM-assisted parsing for non-standard formats
 - **`use-multi-stage-parser.ts`** — Client CSV first; other formats go to the
   LLM. A CSV the client cannot read stops at the `ai-offer` stage until the
   user chooses "Parse with AI" — AI parsing spends the account's AI tokens, so
-  it is never a silent fallback
+  it is never a silent fallback. A CSV whose header the parser recognized and
+  whose records all carry its columns is readable even with no valid row: it
+  goes to Preview for repair, or to Preview's empty state when it has no rows
+  (`blockLlmFallback: "recognized-layout"`, w4/961)
 
 ## Key Utils
 
@@ -73,6 +79,13 @@ Preview. It clears on a new upload or reset/finish — never via localStorage.
   (`createEditableRowSchema`), and configuration. A grouping comma is never
   deleted when it could be a decimal mark. A mixed column's rows stay refused
   until their own amount is edited; editing another field keeps the refusal.
+- A currency symbol is stripped to read the number but still names the row's
+  unit. `amountCurrencySymbol` reads it with the CLI's table (`€` is EUR, `£`
+  GBP/GIP/FKP/SHP/EGP, …; `$` and `¥` name nothing), and Configure refuses
+  selected rows whose symbol rules out the chosen Currency: an alert names the
+  rows, and nothing is sent until the reader picks the matching currency,
+  deselects them, or edits the amount. One import posts one currency; there is
+  no conversion. AI-parsed rows arrive as bare numbers, without symbol evidence.
 - Submit writes `parseAmount(...).decimal` — the exact normalized decimal, with
   the cell's digits (`(12.50)` → `-12.50`, comma-decimal `-1.000` → `-1000`) —
   never the raw token, which the ledger refuses or reads as another number.

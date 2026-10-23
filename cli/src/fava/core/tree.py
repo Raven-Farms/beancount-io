@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from ..beans.abc import Open
 from ..beans.account import parent as account_parent
 from .conversion import cost_or_value, get_cost
-from .inventory import CounterInventory, SimpleCounterInventory
+from .inventory import CounterInventory, KeptZeroSource, SimpleCounterInventory
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -50,7 +50,9 @@ def _converted(
         return converted
     currencies: set[str] = set()
     for key, number in balance.items():
-        position = CounterInventory({key: number})
+        # Reduced into an inventory that keeps a zero, so a position worth
+        # exactly zero still names the currency it is worth zero in (w5/908).
+        position = KeptZeroSource({key: number})
         # SimpleCounterInventory refuses bare iteration; read through items().
         currencies.update(currency for currency, _ in cost_or_value(position, conversion, prices, end).items())
     return SimpleCounterInventory({currency: ZERO for currency in sorted(currencies)})

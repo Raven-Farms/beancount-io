@@ -42,3 +42,24 @@ export function bindRouteLedger(
   }
   return { status: "ready", ledgerId: selectedLedgerId };
 }
+
+/**
+ * A route's params with each repeated one reduced to its first value.
+ * expo-router returns `string[]` for a key that appears twice
+ * (`?path=a&path=b`), and screens typed their params as `string` and called
+ * string methods on them: a hard crash from a link (w21/198). Absent params
+ * stay absent.
+ */
+export function firstParams<T extends Record<string, string | undefined>>(
+  params: Record<string, string | string[] | undefined>,
+): T {
+  const out: Record<string, string | undefined> = {};
+  for (const [key, value] of Object.entries(params)) {
+    out[key] = Array.isArray(value)
+      ? typeof value[0] === "string"
+        ? value[0]
+        : undefined
+      : value;
+  }
+  return out as T;
+}

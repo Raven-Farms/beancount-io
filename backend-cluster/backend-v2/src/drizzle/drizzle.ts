@@ -5,24 +5,15 @@ import { Logger } from "drizzle-orm/logger";
 
 import { logger, type ILogger } from "@/shared/logger";
 
-const formatSqlQuery = (query: { sql: string; params: unknown[] }) => {
-  return query.sql.replace(/\$\d+/g, (match: string) => {
-    const index = parseInt(match.slice(1));
-    return JSON.stringify(query.params[index - 1]);
-  });
-};
-
 class DrizzleLogger implements Logger {
   private readonly logger: ILogger;
   constructor() {
     this.logger = logger.child({ module: "drizzle" });
   }
-  logQuery(query: string, params: unknown[]): void {
-    this.logger.debug(formatSqlQuery({ sql: query, params }));
-  }
-
-  splat(query: string, params: unknown[]): string {
-    return formatSqlQuery({ sql: query, params });
+  logQuery(query: string, _params: unknown[]): void {
+    // Bind values can contain credentials, email links and ledger contents.
+    // Keep placeholders intact and never serialize the parameter array.
+    this.logger.debug(query);
   }
 }
 

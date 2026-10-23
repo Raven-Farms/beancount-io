@@ -118,3 +118,49 @@ describe("RegisterForm username validation focus", () => {
     });
   });
 });
+
+describe("RegisterForm password rule", () => {
+  function renderForm() {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RegisterForm
+        onSubmit={onSubmit}
+        isLoading={false}
+        serverError=""
+        defaultUsername="un_generated1"
+        showSignInLink={false}
+      />,
+    );
+    return onSubmit;
+  }
+
+  it("asks for the 8 characters the server requires", async () => {
+    const user = userEvent.setup();
+    const onSubmit = renderForm();
+
+    expect(screen.getByLabelText("Password")).toHaveAttribute(
+      "placeholder",
+      "Choose a password (min 8 characters)",
+    );
+    await user.type(screen.getByLabelText("Password"), "seven77");
+    await user.tab();
+
+    expect(
+      await screen.findByText("Password must be at least 8 characters"),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("refuses a password longer than bcrypt's 72 bytes", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    // 72 characters would fit; three bytes each, 25 do not.
+    await user.type(screen.getByLabelText("Password"), "€".repeat(25));
+    await user.tab();
+
+    expect(
+      await screen.findByText(/^Password is too long\. Use at most 72/),
+    ).toBeInTheDocument();
+  });
+});

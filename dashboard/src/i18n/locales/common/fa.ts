@@ -397,6 +397,11 @@ const faCommon: Record<string, TranslationEntry> = {
     message: "دانلود",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "دانلود فایل ممکن نشد. لطفاً دوباره تلاش کنید.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "اقدامات بیشتر",
     description: "Label for dropdown menu with additional actions",
@@ -735,6 +740,11 @@ const faCommon: Record<string, TranslationEntry> = {
     message: "حسابی یافت نشد",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "پیشنهادها بارگیری نشدند. همچنان می‌توانید مقداری وارد کنید.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "جستجوی فایل‌ها...",
     description: "Placeholder for ledger file search",
@@ -1059,6 +1069,25 @@ const faCommon: Record<string, TranslationEntry> = {
     message: "شما به‌روز هستید",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "نتوانستیم هزینهٔ {plan} را از {card} برداشت کنیم. برای حفظ {plan} آن را تا {date} به‌روز کنید.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "به‌روزرسانی روش پرداخت",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "کارت شما",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "فعلاً پنهان شود",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

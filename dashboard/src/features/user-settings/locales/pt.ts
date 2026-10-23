@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const ptUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.pt,
-  "userSettings.accessUntil": {
-    message: "Acesso até",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Conta excluída com sucesso",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     message: "Cancelar assinatura",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Tem certeza de que deseja cancelar sua assinatura? Você continuará a ter acesso até o final do período de faturamento atual.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Cancelar assinatura?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Cancelando...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const ptUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Alterar Nome de Usuário",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Sim, cancelar assinatura",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Criar Chave",
@@ -394,13 +377,49 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     message: "Chaves SSH",
     description: "Page title for SSH keys",
   },
+  "userSettings.subscriptionStatus.active": {
+    message: "Ativa",
+    description:
+      "Billing badge for a subscription whose Stripe status is active: paid and current.",
+  },
+  "userSettings.subscriptionStatus.trialing": {
+    message: "Avaliação",
+    description:
+      "Billing badge for a subscription whose Stripe status is trialing: in a free trial.",
+  },
+  "userSettings.subscriptionStatus.past_due": {
+    message: "Pagamento em atraso",
+    description:
+      "Billing badge for a subscription whose Stripe status is past_due: the last renewal failed and Stripe is retrying.",
+  },
+  "userSettings.subscriptionStatus.unpaid": {
+    message: "Não paga",
+    description:
+      "Billing badge for a subscription whose Stripe status is unpaid: Stripe stopped retrying a failed renewal.",
+  },
+  "userSettings.subscriptionStatus.incomplete": {
+    message: "Incompleta",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete: the first payment has not completed.",
+  },
+  "userSettings.subscriptionStatus.incomplete_expired": {
+    message: "Expirada",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete_expired: the first payment never completed.",
+  },
+  "userSettings.subscriptionStatus.canceled": {
+    message: "Cancelada",
+    description:
+      "Billing badge for a subscription whose Stripe status is canceled: ended.",
+  },
+  "userSettings.subscriptionStatus.paused": {
+    message: "Pausada",
+    description:
+      "Billing badge for a subscription whose Stripe status is paused: paused.",
+  },
   "userSettings.subscription": {
     message: "Assinatura",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "A assinatura foi cancelada",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Assinatura cancelada com sucesso",
@@ -409,12 +428,6 @@ const ptUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscriptionUpgraded": {
     message: "Assinatura atualizada com sucesso",
     description: "Success message after upgrading subscription",
-  },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Seu pagamento requer autenticação adicional. Verifique seu e-mail ou entre em contato com o emissor do seu cartão.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
   },
   "userSettings.system": {
     message: "Sistema",
@@ -485,6 +498,10 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokens usados este mês (ilimitado)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "O uso não está disponível no momento.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Plano atual",
     description: "Badge label for the user's current subscription tier",
@@ -509,10 +526,6 @@ const ptUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} livros-razão",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Faça upgrade do seu plano",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Faturamento",
     description: "Section header for billing management",
@@ -528,6 +541,10 @@ const ptUserSettings: Record<string, TranslationEntry> = {
   "userSettings.aiTokensPerMonth": {
     message: "{count} tokens de IA/mês",
     description: "AI token allowance for a subscription tier",
+  },
+  "userSettings.unlimitedAiTokens": {
+    message: "Tokens de IA ilimitados",
+    description: "Unlimited AI token allowance",
   },
   "userSettings.unlimitedLedgers": {
     message: "Razões ilimitadas",
@@ -593,6 +610,399 @@ const ptUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "impressão digital",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Anual",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Ciclo de cobrança",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Planos",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Mudar para anual",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Mudar para mensal",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Mudar para um plano inferior",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Fale conosco",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} cobrados anualmente",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Economize {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Pague anualmente: {yearly} por ano em vez de {monthlyTotal} — economize {saving} por ano.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/ano",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Preço antigo",
+    description: "Label for an older price an existing subscriber keeps",
+  },
+  "userSettings.checkoutConfirming": {
+    message: "Confirmando seu pagamento…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Agora você está no {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Renova em {date} por {amount}. Você receberá o recibo por e-mail.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Agora inclui: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Pagamento recebido. Seu plano aparecerá em um minuto; atualize para conferir.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Atualizar",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Voltar para onde você estava",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.startUsingPlan": {
+    message: "Começar a usar o {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "O pagamento foi cancelado. Nada foi cobrado.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
+  "userSettings.viewBilling": {
+    message: "Ver faturamento",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Mudar para {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "Calculando quanto custa esta mudança…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message: "Não conseguimos calcular o preço desta mudança. Tente novamente.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Começa hoje.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "A pagar hoje",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message:
+      "Inclui um crédito de {credit} pelo tempo não usado do seu plano atual.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Depois {amount}, com a próxima cobrança em {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Cobrado em {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "O que você ganha",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Pagar {amount} e mudar",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Continuar para o pagamento",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Agora não",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "O tempo não usado é sempre creditado — você nunca paga duas vezes.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Você já está neste plano.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Você mantém este plano por um preço antigo e menor; mudar só o aumentaria.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Sua conta tem mais de uma assinatura ativa. Fale com o suporte para mudar de plano.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Não há uma assinatura ativa para alterar. Atualize a página para escolher um plano.",
+    description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Seu último pagamento de renovação não foi concluído. Atualize sua forma de pagamento em Gerenciar faturamento e depois mude de plano.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Começa em {date}. Você mantém {plan} até lá.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Nada a pagar hoje.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "O que muda em {date}",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Colaboradores por livro",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "Tokens de IA por mês",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "você tem {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Todos os seus livros continuam seus e funcionando. Você não poderá criar um novo até ficar abaixo do novo limite de {max}.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Agendar mudança para plano inferior",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Agendar a troca",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "Manter {plan}",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Agendado para {date}. Nada muda até lá.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Isso substitui sua mudança agendada para {plan} em {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message:
+      "Isso também retira o seu cancelamento, então sua assinatura continua.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message:
+      "Seu preço atual não é mais oferecido, então ele termina com esta mudança.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} com cobrança mensal pode começar na sua renovação em {date}. Quer {plan} hoje?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "Ter {plan} hoje com cobrança anual — {amount} agora",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Mudar para {plan} mensal em {date} — nada hoje",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Vale a partir da renovação",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Não incluído mais",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Diretivas",
+    description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Agendado",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Muda para {plan} em {date}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} termina em {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Manter o atual",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Seu plano continua como está.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message: "Não foi possível desfazer sua mudança agendada. Tente de novo.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "Cancelar {plan}?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "Você mantém {plan} até {date}. Depois passa para o plano gratuito: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Seus livros são texto simples — exporte quando quiser. Nada é apagado.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Outras opções",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Mudar para anual — {price}/mês",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Mudar para {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Qual é o principal motivo? (opcional)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Caro demais",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Falta um recurso",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Não estou usando",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Vou mudar de ferramenta",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Outro",
+    description: "Cancellation reason",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Seu banco precisa aprovar este pagamento. Nada muda até lá; depois de aprovar, atualize esta página.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApproving": {
+    message: "Aguardando seu banco aprovar o pagamento…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Aprovar pagamento",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message: "Seu banco não aprovou o pagamento. Nada mudou.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Usar outro cartão",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Backups automáticos",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Automação e integrações avançadas",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Login único (SSO) com OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Consolidação de várias entidades",
+    description: "Plan feature from the pricing table",
   },
 };
 

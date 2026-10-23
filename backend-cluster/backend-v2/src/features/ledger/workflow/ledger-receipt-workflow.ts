@@ -11,7 +11,10 @@ import { InternalServerError } from "@/shared/errors";
 import { logger } from "@/shared/logger";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import type { IAssetStorageService } from "@/features/s3/service/asset-storage-service";
-import type { ILedgerEntryWriter } from "@/features/ledger/service/ledger-entry-service";
+import type {
+  ILedgerEntryWriter,
+  LedgerEntryInput,
+} from "@/features/ledger/service/ledger-entry-service";
 import type { AppConfig } from "@/config/config";
 import type { Identity } from "@/server/api/identity";
 import {
@@ -68,6 +71,27 @@ function buildReceiptPath(
 ): string {
   const slug = slugify(payee) || "receipt";
   return `${baseFolder}/${date}-${slug}-${id}${ext}`;
+}
+
+/** The receipt's transaction, linked or annotated the way its storage needs. */
+function receiptTransaction(
+  input: InsertReceiptInput,
+  extra: { links: string[] } | { meta: Record<string, string> },
+): LedgerEntryInput {
+  return {
+    type: "transaction",
+    entry: {
+      date: input.date,
+      flag: "*",
+      payee: input.payee,
+      narration: input.description,
+      postings: input.postings.map((p) => ({
+        account: p.account,
+        units: { number: p.amountNumber, currency: p.amountCurrency },
+      })),
+      ...extra,
+    },
+  };
 }
 
 function extractExt(objectKey: string): string {
@@ -151,6 +175,20 @@ export class LedgerReceiptWorkflow implements ILedgerReceiptWorkflow {
 
     const linkId = nanoidBase58(8);
     const linkTag = `rcpt_${linkId}`;
+    const transaction = receiptTransaction(input, { links: [linkTag] });
+    // Checked before the receipt is stored: a refused entry — unbalanced, an
+    // unknown account — used to leave the stored receipt behind, one more
+    // with every retry (w23/058). Its document directive can only be checked
+    // once the file exists.
+    await this.ledgerEntryWriter.writeBulkEntries(
+      identity.userId,
+      ledgerOwner,
+      ledgerName,
+      [transaction],
+      "web",
+      false,
+      true,
+    );
 
     const ext = extractExt(receiptObjectKey);
     const receiptBaseFolder = bcioData?.receipt_base_folder ?? "documents";
@@ -166,7 +204,7 @@ export class LedgerReceiptWorkflow implements ILedgerReceiptWorkflow {
       await this.assetStorage.generateDownloadUrl(receiptObjectKey);
     const fileBase64 = await fetchAssetAsBase64(downloadUrl);
 
-    await unwrapFavaResponse(
+    const stored = await unwrapFavaResponse(
       favaApiClient.ledgers.createLedgerFile(ledgerOwner, ledgerName, {
         path: receiptPath,
         content: fileBase64,
@@ -187,37 +225,48 @@ export class LedgerReceiptWorkflow implements ILedgerReceiptWorkflow {
 
     // Receipts don't get mobile directive-limit bypass treatment yet — no
     // caller of this workflow threads a platform through today.
-    await this.ledgerEntryWriter.writeBulkEntries(
-      identity.userId,
-      ledgerOwner,
-      ledgerName,
-      [
-        {
-          type: "document",
-          entry: {
-            date: input.date,
-            account: input.documentAccount,
-            filename: receiptPath,
-            links: [linkTag],
+    try {
+      await this.ledgerEntryWriter.writeBulkEntries(
+        identity.userId,
+        ledgerOwner,
+        ledgerName,
+        [
+          {
+            type: "document",
+            entry: {
+              date: input.date,
+              account: input.documentAccount,
+              filename: receiptPath,
+              links: [linkTag],
+            },
           },
-        },
-        {
-          type: "transaction",
-          entry: {
-            date: input.date,
-            flag: "*",
-            payee: input.payee,
-            narration: input.description,
-            postings: input.postings.map((p) => ({
-              account: p.account,
-              units: { number: p.amountNumber, currency: p.amountCurrency },
-            })),
-            links: [linkTag],
+          transaction,
+        ],
+        "web",
+      );
+    } catch (error) {
+      // Refused after all (the document directive, a lost race): take the
+      // stored receipt back out rather than leave it unreferenced.
+      await unwrapFavaResponse(
+        favaApiClient.ledgers.deleteLedgerFile(ledgerOwner, ledgerName, {
+          path: receiptPath,
+          sha: stored.sha,
+          message: `docs: remove receipt ${receiptPath}; its entry was refused`,
+        }),
+        "remove an unreferenced receipt",
+      ).catch((cleanupError: unknown) => {
+        moduleLogger.warn(
+          "Failed to remove a receipt whose entry was refused",
+          {
+            ledgerOwner,
+            ledgerName,
+            receiptPath,
+            error: cleanupError,
           },
-        },
-      ],
-      "web",
-    );
+        );
+      });
+      throw error;
+    }
 
     return { success: true };
   }
@@ -230,6 +279,19 @@ export class LedgerReceiptWorkflow implements ILedgerReceiptWorkflow {
   }): Promise<{ success: boolean }> {
     const { ledgerId, receiptObjectKey, input, identity } = params;
     const { ledgerOwner, ledgerName } = parseLedgerId(ledgerId);
+
+    // Checked before the upload is promoted, so a refused entry leaves no
+    // permanent copy behind (w23/058); the receipt URL is not yet known and
+    // does not change what is checked.
+    await this.ledgerEntryWriter.writeBulkEntries(
+      identity.userId,
+      ledgerOwner,
+      ledgerName,
+      [receiptTransaction(input, { meta: { receipt: "" } })],
+      "web",
+      false,
+      true,
+    );
 
     const adminClient = this.favaClientFactory.getAdminClient();
     const ledger = await unwrapFavaResponse(
@@ -251,22 +313,7 @@ export class LedgerReceiptWorkflow implements ILedgerReceiptWorkflow {
       identity.userId,
       ledgerOwner,
       ledgerName,
-      [
-        {
-          type: "transaction",
-          entry: {
-            date: input.date,
-            flag: "*",
-            payee: input.payee,
-            narration: input.description,
-            postings: input.postings.map((p) => ({
-              account: p.account,
-              units: { number: p.amountNumber, currency: p.amountCurrency },
-            })),
-            meta: { receipt: receiptUrl },
-          },
-        },
-      ],
+      [receiptTransaction(input, { meta: { receipt: receiptUrl } })],
       "web",
     );
 

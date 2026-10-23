@@ -37,6 +37,10 @@ const {
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -173,16 +177,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     // The app-locale number formatter reads `i18n.language`.
     i18n: { language: "en" },
   }),
-}));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
 }));
 
 function setUserLimits(
@@ -439,7 +433,7 @@ describe("Section Separators", () => {
     expect(separators.length).toBe(3);
   });
 
-  it("should render fewer separators when no upgrade section", () => {
+  it("keeps the plan row for a top-tier subscriber, so lower plans stay visible", () => {
     setUserLimits("ORGANIZATION", {
       aiCfoTokensUsed: 500,
       aiCfoTokensMax: 2000,
@@ -456,9 +450,10 @@ describe("Section Separators", () => {
 
     render(<SubscriptionSection />);
 
-    // Org with active Stripe sub = banner + usage + billing = 2 separators
+    // The plan row lists every tier, so it shows for Organization too:
+    // banner + usage + plans + billing = 3 separators.
     const separators = screen.getAllByTestId("separator");
-    expect(separators.length).toBe(2);
+    expect(separators.length).toBe(3);
   });
 
   it("should render fewer separators for free user with no Stripe sub", () => {

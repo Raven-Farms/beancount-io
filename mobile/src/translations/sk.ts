@@ -6,6 +6,9 @@ export const sk: Translations = {
   guestTryExample: "Vyskúšať príklad",
   guestChooseExample: "Vybrať príklad",
   guestReadOnly: "Príklad iba na čítanie",
+  guestSignInHint: "Otvorí prihlásenie",
+  guestReadOnlyEditor:
+    "Ukážka len na čítanie. Prihláste sa a upravujte vlastnú knihu.",
   guestExit: "Opustiť príklady",
   guestIntroduction:
     "Preskúmajte skutočné prehľady bez účtu. Tieto knihy sú iba na čítanie.",
@@ -27,6 +30,7 @@ export const sk: Translations = {
   discoveryTab_explore: "Preskúmať",
   discoverySearch: "Hľadať knihy",
   discoveryClear: "Vymazať vyhľadávanie",
+  clearSearch: "Vymazať vyhľadávanie",
   discoveryOpen: "Otvoriť {{name}}",
   discoveryStar: "Pridať {{name}} k obľúbeným",
   discoveryUnstar: "Odstrániť {{name}} z obľúbených",
@@ -47,6 +51,15 @@ export const sk: Translations = {
     "Akciu sa nepodarilo dokončiť. Skontrolujte pripojenie a prístup ku knihe a skúste to znova.",
   ledgerReadOnly:
     "Táto kniha je iba na čítanie. Na vykonanie zmien vyberte knihu, ktorú môžete upravovať.",
+  ledgerGoneTitle: "Táto kniha už nie je dostupná",
+  ledgerGoneMessage:
+    "Bola odstránená, premenovaná alebo už nie je zdieľaná. Pokračujte výberom inej knihy.",
+  ledgerEditorNotUtf8:
+    "Tento súbor nie je text v UTF-8. Úprava tu by zmenila niektoré znaky, preto sa otvára iba na čítanie. Upravte ho na počítači.",
+  ledgerEditorTooLarge:
+    "Tento súbor je príliš veľký na otvorenie v telefóne, preto je len na čítanie. Upravte ho na počítači.",
+  ledgerEditorTooLargeToEdit:
+    "Tento súbor má viac ako 1 MiB, viac, než sa dá uložiť z telefónu, preto je len na čítanie. Upravte ho na webe alebo cez CLI.",
 
   // bottom tab bar
   home: "Domov",
@@ -80,25 +93,32 @@ export const sk: Translations = {
   merchantsEmptyMessage:
     "Príjemcovia z vašich transakcií sa tu zobrazia ako prehľadávateľný adresár.",
   merchantsNoSearchResults: "Žiadni obchodníci nezodpovedajú vášmu hľadaniu.",
-  merchantsLoadError: "Nepodarilo sa načítať obchodníkov: ",
+  merchantsLoadError: "Nepodarilo sa načítať obchodníkov",
   merchantsSortByCount: "Zoradiť podľa počtu transakcií",
   merchantsSortAlphabetical: "Zoradiť abecedne",
   merchantsRecurringSection: "Opakujúce sa",
+  merchantsAllSection: "Všetci obchodníci",
   merchantsRecurringBadge: "Opakujúci sa",
   merchantsCadenceWeekly: "Týždenne",
   merchantsCadenceBiweekly: "Každé 2 týždne",
+  merchantsCadenceSemimonthly: "Dvakrát mesačne",
   merchantsCadenceMonthly: "Mesačne",
+  merchantsCadenceBimonthly: "Každé 2 mesiace",
   merchantsCadenceQuarterly: "Štvrťročne",
+  merchantsCadenceSemiannual: "Každých 6 mesiacov",
   merchantsCadenceYearly: "Ročne",
   merchantsCadenceIrregular: "Nepravidelne",
   merchantsCadenceUnknown: "Málo histórie",
+  merchantsCadenceInactive: "Žiadne nedávne platby",
   merchantsNextExpected: "Ďalšie {{date}}",
   merchantsOverdue: "Po splatnosti",
+  merchantsLastPaid: "Naposledy zaplatené {{date}}",
+  merchantsScheduled: "Naplánované na {{date}}",
   merchantsRecurringToggle: "Opakujúce sa",
   merchantsRecurringToggleHelper:
     "Pripnite tohto obchodníka do Opakujúce sa. Manuálna voľba má prednosť pred detekciou a ostáva na tomto zariadení.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Nepodarilo sa načítať obchodníka: ",
+  merchantDetailLoadError: "Nepodarilo sa načítať obchodníka",
   merchantDetailRetry: "Skúsiť znova",
   merchantDetailEmptyTitle: "Žiadne transakcie",
   merchantDetailEmptyMessage:
@@ -138,6 +158,7 @@ export const sk: Translations = {
   deleteAccountConfirmMessage:
     'Pre potvrdenie zadajte "sudo delete my account" nižšie:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Napíšte frázu presne tak, ako je zobrazená.",
   deleteAccountConfirmPlaceholder: "Zadajte frázu tu",
   deleteAccountSuccess: "Účet bol vymazaný",
   deleteAccountFailed: "Účet sa nepodarilo vymazať. Skúste to znova.",
@@ -147,6 +168,7 @@ export const sk: Translations = {
   accountSettings: "Účet",
   supportSettings: "Podpora",
   signIn: "Prihlásiť",
+  sessionEndedNotice: "Vaša relácia skončila. Prihláste sa znova a pokračujte.",
   signUp: "Registrovať",
   serverSettings: "Nastavenia servera",
   serverSettingsDescription:
@@ -167,6 +189,14 @@ export const sk: Translations = {
   serverConnectionUnreachable: "Tento server sa nepodarilo kontaktovať.",
   serverConnectionIncompatible:
     "Tento server neposkytuje požadované API Beancount.io.",
+  serverConnectionOlder:
+    "Tento server je starší ako aplikácia. Môžete sa pripojiť, ale niektoré funkcie nemusia fungovať.",
+  serverConnectionNotConfigured:
+    "Tento server ešte nie je nastavený na prihlasovanie.",
+  serverConnectionMismatch:
+    "Táto adresa nezodpovedá adrese, ktorú server hlási. Otvorte nastavenia servera a otestujte pripojenie.",
+  serverConnectionCanonical: "Tento server sa identifikuje ako {{url}}.",
+  serverUseCanonical: "Použiť túto adresu",
   serverConnectionAdvisory:
     "Túto adresu môžete aj tak uložiť a prihlásiť sa, keď bude server dostupný.",
   restoreDefaultServer: "Obnoviť predvolený server Beancount.io",
@@ -187,26 +217,38 @@ export const sk: Translations = {
   multiPostingsInvalidBalance: "Súčet zápisov musí byť nula",
   multiPostingsMissingAccount: "Každý zápis potrebuje účet",
   multiPostingsZeroAmount: "Každý zápis potrebuje nenulovú sumu",
+  multiPostingsAmountFormat:
+    "Použite číslice a jednu desatinnú bodku, napríklad 1234.56",
   accountPicker: "Výber účtu",
   accountPickerSearchPlaceholder: "Hľadať účty",
   accountPickerRecent: "Nedávne",
   accountPickerAllTab: "Všetky",
   accountPickerNoResults: "Žiadne zodpovedajúce účty",
   accountPickerCreate: "Vytvoriť „%{name}“",
-  next: "Ďalej",
+  accountPickerClosedOn: "{{name}} bol zatvorený {{date}}",
+  accountPickerOpensOn:
+    "{{name}} sa otvára {{date}}. Zmeňte dátum, aby ste ho mohli použiť.",
+  accountPickerOpenLater:
+    "Vaše účty sa otvárajú {{date}}. Zmeňte dátum, aby ste ich mohli použiť.",
+  accountPickerNoAccounts: "Táto kniha zatiaľ nemá žiadne účty.",
   cancel: "Zrušiť",
   confirm: "Potvrdiť",
   saving: "Ukladanie...",
+  deleting: "Odstraňuje sa...",
   saveSuccess: "Transakcia uložená!",
   saveFailed: "Ukladanie zlyhalo",
-  amountEmptyError: "Prosím zadajte sumu",
-  accountEmptyError: "Vyberte zdrojový a cieľový účet",
+  profilePartialSave:
+    "Používateľské meno bolo uložené, ale vaše meno sa nepodarilo uložiť. Skúste to znova.",
   accounts: "Účty",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Účet",
   atCost: "{{amount}} v obstarávacej cene",
+  postingCost: "obstarávacia cena {{amount}}",
+  postingPrice: "cena {{amount}}",
   notInTotal: "Nie je v súčte: {{amounts}}",
+  spendingLastMonthNotInTotal:
+    "Minulý mesiac, nezahrnuté do súčtu: {{amounts}}",
   atMarket: "{{amount}} v trhovej hodnote",
   atMarketValue: "V trhovej hodnote",
   pricesNotUpdatedSince: {
@@ -241,11 +283,15 @@ export const sk: Translations = {
   equity: "Vlastné imanie",
   noDataCharts: "Rýchlo pridajte pre zobrazenie grafov",
   notEnoughChartData: "Zatiaľ nie je dosť údajov na graf",
+  chartSummary:
+    "Od {{start}}, {{startValue}}, do {{end}}, {{endValue}}. Minimum {{low}}, maximum {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} od začiatku",
+  chartAdjustHint: "Potiahnutím nahor alebo nadol prechádzate mesiace",
+  chartAdjustHintAndroid: "Otvorením ponuky akcií prechádzate mesiace",
   done: "Hotovo",
   payee: "Príjemca",
   narration: "Popis",
   suggestions: "Návrhy",
-  aiSuggestions: "Návrhy AI",
   from: "Od",
   to: "Pre",
   date: "Dátum",
@@ -288,9 +334,11 @@ export const sk: Translations = {
     "Len čo pridáte transakcie, objavia sa tu.",
   transactionsNoSearchResults:
     "Vášmu hľadaniu ani filtrom nezodpovedá žiadna transakcia.",
-  transactionsLoadError: "Načítanie transakcií zlyhalo: ",
+  transactionsLoadError: "Načítanie transakcií zlyhalo",
   // transactions filter modal
   filters: "Filtre",
+  filtersActive: "Aktívne: {{count}}",
+  clearAccount: "Vymazať účet",
   filterStatus: "Stav",
   filterDateRange: "Obdobie",
   filterDateRangeInvalid:
@@ -306,6 +354,7 @@ export const sk: Translations = {
   transactions: "Transakcie", // TODO: needs native speaker review
   search: "Hľadať",
   unknown: "Neznámy",
+  datePlaceholder: "RRRR-MM-DD",
   openAccount: "Otvoriť účet",
   accountType: "Typ účtu",
   currency: "Mena",
@@ -314,32 +363,72 @@ export const sk: Translations = {
   chooseCurrency: "Vyberte menu",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Bez meny",
+  openAccountOtherCurrency: "Iná…",
+  openAccountOtherCurrencyTitle: "Iná mena",
+  openAccountOtherCurrencyMessage:
+    "Zadajte kód meny alebo aktíva, napríklad EUR alebo VTI.",
+  openAccountCurrencyInvalid:
+    "Použite veľké písmená, číslice a ' . _ -, začínajúce písmenom, napríklad EUR alebo VTI.",
   openAccountSaving: "Otvára sa...",
   openAccountFailed: "Účet sa nepodarilo otvoriť. Skúste to znova.",
   ledgerWouldBreak: "Toto by pridalo chybu do vašej knihy: {{detail}}",
+  ledgerRefusalLine: "riadok {{line}}",
+  ledgerRefusalNearEntry: "blízko tohto záznamu",
+  ledgerRefusalQuoteHint: 'Úvodzovku v texte zapíšte ako \\".',
+  ledgerWriteOffline: "Ste offline. Nič sa neuložilo.",
+  ledgerWriteUnconfirmed:
+    "Server nepotvrdil uloženie. Skontrolujte to skôr, než to skúsite znova.",
+  ledgerWriteRateLimited:
+    "Príliš veľa zmien naraz. Chvíľu počkajte a skúste to znova.",
+  ledgerInvalidAccount: "{{value}} nie je platný názov účtu.",
+  ledgerInvalidCurrency: "{{value}} nie je platná mena.",
+  ledgerInvalidTag:
+    "#{{value}} nemožno použiť ako značku. Použite iba písmená A–Z, číslice a - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} nemožno použiť ako odkaz. Použite iba písmená A–Z, číslice a - _ . /",
+  ledgerInvalidFlag: "{{value}} nemožno použiť ako príznak.",
+  ledgerEntryOneAtATime: "Upravujte naraz iba jeden záznam.",
+  ledgerEntryIndent: "Odsaďte účtovania pod riadkom s dátumom.",
+  ledgerEntryNotAnEntry:
+    "Možnosti, pluginy a zahrnutia nie sú záznamy. Zmeňte ich v editore súboru knihy.",
   openAccountInvalidRoot: "Vyberte platný typ účtu.",
   openAccountNameRequired: "Zadajte aspoň jednu časť názvu účtu.",
   openAccountEmptyComponent: "Časti názvu účtu nemôžu byť prázdne.",
   openAccountNamePreview: "Vytvorí sa ako {{account}}",
   openAccountAlreadyOpen: "Účet {{account}} je v tejto knihe už otvorený.",
+  openAccountClosed:
+    "{{account}} bol zatvorený {{date}} a nedá sa znova otvoriť.",
   openAccountUppercaseComponent:
     "Každá časť názvu účtu musí začínať veľkým písmenom alebo číslicou.",
   openAccountInvalidCharacters:
     "V názvoch účtov používajte len písmená, číslice a spojovníky.",
   transaction: "Transakcia",
+  transactionActions: "Akcie transakcie",
   loadingMore: "Načítava sa viac...",
   noMoreEntries: "Žiadne ďalšie záznamy",
+  loadMoreFailed: "Nepodarilo sa načítať ďalšie záznamy.",
+  a11yTapToExpand: "Dvojitým ťuknutím rozbalíte",
+  a11yTapToCollapse: "Dvojitým ťuknutím zbalíte",
   noEntries: "Žiadne záznamy",
   accountDetailUnavailable: "Tento účet nie je vo zvolenej knihe dostupný.",
   transactionDetailUnavailable:
     "Táto transakcia nie je vo zvolenej knihe dostupná.",
+  transactionDetailRemoved:
+    "Táto transakcia bola zmenená alebo odstránená. Vráťte sa späť a pozrite si aktuálny zoznam.",
+  transactionErrorOpenFile: "Otvoriť v editore súborov",
+  pluginCopyNotice:
+    "Tento záznam vytvoril doplnok z iného záznamu, preto ho tu nemožno upraviť ani odstrániť.",
+  pluginCopyOpenSource: "Otvoriť zdrojový záznam",
   merchantDetailUnavailable:
     "Tento obchodník nie je vo zvolenej knihe dostupný.",
   commitDetailUnavailable: "Táto zmena nie je vo zvolenej knihe dostupná.",
-  journalLoadError: "Načítanie denníka zlyhalo: ",
+  commitDetailGone: "Tento commit už nie je dostupný.",
+  fileEditorUnavailable: "Tento súbor nie je dostupný vo vybranej knihe.",
+  journalLoadError: "Načítanie denníka zlyhalo",
   // entry context (transactions screen)
   journalError: "Chyba",
   journalNoData: "Údaje kontextu záznamu nie sú k dispozícii",
+  dateSectionHeaderTotal: "{{date}}, spolu {{total}}",
   journalEntryContext: "Kontext záznamu",
   journalBalancesBefore: "Zostatky pred záznamom",
   journalBalancesAfter: "Zostatky po zázname",
@@ -348,6 +437,7 @@ export const sk: Translations = {
   open: "Otvorenie",
   close: "Uzavretie",
   balance: "Zostatok",
+  balanceOffBy: "Rozdiel {{amount}}",
   note: "Poznámka",
   document: "Doklad",
   pad: "Vyrovnanie",
@@ -355,9 +445,11 @@ export const sk: Translations = {
   custom: "Vlastné",
   cleared: "Potvrdené",
   pending: "Čakajúce",
+  entryUpcoming: "Nadchádzajúce",
   other: "Ostatné",
   budget: "Rozpočet",
   metadata: "Metaúdaje",
+  accountOwnPostings: "{{name}} (vlastné)",
   postings: "Zápisy",
   details: "Podrobnosti",
   tags: "Značky",
@@ -366,6 +458,8 @@ export const sk: Translations = {
   reports: "Prehľady",
   netProfit: "Čistý zisk",
   cashFlow: "Peňažný tok",
+  cashFlowRefunds: "Vrátené platby",
+  cashFlowClawbacks: "Spätné vymáhania",
   moneyFlow: "Pohyb peňazí",
   cashFlowEmpty: "V tomto období nie je peňažný tok",
   savings: "Úspory",
@@ -377,12 +471,22 @@ export const sk: Translations = {
   notFoundGoHome: "Prejsť na domov",
   // home dashboard
   seeAll: "Zobraziť všetko",
+  seeAllCard: "Zobraziť všetko: {{title}}",
+  seeAllAccounts: "Zobraziť všetky účty",
   netWorth: "Čisté imanie",
   noAccounts: "Žiadne účty",
+  reportsNoExpenses: "V tomto období nie sú žiadne výdavky",
+  reportsNoIncome: "V tomto období nie sú žiadne príjmy",
   recentTransactions: "Nedávne transakcie",
   recentTransactionsEmpty: "Zatiaľ žiadne transakcie",
+  recentTransactionsUpcoming:
+    "Do dnešného dňa nič. Pripravované záznamy nájdete v Transakciách.",
+  recentTransactionsEmptyRange: "V tomto období nie sú žiadne transakcie",
   spending: "Výdavky",
   spendingSubtitle: "Tento mesiac oproti minulému",
+  spendingChartSummary:
+    "Výdavky: minulý mesiac {{lastMonth}}, tento mesiac {{thisMonth}}.",
+  spendingEmpty: "Zatiaľ žiadne výdavky",
   thisMonth: "Tento mesiac",
   lastMonth: "Minulý mesiac",
   range1M: "1M",
@@ -392,6 +496,13 @@ export const sk: Translations = {
   range1Y: "1R",
   rangeLastYear: "MR",
   rangeAll: "VŠETKO",
+  rangeSpoken1M: "1 mesiac",
+  rangeSpoken3M: "3 mesiace",
+  rangeSpoken6M: "6 mesiacov",
+  rangeSpokenYTD: "Od začiatku roka",
+  rangeSpoken1Y: "1 rok",
+  rangeSpokenLastYear: "Minulý rok",
+  rangeSpokenAll: "Celé obdobie",
   // edit / delete transaction
   editTransaction: "Upraviť transakciu",
   deleteTransaction: "Odstrániť",
@@ -400,8 +511,12 @@ export const sk: Translations = {
     "Naozaj chcete odstrániť túto transakciu? Túto akciu nemožno vrátiť späť.",
   deleteSuccess: "Transakcia odstránená",
   deleteFailed: "Transakciu sa nepodarilo odstrániť",
+  deleteTransactionChanged:
+    "Táto transakcia bola zmenená inde. Bola znova načítaná; skúste ju vymazať znova.",
   editSuccess: "Transakcia uložená",
   editFailed: "Transakciu sa nepodarilo uložiť",
+  editTransactionEmpty:
+    "Prázdny záznam nemožno uložiť. Ak chcete transakciu odstrániť, použite Odstrániť v jej detaile.",
   editTransactionLoadFailed: "Transakciu sa nepodarilo načítať",
   editTransactionSource:
     "Nižšie upravte zdrojový text beancount. Neplatný beancount alebo zastaraný kontrolný súčet bude odmietnutý s chybou.",
@@ -415,12 +530,16 @@ export const sk: Translations = {
   receiptFlashOff: "Vypnutý",
   receiptFlashOn: "Zapnutý",
   receiptRetake: "Znova",
+  receiptTryAgain: "Skúsiť znova",
   receiptUpload: "Nahrať",
   receiptOpenSettings: "Otvoriť nastavenia",
+  receiptAllowCamera: "Povoliť fotoaparát",
   receiptCancel: "Zrušiť",
   receiptUploading: "Nahráva sa fotka…",
+  receiptUploadingProgress: "Nahrávam fotografiu… {{percent}} %",
   receiptParsing: "AI číta vašu účtenku…",
   receiptRevealTitle: "Toto sme prečítali",
+  receiptRevealSpoken: "Doklad prečítaný: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -440,14 +559,35 @@ export const sk: Translations = {
   notificationsChangesSection: "Nedávne zmeny",
   notificationsLedgerHealthy: "Kniha je v poriadku — žiadne chyby.",
   notificationsNoChanges: "Žiadne nedávne zmeny.",
+  notificationsShowOlder: "Zobraziť staršie zmeny",
+  commitNoMessage: "(bez správy)",
   // commit detail
   commitDetailAuthor: "Autor",
   commitDetailStats: "Štatistika",
   commitDetailFiles: "Súbory",
+  commitFileAdded: "Pridaný",
+  commitFileDeleted: "Odstránený",
+  commitFileRenamedFrom: "Premenovaný z {{name}}",
   commitDetailDiff: "Rozdiely",
+  commitDetailShowMore: {
+    one: "Zobraziť ďalší {{count}} riadok",
+    few: "Zobraziť ďalšie {{count}} riadky",
+    many: "Zobraziť ďalších {{count}} riadka",
+    other: "Zobraziť ďalších {{count}} riadkov",
+  },
   commitDetailNoDiff: "Nie sú dostupné žiadne rozdiely.",
-  commitDetailAdditions: "+{{count}} riadkov",
-  commitDetailDeletions: "-{{count}} riadkov",
+  commitDetailAdditions: {
+    one: "+{{count}} riadok",
+    few: "+{{count}} riadky",
+    many: "+{{count}} riadka",
+    other: "+{{count}} riadkov",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} riadok",
+    few: "-{{count}} riadky",
+    many: "-{{count}} riadka",
+    other: "-{{count}} riadkov",
+  },
   // ledger file browser
   ledgerLoadError: "Načítanie zlyhalo",
   ledgerEmpty: "Žiadne súbory",
@@ -460,20 +600,35 @@ export const sk: Translations = {
     "Zadajte jedinečný názov súboru .bean alebo .beancount. Bez prípony sa doplní .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "{{name}} vytvorený",
+  ledgerCreateFileSuccessIn: "{{name}} bol vytvorený v {{ledger}}",
   ledgerCreateFileFailed: "Súbor sa nepodarilo vytvoriť",
+  ledgerFileNameExists: "Súbor s názvom {{name}} už existuje",
+  ledgerFileNameExtension: "Použite názov s príponou .bean alebo .beancount",
+  ledgerFileNamePath:
+    "Použite názov bez \\, .. alebo prázdnych názvov priečinkov",
+  ledgerFileNamePortable:
+    'Vyhnite sa < > : " | ? *, častiam končiacim bodkou alebo medzerou a názvom ako con alebo nul',
   ledgerDeleteFile: "Odstrániť {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, priečinok",
+  ledgerFilesFileLabel: "{{name}}, súbor",
   ledgerDeleteFileTitle: "Odstrániť súbor knihy",
   ledgerDeleteFileMessage:
     'Odstrániť "{{name}}"? Túto akciu nemožno vrátiť späť.',
   ledgerDeleteFileConfirm: "Odstrániť",
   ledgerDeleteFileSuccess: "{{name}} odstránený",
   ledgerDeleteFileFailed: "Súbor sa nepodarilo odstrániť",
+  ledgerDeleteFileChanged:
+    "Tento súbor bol inde zmenený. Zoznam sa obnovil; skúste to znova.",
   ledgerMainFileProtected: "main.bean nemožno odstrániť",
   // ledger file editor
   ledgerEditorSave: "Uložiť",
   ledgerEditorSaving: "Ukladá sa...",
   ledgerEditorSaveSuccess: "Súbor uložený",
   ledgerEditorSaveFailed: "Uloženie zlyhalo",
+  ledgerEditorSaveLeftErrorsTitle: "Uložené, s novou chybou v knihe",
+  ledgerEditorSaveLeftErrors:
+    "Súbor je uložený, ale vaša kniha má teraz chybu, ktorú predtým nemala: {{error}}",
+  ledgerEditorViewErrors: "Zobraziť chyby",
   ledgerEditorLoadFailed: "Súbor sa nepodarilo načítať",
   ledgerEditorFileUnavailable: "Tento súbor už v knihe nie je.",
   ledgerEditorBackToFiles: "Späť na súbory",
@@ -482,11 +637,36 @@ export const sk: Translations = {
   ledgerEditorDiscardChanges: "Zahodiť",
   ledgerEditorConflictTitle: "Súbor sa zmenil",
   ledgerEditorConflictMessage:
-    "Tento súbor bol zmenený na serveri. Zahodiť miestne zmeny a načítať znova?",
+    "Tento súbor bol zmenený vzdialene. Uložiť váš text cez neho, alebo ho skopírovať a načítať novú verziu?",
+  ledgerEditorOverwrite: "Prepísať",
+  ledgerEditorCopyReload: "Kopírovať a znova načítať",
+  ledgerEditorOverwriteTitle: "Prepísať vzdialené zmeny?",
+  ledgerEditorOverwriteMessage:
+    "Váš text nahradí verziu uloženú inde. Jej zmeny sa stratia.",
+  ledgerEditorFileGoneTitle: "Súbor bol odstránený",
+  ledgerEditorFileGoneMessage:
+    "Tento súbor bol inde odstránený alebo presunutý a nedá sa uložiť. Váš text je stále tu: skopírujte ho alebo ho uložte ako nový súbor na rovnakej ceste.",
+  ledgerEditorRecreate: "Uložiť ako nový súbor",
+  ledgerEditorSaveFailedHint: "Váš text je stále tu. Skúste to o chvíľu znova.",
+  ledgerEditorAccessRemoved:
+    "Túto knihu už nemôžete upravovať. Váš text tu stále je: skopírujte ho, aby ste ho zachovali.",
+  ledgerEditorCopyFailed:
+    "Váš text sa nepodarilo skopírovať, preto sa súbor znova nenačítal.",
   ledgerEditorReload: "Načítať znova",
   ledgerEditorKeepEditing: "Pokračovať v úpravách",
   keyboardAccessoryInsert: "Vložiť {{symbol}}",
+  keyboardInsertDate: "Vložiť dnešný dátum",
+  keyboardInsertCleared: "Vložiť príznak potvrdené",
+  keyboardInsertPending: "Vložiť príznak čakajúce",
+  keyboardInsertQuotes: "Vložiť úvodzovky",
+  keyboardInsertColon: "Vložiť dvojbodku",
+  keyboardInsertTab: "Vložiť tabulátor",
+  keyboardInsertMinus: "Vložiť mínus",
+  keyboardInsertTag: "Vložiť značku",
+  keyboardInsertLink: "Vložiť odkaz",
   keyboardAccessoryDismiss: "Skryť klávesnicu",
+  ledgerEditorErrorLine: "riadok {{line}}",
+  ledgerEditorJumpToLine: "Prejsť na riadok {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} chyba",
     few: "{{count}} chyby",
@@ -512,14 +692,22 @@ export const sk: Translations = {
     "Nastavte cieľ pre ľubovoľný účet a začnite sledovať.",
   budgetEmptyStateCta: "Pridať prvý rozpočet",
   budgetPanelEmpty: "Nastavte cieľ pre účet",
+  budgetPanelEmptyGuest: "Prihláste sa a nastavte ciele výdavkov",
   budgetPanelRowValue:
     "{{actual}} z {{budget}}, využité {{percent}}%, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} z {{budget}}, {{status}}",
+  budgetStartsOn: "Začína {{date}}",
   budgetLoadFailed: "Načítanie rozpočtov zlyhalo",
   budgetIntervalDaily: "Denne",
   budgetIntervalWeekly: "Týždenne",
   budgetIntervalMonthly: "Mesačne",
   budgetIntervalQuarterly: "Štvrťročne",
   budgetIntervalYearly: "Ročne",
+  budgetIntervalAdjDaily: "denný",
+  budgetIntervalAdjWeekly: "týždenný",
+  budgetIntervalAdjMonthly: "mesačný",
+  budgetIntervalAdjQuarterly: "štvrťročný",
+  budgetIntervalAdjYearly: "ročný",
   // add / update budget
   budgetAdd: "Pridať rozpočet",
   budgetUpdate: "Aktualizovať rozpočet",
@@ -533,10 +721,14 @@ export const sk: Translations = {
   budgetSaveFailed: "Uloženie rozpočtu zlyhalo",
   // delete
   budgetDelete: "Odstrániť",
+  budgetUpdateNamed: "Aktualizovať rozpočet pre {{account}}, {{currency}}",
+  budgetDeleteNamed: "Odstrániť záznam rozpočtu z {{date}}, {{amount}}",
   budgetDeleteTitle: "Odstrániť rozpočet",
   budgetDeleteMessage:
     "Odstrániť {{interval}} rozpočet {{amount}} pre {{account}} platný od {{date}}? Odstráni sa jeden záznam a nedá sa to vrátiť späť.",
   budgetDeleteFailed: "Odstránenie rozpočtu zlyhalo",
+  budgetDeleteChanged:
+    "Tento záznam rozpočtu bol inde zmenený. História sa obnovila; skúste to znova.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Opýtaj sa Beancount.io",
@@ -575,10 +767,16 @@ export const sk: Translations = {
   createLedgerNameInvalid:
     "Názov musí obsahovať aspoň jedno písmeno alebo číslicu.",
   createLedgerNameConflict: "Kniha s týmto názvom už existuje.",
+  createLedgerNameReserved:
+    "Tento názov patril premenovanej knihe a stále na ňu presmerúva. Vyberte iný názov.",
+  createLedgerSetupUnsupported:
+    "Tento server nepodporuje sprievodcu nastavením. Vráťte sa a vyberte Úvodná alebo Ukážka, aby ste vytvorili knihu s predvolenými hodnotami servera.",
+  createLedgerCreated: "{{name}} vytvorený",
   createLedgerSlugPreview: "Vytvorí sa ako {{slug}}",
   createLedgerDescription: "Popis",
   createLedgerDescriptionPlaceholder: "Voliteľné",
   createLedgerPrivate: "Súkromná",
+  createLedgerPublic: "Verejná",
   createLedgerTemplate: "Šablóna",
   createLedgerTemplateStarter: "Úvodná",
   createLedgerTemplateStarterHint:
@@ -589,6 +787,8 @@ export const sk: Translations = {
   createLedgerTierLimit:
     "Bol dosiahnutý limit kníh. Ďalšiu knihu nie je možné vytvoriť.",
   createLedgerGenericError: "Knihu sa nepodarilo vytvoriť. Skúste to znova.",
+  createLedgerStillCreating:
+    "Táto kniha sa ešte vytvára. Počkajte niekoľko sekúnd a znova klepnite na Vytvoriť.",
   createLedgerDrawerRow: "Nová kniha",
   createLedgerEmptyTitle: "Zatiaľ žiadne knihy",
   createLedgerEmptyBody: "Vytvorte knihu alebo objavte verejné príklady.",
@@ -599,8 +799,16 @@ export const sk: Translations = {
     "Vytvorte knihu alebo objavte jednu, aby ste mohli pokračovať.",
   removePosting: "Odstrániť zápis",
   toggleAmountSign: "Prepnúť znamienko sumy",
-  incomeExpenseChartSummary:
-    "Príjmy a výdavky za {{count}} mesiacov. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+  postingSignToggle: "Znamienko pre {{account}}",
+  signPlus: "Plus",
+  signMinus: "Mínus",
+  incomeExpenseChartSummary: {
+    one: "Príjmy a výdavky za {{count}} mesiac. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+    few: "Príjmy a výdavky za {{count}} mesiace. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+    many: "Príjmy a výdavky za {{count}} mesiaca. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+    other:
+      "Príjmy a výdavky za {{count}} mesiacov. Príjmy {{income}}, výdavky {{expense}}, čisté {{net}}.",
+  },
   cashFlowChartSummary:
     "Peňažný tok z príjmov do výdavkov. Príjmy {{income}}, výdavky {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -610,6 +818,7 @@ export const sk: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (príjmy)",
   sankeyExpensesNodeLabel: "{{name}} (výdavky)",
   ledgerNavigateUp: "O úroveň vyššie",
+  ledgerNavigateUpTo: "Hore do {{folder}}",
   openLedgerDrawer: "Otvoriť menu",
   back: "Späť",
   postingAmountLabel: "Suma pre {{account}}",
@@ -619,8 +828,15 @@ export const sk: Translations = {
   expandAccount: "Rozbaliť {{account}}",
   collapseAccount: "Zbaliť {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}} % z celku",
-  budgetChartSummary:
-    "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} období, {{over}} nad cieľom.",
+  budgetChartSummary: {
+    one: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobie, {{missed}}.",
+    few: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{missed}}.",
+    many: "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} obdobia, {{missed}}.",
+    other:
+      "Rozpočet verzus skutočnosť za {{span}}. Skutočnosť {{actual}} z rozpočtu {{budget}} za {{count}} období, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} nad cieľom",
+  budgetSummaryBelowTarget: "{{count}} pod cieľom",
   feedSourceLedger: "Kniha",
   feedSourceBlog: "Blog",
   feedSourceRelease: "Vydanie",
@@ -633,6 +849,7 @@ export const sk: Translations = {
   profileUsernameHint:
     "Webové adresy vašich kníh začínajú vaším používateľským menom, takže jeho zmena zmení aj ich.",
   profileUsernameRequired: "Zadajte používateľské meno",
+  profileNameTooLong: "Najviac 100 znakov.",
   profileUsernameRule:
     "Použite 1 až 20 znakov: malé písmená a–z, číslice 0–9 alebo podčiarkovníky.",
   profileUsernameTaken: "Toto používateľské meno je už obsadené",
@@ -640,6 +857,54 @@ export const sk: Translations = {
   profileEmailReadOnly: "E-mail tu nemožno zmeniť",
   profileNotSet: "Nenastavené",
   profilePhotoFromGravatar: "Fotka z Gravataru",
+  profileAddGravatar: "Pridajte fotku na Gravatar",
   profileUpdated: "Profil bol aktualizovaný",
   multiplePostings: "Viacero zápisov",
+  createLedgerNext: "Ďalej",
+  createLedgerBack: "Späť",
+  createLedgerStep: "Krok {{step}} z {{total}}",
+  createLedgerStartPreset: "Predvoľba",
+  createLedgerStartPresetHint:
+    "Vyberte hotový účtový rozvrh pre to, čo sledujete: domácnosť, podnikanie, investície.",
+  createLedgerCurrency: "Prevádzková mena",
+  createLedgerHistoryStart: "Knihy začínajú dňa",
+  createLedgerOpeningAccount: "Otvárací účet",
+  createLedgerOpeningAmount: "Počiatočný zostatok (voliteľné)",
+  createLedgerReviewOpening: "Počiatočný zostatok: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Dlžná suma (voliteľné)",
+  createLedgerOpeningNone: "Rozhodnúť neskôr",
+  createLedgerReview: "Kontrola",
+  createLedgerReviewDescription:
+    "Presne toto sa vytvorí. Vráťte sa, ak chcete niečo zmeniť.",
+  createLedgerAccounts: "Účty",
+  createLedgerAmountInvalid: "Zadajte sumu ako 100 alebo -30.50",
+  createLedgerAmountReenter:
+    "Zadajte počiatočný zostatok znova alebo vyberte Rozhodnúť neskôr. V uloženom koncepte sa neuchováva.",
+  createLedgerCurrencyInvalid: "Zadajte kód meny, napríklad USD alebo EUR.",
+  createLedgerHistoryStartInvalid:
+    "Zadajte platný dátum, napríklad 2026-01-01.",
+  createLedgerPresetPersonal: "Osobná kniha",
+  createLedgerPresetPersonalOutcome:
+    "Zaznamenajte nákup a pochopte jeho vplyv na zostávajúce peniaze.",
+  createLedgerPresetFreelance: "Kniha na voľnej nohe",
+  createLedgerPresetFreelanceOutcome:
+    "Zaznamenajte príjmy od zákazníkov alebo zistite, koľko dlží nezaplatený zákazník.",
+  createLedgerPresetBusiness: "Firemná kniha",
+  createLedgerPresetBusinessOutcome:
+    "Vytvorte otváraciu pozíciu a odlíšte financovanie od výnosov.",
+  createLedgerPresetPortfolio: "Portfóliová kniha",
+  createLedgerPresetPortfolioOutcome:
+    "Zaznamenajte nákup a overte jednotky, záznamy o nadobudnutí a pohyb peňazí.",
+  createLedgerPresetRental: "Kniha nájmu",
+  createLedgerPresetRentalOutcome:
+    "Zaznamenajte príjmy a odlíšte nájom od vratnej zálohy.",
+  createLedgerPresetShared: "Kniha spoločných výdavkov",
+  createLedgerPresetSharedOutcome:
+    "Zaznamenajte preddavok a pozrite, kto komu dlží.",
+  createLedgerPresetCommunity: "Kniha komunity",
+  createLedgerPresetCommunityOutcome:
+    "Vysvetlite príspevky, projektové výdavky a zostávajúce prostriedky.",
+  createLedgerPresetBlank: "Prázdna kniha",
+  createLedgerPresetBlankOutcome:
+    "Pridajte zvolenú štruktúru bez odstraňovania nechcených kategórií.",
 };

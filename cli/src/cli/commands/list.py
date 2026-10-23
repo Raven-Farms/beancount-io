@@ -13,10 +13,13 @@ Beancount syntax the helper already produced.
 
 from __future__ import annotations
 
+import os
 import re
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Annotated, Any
 
 import typer
@@ -113,7 +116,7 @@ def _cost(cost: dict[str, Any]) -> str:
     parts = [_amount(cost)]
     if cost.get("date"):
         parts.append(str(cost["date"]))
-    if cost.get("label"):
+    if cost.get("label") is not None:
         # Beancount's string escaping, so a label holding a quote or a
         # backslash still reads as one string — the spelling `--details` shows.
         label = str(cost["label"]).replace("\\", "\\\\").replace('"', '\\"')
@@ -313,7 +316,8 @@ def _refuse_non_token(flag: str, value: str, sigil: str) -> None:
     noun = "tags" if flag == "--tag" else "links"
     raise UsageError(
         f"{flag}: {value!r} is not one tag or link; use only ASCII letters, digits and - _ / . after an optional "
-        f"leading {sigil}.{_several(value, f'repeat {flag} for several {noun}')}"
+        # Repeats are ANDed: "repeat --tag for several tags" then found nothing (w5/835).
+        f"leading {sigil}.{_several(value, f'repeat {flag} to require several {noun} on one transaction')}"
     )
 
 
@@ -406,7 +410,9 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
 
     output.utf8_stdout()
     if not items:
-        typer.echo(spec.empty)
+        # On stderr, as `query`'s `(no rows)` and `balance`'s notice are: on
+        # stdout a `| head` or `> file` read it as a row (w5/843).
+        typer.echo(spec.empty, err=True)
         return
     # A plugin can add rows the ledger file never declares. They read as
     # `generated`, and the column only exists when one does — a plugin-free
@@ -419,7 +425,9 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
             if item.get("source"):
                 suffix = " (generated)" if item.get("generated") else ""
                 typer.echo(single_line(f"{item['source']['filename']}:{item['source']['lineno']}{suffix}"))
-            typer.echo(inert_text(rendered))
+            # A terminal shows control characters inert; a redirect gets the
+            # ledger's own strings, so the text parses back (w5/834).
+            typer.echo(inert_text(rendered) if sys.stdout is not None and sys.stdout.isatty() else rendered)
     elif name == "transaction":
         account = fold_account(filters.get("account") or "")
         amounts = "MATCHING POSTING AMOUNTS" if account else "POSTING AMOUNTS"
@@ -448,13 +456,47 @@ def _run(name: str, spec: _Spec, limit: int, allow_errors: bool, *, details: boo
         )
     else:
         headers, rows = spec.headers, [spec.row(item) for item in items]
+        if name == "document":
+            # Each filename is relative to the file that wrote it; name that file,
+            # or two includes' `receipt.pdf` read alike (w5/833).
+            headers = [*headers, "WRITTEN IN"]
+            rows = [[*row, _written_in(item, file)] for row, item in zip(rows, items, strict=True)]
         if show_source:
             headers = [*headers, "SOURCE"]
             rows = [[*row, "generated" if marker else ""] for row, marker in zip(rows, generated, strict=True)]
         output.table(headers, rows)
     if truncated:
-        advice = "pass --limit for more" if limit == 50 else "raise --limit for more"
+        advice = "raise --limit for more" if _limit_was_given() else "pass --limit for more"
         output.note(f"Showing the first {limit}; {advice}.")
+
+
+def _written_in(item: dict[str, Any], root: Path) -> str:
+    """`FILE:LINE` of the directive behind a row, relative to the root's folder when inside it."""
+    source = item.get("source") or {}
+    filename, lineno = source.get("filename"), source.get("lineno")
+    if not filename:
+        return ""
+    folder, path = Path(os.path.abspath(root)).parent, Path(filename)
+    # As the ledger spells it first, so a symlinked root keeps its own names.
+    shown = next(
+        (
+            str(target.relative_to(base))
+            for base, target in ((folder, path), (folder.resolve(), path.resolve()))
+            if target.is_relative_to(base)
+        ),
+        filename,
+    )
+    return single_line(f"{shown}:{lineno}")
+
+
+def _limit_was_given() -> bool:
+    """Whether `--limit` was typed, whatever its value: an explicit `-l 50` was told to pass it (w5/836)."""
+    from typer._click.core import ParameterSource
+    from typer._click.globals import get_current_context
+
+    ctx = get_current_context(silent=True)
+    source = ctx.get_parameter_source("limit") if ctx is not None else None
+    return source is not None and source is not ParameterSource.DEFAULT
 
 
 def _account_command(name: str, spec: _Spec) -> Callable[..., None]:
@@ -588,8 +630,14 @@ def transactions(
             help="Case-insensitive text in payee or narration; repeatable (AND — every term must match)",
         ),
     ] = None,
-    tag: Annotated[list[str] | None, typer.Option("--tag", help="Tag with or without '#'; repeatable")] = None,
-    link: Annotated[list[str] | None, typer.Option("--link", help="Link with or without '^'; repeatable")] = None,
+    tag: Annotated[
+        list[str] | None,
+        typer.Option("--tag", help="Tag with or without '#', case-sensitive; repeat to require every tag"),
+    ] = None,
+    link: Annotated[
+        list[str] | None,
+        typer.Option("--link", help="Link with or without '^', case-sensitive; repeat to require every link"),
+    ] = None,
     allow_errors: AllowErrorsOpt = False,
     on_disk: OnDiskOpt = False,
     details: Annotated[
@@ -600,7 +648,7 @@ def transactions(
         ListSort, typer.Option("--sort", help="Transaction date order, applied before the limit")
     ] = ListSort.newest,
 ) -> None:
-    """List recent transactions and their amounts; --details adds metadata and source."""
+    """List recent transactions and their amounts."""
     if flag == "txn":
         # `add --flag txn` writes it and Beancount reads it as `*`: the shared
         # flag grammar includes it, so the filter does too (w5/526).

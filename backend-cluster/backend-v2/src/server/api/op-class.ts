@@ -199,7 +199,7 @@ export const SOCIAL_PUBLIC_EXCLUSIONS = {
   "Query.getUserFollowing":
     "Following lists are public social-graph discovery in the current product contract.",
   "Query.getUserStarredRepos":
-    "Starred repository lists are public discovery and return only the established public response shape.",
+    "Starred repository lists are public discovery and return only the established public response shape; the caller's own list, read with their credentials, also holds their private stars.",
 } as const;
 
 /**
@@ -478,6 +478,18 @@ const AUTH_VERB_ENTRIES: readonly VerbEntry[] = [
     M.sessionCeremony,
   ),
   gqlOnly(
+    "Mutation.requestSignInRecovery",
+    "session-only",
+    R.sessionCeremony,
+    M.sessionCeremony,
+  ),
+  gqlOnly(
+    "Mutation.signInWithEmailCode",
+    "session-only",
+    R.sessionCeremony,
+    M.sessionCeremony,
+  ),
+  gqlOnly(
     "Mutation.refreshToken",
     "session-only",
     R.sessionCeremony,
@@ -617,6 +629,23 @@ const BILLING_VERBS: readonly VerbEntry[] = [
     authorizationAction:
       AUTHORIZATION_ACTIONS.USER_BILLING_SUBSCRIPTION_UPGRADE,
   },
+  {
+    ...gqlOnly("Query.previewPlanChange", "read", R.billing, M.billing),
+    authorizationAction: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_PREVIEW,
+  },
+  {
+    ...gqlOnly("Mutation.changePlan", "write", R.billing, M.billing),
+    authorizationAction: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_APPLY,
+  },
+  {
+    ...gqlOnly(
+      "Mutation.cancelScheduledPlanChange",
+      "write",
+      R.billing,
+      M.billing,
+    ),
+    authorizationAction: AUTHORIZATION_ACTIONS.USER_BILLING_PLAN_CHANGE_CANCEL,
+  },
 ];
 
 const PROBE_VERBS: readonly VerbEntry[] = [
@@ -654,6 +683,14 @@ const LEDGER_ADMIN_VERBS: readonly VerbEntry[] = [
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
     rest: "POST /api-gateway/v1/ledgers",
     mcp: "createLedger",
+  },
+  {
+    verb: "Query.previewLedgerSetup",
+    gql: "Query.previewLedgerSetup",
+    class: "admin",
+    authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_CREATE,
+    rest: "POST /api-gateway/v1/ledgers/preview",
+    mcp: "previewLedgerSetup",
   },
   {
     verb: "Mutation.updateLedger",
@@ -1455,7 +1492,7 @@ const CROSS_SURFACE_VERBS: readonly VerbEntry[] = [
     gqlExempt: G.bytesNotFields,
     mcpResource: "ledgerArchive",
     mcpExempt:
-      "Archive bytes are delivered by the MCP resource as a base64 blob with per-call authorization, archive selection, and the shared download budget.",
+      "Archive bytes are delivered by the MCP resource as a base64 blob with per-call authorization, archive selection, and the shared download budget. A blob is one JSON-RPC message held whole in memory, so it is capped at `MCP_ARCHIVE_BLOB_MAX_BYTES`; a larger archive is refused with a hint to the `ledgerArchiveDownloadUrl` resource, whose REST URL streams.",
   },
   {
     // The pre-v1 spelling, superseded and marked deprecated in the spec. Kept
@@ -1555,7 +1592,7 @@ const GITEA_SOCIAL_VERBS: readonly VerbEntry[] = [
     gql: "Mutation.approvePullRequest",
     class: "write" as const,
     rest: "POST /api-gateway/v1/ledgers/{owner}/{name}/pull-requests/{prNumber}/approve",
-    mcp: "approvePullRequest",
+    mcp: "mergePullRequest",
     authorizationAction: AUTHORIZATION_ACTIONS.LEDGER_PULL_REQUEST_APPROVE,
   },
   {

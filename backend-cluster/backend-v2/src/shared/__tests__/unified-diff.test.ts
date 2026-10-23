@@ -1,21 +1,43 @@
 import { unifiedDiff } from "@/shared/unified-diff";
 
 describe("unifiedDiff", () => {
+  // A trailing newline ends the last line rather than starting an empty one
+  // (w23/005): a two-line file is two `+` lines, not three.
   it("renders a creation as all additions", () => {
     expect(unifiedDiff("new.bean", null, "a\nb\n")).toBe(
-      "--- a/new.bean\n+++ b/new.bean\n@@ -0,0 +1,3 @@\n+a\n+b\n+\n",
+      "--- a/new.bean\n+++ b/new.bean\n@@ -0,0 +1,2 @@\n+a\n+b\n",
     );
   });
 
   it("renders a deletion as all removals", () => {
-    expect(unifiedDiff("old.bean", "a\nb", null)).toBe(
+    expect(unifiedDiff("old.bean", "a\nb\n", null)).toBe(
       "--- a/old.bean\n+++ b/old.bean\n@@ -1,2 +0,0 @@\n-a\n-b\n",
     );
   });
 
+  it("deletes a one-line file as one removed line", () => {
+    expect(unifiedDiff("one-line.bean", "; text\n", null)).toBe(
+      "--- a/one-line.bean\n+++ b/one-line.bean\n@@ -1,1 +0,0 @@\n-; text\n",
+    );
+  });
+
+  it("marks a last line that has no newline the way git does", () => {
+    expect(unifiedDiff("old.bean", "a\nb", null)).toBe(
+      "--- a/old.bean\n+++ b/old.bean\n@@ -1,2 +0,0 @@\n-a\n-b\n" +
+        "\\ No newline at end of file\n",
+    );
+  });
+
+  it("shows adding a final newline as a change to the last line", () => {
+    expect(unifiedDiff("main.bean", "a\nb", "a\nb\n")).toBe(
+      "--- a/main.bean\n+++ b/main.bean\n@@ -1,2 +1,2 @@\n a\n-b\n" +
+        "\\ No newline at end of file\n+b\n",
+    );
+  });
+
   it("renders a one-line change with context and hunk header", () => {
-    const before = ["1", "2", "3", "4", "5", "6", "7"].join("\n");
-    const after = ["1", "2", "3", "FOUR", "5", "6", "7"].join("\n");
+    const before = ["1", "2", "3", "4", "5", "6", "7", ""].join("\n");
+    const after = ["1", "2", "3", "FOUR", "5", "6", "7", ""].join("\n");
     expect(unifiedDiff("main.bean", before, after)).toBe(
       "--- a/main.bean\n" +
         "+++ b/main.bean\n" +

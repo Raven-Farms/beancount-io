@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { disclosureAccessibility } from "@/common/accessibility";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import {
@@ -10,19 +11,27 @@ import {
   space,
   useTheme,
 } from "@/common/theme";
+import { formatLedgerDate, formatLedgerDateShort } from "@/common/date-format";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { AmountText } from "@/components";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useDeleteBudgetEntry } from "@/screens/budget-screen/hooks/use-delete-budget-entry";
 import { selectBudgetEntryActions } from "@/screens/budget-screen/selectors/select-budget-write-actions";
-import { intervalLabelKey } from "@/screens/budget-screen/selectors/budget-labels";
 import {
+  intervalAdjectiveKey,
+  intervalLabelKey,
+} from "@/screens/budget-screen/selectors/budget-labels";
+import {
+  formatBudgetEntryAmount,
   selectHistoryRows,
   type BudgetGroup,
   type BudgetHistoryRow,
 } from "@/screens/budget-screen/selectors/budget-selectors";
+import { isolateLtr } from "@/common/bidi";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
+import { InlineError } from "@/components/inline-error";
+import { iconActionSize } from "@/common/theme/spacing";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -70,8 +79,13 @@ const getStyles = (theme: ColorTheme) =>
       color: theme.text01,
       marginEnd: space.sm,
     },
+    // A 44 pt target around the 18 pt bin: it is destructive, and was 26 pt
+    // (w21/485).
     deleteButton: {
-      padding: space.xs,
+      minWidth: iconActionSize,
+      minHeight: iconActionSize,
+      alignItems: "center",
+      justifyContent: "center",
     },
     error: {
       paddingHorizontal: gutter,
@@ -97,7 +111,7 @@ export function BudgetHistoryRows({
 }: BudgetHistoryRowsProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { deleteBudgetEntry, deleting } = useDeleteBudgetEntry(ledgerId);
@@ -118,10 +132,11 @@ export function BudgetHistoryRows({
     Alert.alert(
       t("budgetDeleteTitle"),
       t("budgetDeleteMessage", {
-        interval: t(intervalLabelKey(interval)).toLowerCase(),
-        amount,
+        interval: t(intervalAdjectiveKey(interval)),
+        amount: isolateLtr(formatBudgetEntryAmount(amount, group.currency)),
         account: group.account,
-        date,
+        // In the reader's language, not ISO (w21/366).
+        date: formatLedgerDate(date, locale),
       }),
       [
         { text: t("cancel"), style: "cancel" },
@@ -147,7 +162,9 @@ export function BudgetHistoryRows({
         style={styles.toggle}
         onPress={() => setExpanded((value) => !value)}
         accessibilityRole="button"
-        accessibilityState={{ expanded }}
+        // Named by its text alone: the chevron glyph read as "U+F…" (w21/141).
+        accessibilityLabel={t("budgetHistoryCount", { count: rows.length })}
+        {...disclosureAccessibility(expanded, t)}
       >
         <Text style={styles.toggleText}>
           {t("budgetHistoryCount", { count: rows.length })}
@@ -165,18 +182,26 @@ export function BudgetHistoryRows({
             key={row.entry_hash}
             style={[styles.row, row.isCurrent && styles.rowCurrent]}
           >
-            <Text style={styles.date}>{row.date}</Text>
+            <Text style={styles.date}>
+              {formatLedgerDateShort(row.date, locale)}
+            </Text>
             <Text style={styles.interval}>
               {t(intervalLabelKey(row.interval))}
             </Text>
-            <AmountText style={styles.amount}>{row.amount}</AmountText>
+            <AmountText style={styles.amount}>
+              {formatBudgetEntryAmount(row.amount, group.currency)}
+            </AmountText>
             {showDelete && (
               <TouchableOpacity
                 style={styles.deleteButton}
                 disabled={deleteDisabled}
                 onPress={() => confirmDelete(row)}
                 accessibilityRole="button"
-                accessibilityLabel={t("budgetDelete")}
+                // Which entry: every row's button read "Delete" (w21/142).
+                accessibilityLabel={t("budgetDeleteNamed", {
+                  date: formatLedgerDate(row.date, locale),
+                  amount: formatBudgetEntryAmount(row.amount, group.currency),
+                })}
               >
                 <Ionicons
                   name="trash-outline"
@@ -188,7 +213,7 @@ export function BudgetHistoryRows({
           </View>
         ))}
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && <InlineError style={styles.error} message={error} />}
     </View>
   );
 }

@@ -127,8 +127,20 @@ BALANCES = "Assets:Cash     10\nAssets:Savings  20\nExpenses:Food    5\n"
         ("-r", "(unclosed"),
         ("-d", "*"),
         ("--split=a{2,1}",),
+        # w5/806: a repetition too large to compile is an invalid expression.
+        ("--pattern", "A.{4294967296}"),
+        ("-r", "A.{4294967296}"),
     ],
-    ids=["pattern", "delimiter", "split", "short-pattern", "short-delimiter", "split-equals"],
+    ids=[
+        "pattern",
+        "delimiter",
+        "split",
+        "short-pattern",
+        "short-delimiter",
+        "split-equals",
+        "pattern-overflow",
+        "short-pattern-overflow",
+    ],
 )
 def test_treeify_names_the_malformed_regex_option(tmp_path: Path, option: tuple[str, ...]) -> None:
     """w5/061: a regex typo was `IndexError: no such group` or a position in text the user never typed, exit 1."""

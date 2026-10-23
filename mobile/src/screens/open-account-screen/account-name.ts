@@ -1,3 +1,5 @@
+import type { AccountRoot, RootNames } from "../../common/account-root";
+
 /** The five canonical Beancount account roots, in conventional display order. */
 export const ACCOUNT_ROOT_PREFIXES = [
   "Assets",
@@ -8,6 +10,19 @@ export const ACCOUNT_ROOT_PREFIXES = [
 ] as const;
 
 export type AccountRootPrefix = (typeof ACCOUNT_ROOT_PREFIXES)[number];
+
+/**
+ * What a ledger calls a root: its `option "name_assets" "Activos"` when it
+ * renames one, else the canonical name. Open Account offered and wrote only
+ * the English roots, so a renamed ledger got an `open Assets:…` for a root it
+ * does not have (w21/073).
+ */
+export function ledgerRootName(
+  root: AccountRootPrefix,
+  roots: RootNames = {},
+): string {
+  return roots[root.toLowerCase() as AccountRoot] || root;
+}
 
 export type AccountNameValidationReason =
   | "invalidRoot"
@@ -20,16 +35,16 @@ export type AccountNameValidation =
   { ok: true } | { ok: false; reason: AccountNameValidationReason };
 
 /** Join a selected root to a user-entered sub-path. */
-export function composeAccountName(
-  rootPrefix: AccountRootPrefix,
-  subPath: string,
-): string {
+export function composeAccountName(rootName: string, subPath: string): string {
+  // NFC, so a keyboard's decomposed "É" (E + U+0301) is written composed and
+  // the already-open check compares like with like (w21/041).
   const components = subPath
+    .normalize("NFC")
     .split(":")
     .map((component) => component.trim())
     .filter(Boolean);
 
-  return [rootPrefix, ...components].join(":");
+  return [rootName, ...components].join(":");
 }
 
 /**
@@ -37,42 +52,118 @@ export function composeAccountName(
  * the inverse of `composeAccountName` for prefilled input. A canonical root is
  * matched case-insensitively so a lowercase search query still lands on the
  * right prefix; everything after it stays verbatim, letting the screen's normal
- * validation speak instead of silently rewriting what the user typed. A string
+ * validation speak instead of silently rewriting what the user typed, except
+ * that words separated by spaces become one component (`credit card` seeds
+ * `CreditCard`), since a space is never valid in a name. A string
  * with no recognizable root becomes the sub-path under `fallbackRoot`.
  */
 export function splitPrefillAccountName(
   input: string,
   fallbackRoot: AccountRootPrefix = "Assets",
+  roots: RootNames = {},
+): { rootPrefix: AccountRootPrefix; subPath: string } {
+  const split = splitPrefillRoot(input, fallbackRoot, roots);
+  return { ...split, subPath: joinPrefillWords(split.subPath) };
+}
+
+/**
+ * An account component can't hold a space, so words typed into the search ("my
+ * savings") become one component when they seed Create: `MySavings`, not a
+ * name the form refuses (w21/255). Text without whitespace is untouched.
+ */
+function joinPrefillWords(subPath: string): string {
+  if (!/\s/.test(subPath)) return subPath;
+  return subPath
+    .split(":")
+    .map((component) =>
+      component
+        .trim()
+        .split(/\s+/)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(""),
+    )
+    .join(":");
+}
+
+/**
+ * What the root button reads aloud: the ledger's own name for the root, as the
+ * visible prefix shows it. It said the canonical "Assets" beside a visible
+ * "Activos:" on a ledger with `option "name_assets" "Activos"` (w21/629).
+ */
+export function rootButtonLabel(
+  accountTypeLabel: string,
+  rootPrefix: AccountRootPrefix,
+  roots: RootNames = {},
+): string {
+  return `${accountTypeLabel}: ${ledgerRootName(rootPrefix, roots)}`;
+}
+
+/**
+ * Words with a space between them join into one component as they are typed or
+ * pasted, as they do after a root (w21/255): "Credit Card" and
+ * "Assets:Credit Card" gave different results, the first refused (w21/628). A
+ * trailing space, the one just typed after a word, is left alone so typing the
+ * next word is not fought.
+ */
+function joinTypedWords(typed: string): string {
+  return /\S\s+\S/.test(typed) ? joinPrefillWords(typed) : typed;
+}
+
+function splitPrefillRoot(
+  input: string,
+  fallbackRoot: AccountRootPrefix,
+  roots: RootNames,
 ): { rootPrefix: AccountRootPrefix; subPath: string } {
   const trimmed = input.trim();
   const lower = trimmed.toLowerCase();
   for (const root of ACCOUNT_ROOT_PREFIXES) {
-    if (lower === root.toLowerCase()) {
+    const name = ledgerRootName(root, roots);
+    if (lower === name.toLowerCase()) {
       return { rootPrefix: root, subPath: "" };
     }
-    if (lower.startsWith(`${root.toLowerCase()}:`)) {
-      return { rootPrefix: root, subPath: trimmed.slice(root.length + 1) };
+    if (lower.startsWith(`${name.toLowerCase()}:`)) {
+      return { rootPrefix: root, subPath: trimmed.slice(name.length + 1) };
     }
   }
   return { rootPrefix: fallbackRoot, subPath: trimmed };
 }
 
 /**
- * Whether a subcomponent's initial character is one Beancount accepts.
- *
- * Allowed: a Unicode uppercase letter ("Épargne"), a digit ("401k"), and a
- * letter from a caseless script ("日本", "العربية"). That last case is why this
- * is not a single `\p{Lu}` test: Han and Kana are `\p{Lo}`, so an uppercase-only
- * rule rejects names the ledger grammar allows. A letter is treated as caseless
- * when it has no distinct uppercase form, which still rejects a lowercase-led
- * Latin, Greek or Cyrillic name.
+ * The sub-path field's text with a typed root moved into the selector. The
+ * app shows accounts by full name everywhere, so a pasted
+ * `Assets:Bank:Checking` used to compose into `Assets:Assets:Bank:Checking`
+ * (w21/004). Only a root followed by `:` is peeled — a bare `Assets` may still
+ * be the start of a component — and the rest stays verbatim, so validation
+ * still refuses what the user actually typed. Text without a leading root is
+ * returned unchanged under the current root.
+ */
+export function peelTypedRoot(
+  typed: string,
+  currentRoot: AccountRootPrefix,
+  roots: RootNames = {},
+): { rootPrefix: AccountRootPrefix; subPath: string } {
+  const lower = typed.trimStart().toLowerCase();
+  const root = ACCOUNT_ROOT_PREFIXES.find((candidate) =>
+    lower.startsWith(`${ledgerRootName(candidate, roots).toLowerCase()}:`),
+  );
+  return root
+    ? splitPrefillAccountName(typed, root, roots)
+    : { rootPrefix: currentRoot, subPath: joinTypedWords(typed) };
+}
+
+/**
+ * Whether a subcomponent's initial character is one the engine accepts, as
+ * probed against `@rustledger/wasm` 0.24 over every code point (w21/192):
+ * an uppercase or titlecase letter ("Épargne", "ǅep"), any other letter that
+ * is not cased, `\p{Lo}` ("日本", "العربية", "हिंदी"), or an ASCII digit
+ * ("401k"). Not accepted, though they once passed here: a digit of another
+ * script (Persian "۱۴۰۲", full-width "１２３", Devanagari "०"), a letter-like
+ * numeral ("Ⅷ", "²nd"), a modifier letter ("ʰBank") and a lowercase letter.
+ * Titlecase `ǅ` is neither `\p{Lu}` nor caseless, and is accepted (w21/041).
  */
 const startsSubcomponent = (component: string): boolean => {
   const initial = [...component][0];
-  if (initial === undefined) return false;
-  if (/\p{N}/u.test(initial)) return true;
-  if (/\p{Lu}/u.test(initial)) return true;
-  return /\p{L}/u.test(initial) && initial.toUpperCase() === initial;
+  return initial !== undefined && /^[\p{Lu}\p{Lt}\p{Lo}0-9]$/u.test(initial);
 };
 
 /** Validate a full account name using Beancount's component naming rules. */
@@ -92,23 +183,25 @@ export function validateAccountName(
     return { ok: false, reason: "emptyComponent" };
   }
 
-  // The root is one of the five canonical ASCII names (already checked above),
-  // so it keeps the strict ASCII rules. Subcomponents follow the Beancount
-  // grammar, which allows any Unicode uppercase letter or a digit as the initial
-  // ("Assets:Épargne", "Assets:US:401k") and Unicode letters, digits and hyphens
-  // in the body. Lowercase-led names, underscores and spaces stay rejected.
-  if (!/^[A-Z]/.test(components[0])) {
-    return { ok: false, reason: "componentMustStartUppercase" };
-  }
-  if (!/^[A-Za-z0-9-]+$/.test(components[0])) {
-    return { ok: false, reason: "invalidCharacters" };
-  }
+  // The root is one of the ledger's own root names (checked above), which the
+  // ledger already accepts, renamed ones included (w21/073). Subcomponents
+  // follow the Beancount grammar, which allows any Unicode uppercase letter or a
+  // digit as the initial ("Assets:Épargne", "Assets:US:401k") and Unicode
+  // letters, digits and hyphens in the body. Lowercase-led names, underscores
+  // and spaces stay rejected.
 
-  for (const component of components.slice(1)) {
+  // Combining marks (`\p{M}`) may follow the initial: Devanagari vowel signs
+  // in "हिंदी", or the U+0301 of a decomposed "É" that NFC cannot always fold.
+  // The ledger accepts both, and refusing them disabled Done for a name it
+  // would open (w21/041).
+  for (const component of components.slice(1).map((c) => c.normalize("NFC"))) {
     if (!startsSubcomponent(component)) {
       return { ok: false, reason: "componentMustStartUppercase" };
     }
-    if (!/^[\p{L}\p{N}-]+$/u.test(component)) {
+    // ZWNJ and ZWJ belong to Persian and Indic words ("خانه‌ها"); the engine
+    // accepts them in the body, and refusing them blocked a name it opens
+    // (w21/192).
+    if (!/^[\p{L}\p{N}][\p{L}\p{M}\p{N}\u200c\u200d-]*$/u.test(component)) {
       return { ok: false, reason: "invalidCharacters" };
     }
   }
@@ -153,8 +246,16 @@ export function openAccountSubmitState(input: {
   /** A save is running or already committed. */
   busy: boolean;
 }): { canSubmit: boolean; alreadyOpen: boolean } {
+  // Compared as NFC: the typed name is composed in NFC, but a ledger imported
+  // from a system that writes decomposed Unicode (macOS file names, some bank
+  // exports) holds "Café" as "Cafe" + U+0301, which the engine keeps as a
+  // different account that looks identical (w21/256).
+  const wanted = input.account.normalize("NFC");
   const alreadyOpen =
-    input.nameOk && (input.openAccounts ?? []).includes(input.account);
+    input.nameOk &&
+    (input.openAccounts ?? []).some(
+      (account) => account.normalize("NFC") === wanted,
+    );
   return {
     alreadyOpen,
     canSubmit:
@@ -163,4 +264,43 @@ export function openAccountSubmitState(input: {
       !alreadyOpen &&
       !input.busy,
   };
+}
+
+/**
+ * The currencies Open Account offers: the operating currencies first, in the
+ * ledger's order, then every other commodity the ledger knows, sorted. Only
+ * the operating currencies were offered, so an EUR bank account or a VTI
+ * holding could not be constrained to its commodity (w21/085).
+ */
+export function openAccountCurrencyChoices(
+  operating: readonly string[],
+  all: readonly string[],
+  typed: readonly string[] = [],
+): string[] {
+  const first = [...new Set(operating)];
+  const rest = [...new Set([...all, ...typed])]
+    .filter((currency) => !first.includes(currency))
+    .sort();
+  return [...first, ...rest];
+}
+
+/**
+ * Beancount's commodity grammar: one uppercase letter, or an uppercase letter
+ * then up to 22 of letters, digits and `'._-`, ending in a letter or digit
+ * (EUR, VTI, USDC, A1B). The same rule the backend applies to a posting amount
+ * (w21/190), so a typed code the app accepts the server accepts too.
+ */
+export function isCommodityCode(code: string): boolean {
+  return /^[A-Z](?:[A-Z0-9'._-]{0,22}[A-Z0-9])?$/.test(code);
+}
+
+/**
+ * A currency typed into Open Account's "Other…": trimmed and upper-cased, or
+ * null when it is not a commodity code. The picker lists only commodities the
+ * ledger has posted, so opening a first EUR, GBP or stock account had no way
+ * to name its commodity (w21/234).
+ */
+export function typedCurrencyCode(input: string): string | null {
+  const code = input.trim().toUpperCase();
+  return isCommodityCode(code) ? code : null;
 }

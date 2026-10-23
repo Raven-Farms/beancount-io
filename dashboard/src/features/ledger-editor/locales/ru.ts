@@ -9,6 +9,17 @@ const ruLedgerEditor: Record<string, { message: string; description: string }> =
       message: "Создать файл",
       description: "Button label to create file",
     },
+    "ledgerEditor.branchNotFound": {
+      message:
+        "Ветка «{branch}» здесь недоступна. Файлы показываются из {main}.",
+      description:
+        "404 for a Files URL naming a branch other than the supported one (contains {branch} and {main})",
+    },
+    "ledgerEditor.browseMainFiles": {
+      message: "Открыть файлы в {main}",
+      description:
+        "Link to the Files root on the supported branch (contains {main})",
+    },
     "ledgerEditor.files": {
       message: "Файлы",
       description: "Ledger files management",
@@ -49,6 +60,12 @@ export default {
   "ledgerEditor.unsupportedPreview": {
     message: "Этот тип файла не поддерживается для предварительного просмотра.",
     description: "Unsupported preview message without a file type",
+  },
+  "ledgerEditor.notUtf8Text": {
+    message:
+      "Этот файл не является текстом в UTF-8, поэтому его нельзя показать или изменить здесь, не изменив его байты. Скачайте его, чтобы открыть в другой программе.",
+    description:
+      "Shown instead of the editor for a text file whose bytes are not valid UTF-8",
   },
   "ledgerEditor.createFileCommit": {
     message: "Создать файл {path}",

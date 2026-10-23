@@ -10,13 +10,28 @@ The backend is built with Node.js and TypeScript using Koa and GraphQL. It power
 - Redis for caching
 - Background jobs for data processing
 
+For password admission, API quotas, email recovery and deployment requirements,
+see [Authentication and rate limits](docs/authentication-rate-limits.md).
+Signup's explicit account-existence response remains a deliberate product
+choice. Frequent Git automation should use SSH keys rather than repeatedly
+present an account password over HTTP.
+
 ## Billing
 
 The supported application client is `beancount-web-prod`, configured by
-`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY`, and `STRIPE_WEBHOOK_SECRET`. Billing
+`STRIPE_PRIVATE_KEY`, `STRIPE_PUBLIC_KEY`, and `STRIPE_WEBHOOK_SECRET`.
+Every billing-portal session uses the configuration pinned in
+`SUBSCRIPTION_CONFIG`, which allows payment methods, invoices and billing
+details only; plan changes go through `changePlan`. Billing
 uses live subscriptions and recognized current/legacy prices; an old cached period
 or unknown price cannot identify a purchased plan. Only verified live webhooks
 may refresh a customer's cache. Stripe failures do not clear stored periods.
+
+GA4 `purchase` events are recorded by the dashboard, in the browser, once the
+payment is confirmed; the backend sends no analytics. A paid Checkout returns
+to the dashboard confirmation (`/settings/billing?checkout=success&session_id=…`),
+and `changePlan` reports the invoice an immediate change charged
+(`invoiceId`, `amountPaid`, `currency`) so the dashboard counts it once.
 
 The retired `beancount-web-dev` tenant and `STRIPE_DEV_*` variables are ignored;
 no fake-paid script replaces them. Keep isolated Stripe testing outside live
@@ -25,17 +40,19 @@ application billing.
 ## Project Structure
 
 ```
-/backend
-├── config/         # Configuration files
-├── migrations/     # Database migration scripts
+backend-v2/
+├── docs/           # API and operator guides
+├── scripts/        # Deployment migrations and developer tools
 ├── src/
-│   ├── api-gateway/  # API gateway implementation
-│   ├── model/        # Data models and database schemas
-│   ├── scripts/      # Utility scripts
-│   ├── server/       # Server implementation
-│   └── shared/       # Shared utilities and components
-├── server.ts       # Main entry point
-└── package.json    # Project dependencies and scripts
+│   ├── config/     # Environment-backed application configuration
+│   ├── drizzle/    # PostgreSQL setup and tracked migrations
+│   ├── features/   # Domain adapters, workflows, services and models
+│   ├── foundation/ # Composition, external clients and Redis
+│   ├── scheduler/  # Scheduled jobs, including authentication mail
+│   ├── server/     # Koa, GraphQL, REST and MCP transport setup
+│   └── shared/     # Errors, caching, logging and utilities
+├── server.ts       # Application entry point
+└── package.json
 ```
 
 ## Getting Started
@@ -74,11 +91,14 @@ REDIS_URI=redis://localhost:6379
 FAVA_API_URL=http://localhost:8000
 FAVA_API_ADMIN_USER=admin
 FAVA_API_ADMIN_PASSWORD=your_password
-AUTH_SECRET=your_jwt_secret
+AUTH_SECRET=replace_with_a_strong_shared_deployment_secret
 SERVER_URL=http://localhost:4104
 DASHBOARD_URL=http://localhost:5173
 # Optional: login/register JWT lifetime in minutes (default 525600 = 365 days)
 # AUTH_JWT_EXP_MINUTES=5
+# Optional: reverse proxies in front of this server that append to
+# X-Forwarded-For (default 1; 0 when clients connect directly)
+# TRUSTED_PROXY_HOPS=1
 ```
 
 ### Self-hosting on your own domain
@@ -127,7 +147,8 @@ allows CORS from those hosts. A self-host on another domain sets:
     in Workspace, block or delete the old user first.
 - `AUTH_PASSWORD_ENABLED` (default `true`): `false` turns off every password
   path: password sign-in, sign-up with an emailed code, forgot/reset password,
-  and email+password git access through the proxy. `/api-gateway/auth/providers`
+  sign-in recovery (emailed code plus current password), and email+password git
+  access through the proxy. `/api-gateway/auth/providers`
   reports `password: false`, so the dashboard shows only the other methods. The
   one-time-token sign-in (used by the admin `login-as` break-glass) stays
   available.
@@ -141,6 +162,30 @@ allows CORS from those hosts. A self-host on another domain sets:
   AI quota, personal API keys) uses it. Unset keeps the Stripe-derived tier,
   which is `FREE` without a Stripe key. Build the dashboard with
   `VITE_BILLING_ENABLED=false` to hide the subscription section in settings.
+
+Keep `AUTH_SECRET` non-empty and consistent across API/worker processes and
+restarts: it signs sessions and derives authentication-mail encryption and
+recovery-proof keys. Never commit its real value.
+
+4. Apply the database migrations before starting the server:
+
+```bash
+node --env-file=.env scripts/migrate-deploy.js
+yarn start
+```
+
+The deployment equivalent is `yarn migrate:deploy` with environment variables
+already injected. This includes the `auth_mail` outbox migration; starting the
+API without it cannot enqueue recovery mail. The normal server starts its
+authentication-mail worker automatically, every five seconds.
+
+Development/test `ConsoleSendGrid` suppresses delivery and never prints email
+contents, addresses, links or OTPs. Human email/signup/recovery verification
+requires a fully configured mail deployment: the production client uses
+`SEND_GRID_API_KEY` and its configured sender. Automated tests capture synthetic
+mail without contacting a provider. See the
+[operator guide](docs/authentication-rate-limits.md#deployment-and-development)
+for the worker, Redis and recovery prerequisites.
 
 Production OAuth requires `OAUTH_JWKS`, a complete private P-256/ES256 signing
 JWKS provided by the deployment secret manager. It must never be committed or
@@ -483,6 +528,16 @@ Discourse keeps oidc-provider's defaults.
 Revocation is what ends a long session early: logout revokes the refresh
 credential, which revokes the grant with it.
 
+A password reset ends all of them at once. In the same transaction as the
+password change it deletes every dashboard and CLI session (`jwts` rows) and,
+for every client, every OAuth grant, refresh token and authorization-server
+session the user holds (`oauthGrant.revokeAllForUser`). A reset that cannot
+revoke them fails and leaves the old password in place. Access tokens already
+issued run out within their hour, and nothing can refresh them. Personal API
+keys (`bcio_`) and SSH keys are not revoked: they are long-lived credentials the
+user created on purpose, and each is listed and revocable in the dashboard
+under Settings → Personal access tokens and Settings → SSH Keys.
+
 Credentials issued before these lifetimes shipped keep working on their own
 terms: an existing refresh token is honored until its original expiry and the
 replacement it rotates into carries the new window, so an installed app migrates
@@ -559,6 +614,7 @@ The server will be available at the port specified in your configuration (defaul
 Background jobs are scheduled using node-cron and run automatically when the server starts:
 
 - **JWT Cleanup**: Runs daily at midnight (00:00) to delete expired tokens from PostgreSQL
+- **Authentication Mail**: Runs every five seconds, processing up to five durable outbox jobs per batch
 - **Dev Test Job**: Runs every 5 minutes in development mode (console.log test)
 
 See `src/scheduler/` for implementation details and `src/scheduler/README.md` for information on adding new jobs.

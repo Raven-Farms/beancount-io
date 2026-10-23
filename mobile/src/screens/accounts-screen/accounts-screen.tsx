@@ -1,3 +1,8 @@
+import {
+  selectCardLoadState,
+  selectReadContextState,
+} from "@/common/apollo/card-load-state";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useLedgerAccess } from "@/common/hooks/use-ledger-access";
 import { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -8,7 +13,6 @@ import { gutter, rowMinHeight, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useGuest } from "@/common/guest/guest-context";
-import { getPrimaryCurrency } from "@/common/currency-util";
 import { LedgerDrawerHeader, StaleDataBanner } from "@/components";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
@@ -19,7 +23,9 @@ import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { useTrialBalance } from "@/screens/accounts-screen/hooks/use-trial-balance";
 import { useLedgerPrices } from "@/common/hooks/use-ledger-prices";
-import { getFormatDate } from "@/common/format-util";
+import { useToday } from "@/common/hooks/use-today";
+import { useAccountCloseDatesState } from "@/common/hooks/use-account-close-dates";
+import { listedAccountsAsOf } from "@/common/account-close-dates";
 import { isShowingStaleDataFromQueries } from "@/common/apollo/stale-data";
 
 // Skeleton rows sized to the loaded table's rhythm: each tile plus its vertical
@@ -78,11 +84,10 @@ const AccountsScreenImpl = (): JSX.Element => {
   const {
     data: ledgerMeta,
     accounts,
-    currencies,
+    primaryCurrency: currency,
     refetch: ledgerMetaRefetch,
     error: ledgerMetaError,
   } = useLedgerReadContext(ledgerId);
-  const currency = getPrimaryCurrency(currencies);
 
   // Commodity holdings are valued at market, as on Home, so they count toward
   // Assets rather than being dropped for lack of a cash balance.
@@ -101,9 +106,17 @@ const AccountsScreenImpl = (): JSX.Element => {
     error: unitsError,
   } = useTrialBalance(ledgerId, undefined, "units");
 
+  // Closed accounts the ledger emptied stay out of the tree (w21/099).
+  const today = useToday();
+  const { closeDates, settled: closeDatesSettled } =
+    useAccountCloseDatesState(ledgerId);
+  const listed = useMemo(
+    () => listedAccountsAsOf(accounts ?? [], today, closeDates),
+    [accounts, today, closeDates],
+  );
   const categories = useMemo(
-    () => selectTrialBalanceCategories(currency, accountData, accounts),
-    [currency, accountData, accounts],
+    () => selectTrialBalanceCategories(currency, accountData, listed),
+    [currency, accountData, listed],
   );
   // Which commodities had a price: a row's value reads "at market" or "at
   // cost", and each root dates its prices the way Home's pages do.
@@ -115,7 +128,6 @@ const AccountsScreenImpl = (): JSX.Element => {
     refetch: pricesRefetch,
     error: pricesError,
   } = useLedgerPrices(ledgerId);
-  const today = useMemo(() => getFormatDate(new Date()), []);
   const displays = useMemo(
     () =>
       selectTrialBalanceDisplays(
@@ -153,10 +165,22 @@ const AccountsScreenImpl = (): JSX.Element => {
   // Held until the units and price reads land too, so a commodity row does not
   // first render as money, or without its basis, and then switch. A failed read
   // still shows the table.
+  const contextState = selectReadContextState(ledgerMeta, ledgerMetaError);
   const accountsPending =
+    contextState === "loading" ||
+    !closeDatesSettled ||
     (accountsLoading && !accountData) ||
     (unitsLoading && !unitsData && !unitsError) ||
     (pricesLoading && !pricesData && !pricesError);
+  // A failed first load has no accounts to list; the table read that as "No
+  // accounts" (w21/080).
+  const accountsFailed =
+    contextState === "failed" ||
+    selectCardLoadState({
+      loading: accountsLoading,
+      hasData: accountData !== undefined,
+      error: accountsError,
+    }) === "failed";
   const showStale = isShowingStaleDataFromQueries([
     { data: accountData, error: accountsError },
     { data: unitsData, error: unitsError },
@@ -194,9 +218,13 @@ const AccountsScreenImpl = (): JSX.Element => {
             </View>
           ))}
         </View>
+      ) : accountsFailed ? (
+        <CardLoadFailure onRetry={() => void onRefresh()} />
       ) : (
         <FadeInView fill>
           <AccountTable
+            // Expand and collapse choices belong to one ledger's tree (w21/384).
+            key={ledgerId}
             categories={categories}
             currency={currency}
             displays={displays}

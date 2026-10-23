@@ -565,3 +565,18 @@ test("deriveTwoPostingSuggestions yields empty sides when the payee has no two-p
   expect(result.from.chips).toEqual([]);
   expect(result.to.chips).toEqual([]);
 });
+
+// w21/519: iOS Smart Punctuation types ’ for ', so "Trader Joe’s" found none of
+// the history of "Trader Joe's".
+test("deriveTwoPostingSuggestions reads a curly apostrophe as a straight one", () => {
+  const entries = [
+    txn("Trader Joe's", [
+      { account: "Assets:Cash", n: -5 },
+      { account: "Expenses:Food:Groceries", n: 5 },
+    ]),
+  ];
+  const curly = deriveTwoPostingSuggestions(entries, "Trader Joe’s");
+  const straight = deriveTwoPostingSuggestions(entries, "Trader Joe's");
+  expect(curly.to.autoFill).toBe("Expenses:Food:Groceries");
+  expect(curly).toEqual(straight);
+});

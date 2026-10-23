@@ -253,16 +253,12 @@ describe("ValuationSheet footer action", () => {
     );
   });
 
-  it("still invites a guest to sign in, whatever the write access", () => {
-    let requests = 0;
-    guest = { requestSignIn: () => (requests += 1) };
+  // w21/633: a guest was shown "Sign In" where an owner sees "Update prices on the
+  // web", but signing in does not let them update an example's prices.
+  it("offers a guest no action, whatever the write access", () => {
+    guest = { requestSignIn: () => undefined };
     for (const canWrite of [false, true]) {
-      const { buttons, closes } = footer(canWrite);
-      expect(buttons.length).toBe(1);
-      expect(buttons[0].children).toEqual(["signIn"]);
-      buttons[0].props.onPress();
-      expect(closes()).toBe(1);
+      expect(footer(canWrite).buttons.length).toBe(0);
     }
-    expect(requests).toBe(2);
   });
 });

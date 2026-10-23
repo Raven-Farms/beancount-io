@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   View,
   Text,
@@ -36,6 +42,7 @@ import {
   pickerOptionAccessibility,
   wheelOffsetForIndex,
 } from "./wheel-position";
+import { useTranslations } from "@/common/hooks/use-translations";
 
 const VISIBLE_ITEMS = 5;
 const WHEEL_ITEM_FONT_SIZE = 18;
@@ -174,10 +181,14 @@ export const Picker: React.FC<PickerProps> = ({
   onCancel,
   selectedValue,
   title,
-  confirmButtonText = "Done",
-  cancelButtonText = "Cancel",
+  confirmButtonText,
+  cancelButtonText,
 }) => {
   const theme = useTheme().colorTheme;
+  // Translated defaults, never English ones (w21/178).
+  const { t } = useTranslations();
+  confirmButtonText ??= t("done");
+  cancelButtonText ??= t("cancel");
   const styles = getStyles(theme);
 
   const translateY = useSharedValue(screenHeight);
@@ -208,6 +219,13 @@ export const Picker: React.FC<PickerProps> = ({
   // scroll event — so an untouched picker used to confirm items[0] instead of
   // the option it was visibly showing.
   const scrollY = useSharedValue(initialScrollY);
+  // Whether the wheel has been moved to the selection since it opened. Until
+  // then a scroll report is the native view's own default (y = 0), not the
+  // user, and must not replace the seed: on iOS 27 a wheel mounted inside the
+  // animating modal could ignore `contentOffset`, show row 0 and report it, so
+  // an untouched Confirm saved row 0 — "Light", or English (w21/009).
+  const positioned = useSharedValue(false);
+  const positionedRef = useRef(false);
 
   useEffect(() => {
     // Re-seed when the picker opens or its selection/item set changes, so a
@@ -217,8 +235,32 @@ export const Picker: React.FC<PickerProps> = ({
       scrollY.value = initialScrollY;
       reportedIndex.value = committedIndex;
       setPendingIndex(committedIndex);
+      positioned.value = false;
+      positionedRef.current = false;
     }
-  }, [visible, initialScrollY, scrollY, committedIndex, reportedIndex]);
+  }, [
+    visible,
+    initialScrollY,
+    scrollY,
+    committedIndex,
+    reportedIndex,
+    positioned,
+  ]);
+
+  // Move the wheel to the selection imperatively — `contentOffset` is an
+  // initial-only prop iOS does not reliably apply here. Layout may arrive
+  // before the rows can scroll that far, so it positions without settling;
+  // the content-size report (or a tap) settles it, after which nothing moves
+  // the wheel but the user.
+  const positionWheel = useCallback(
+    (settle: boolean) => {
+      if (positionedRef.current) return;
+      positionedRef.current = settle;
+      scrollViewRef.current?.scrollTo({ y: initialScrollY, animated: false });
+      positioned.value = true;
+    },
+    [initialScrollY, positioned, scrollViewRef],
+  );
 
   const showModal = useCallback(() => {
     overlayOpacity.value = withTiming(1, {
@@ -267,6 +309,7 @@ export const Picker: React.FC<PickerProps> = ({
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
+      if (!positioned.value) return;
       scrollY.value = event.contentOffset.y;
       const index = wheelIndexAtOffset(event.contentOffset.y, itemCount);
       if (index !== reportedIndex.value) {
@@ -294,9 +337,11 @@ export const Picker: React.FC<PickerProps> = ({
       scrollY.value = offset;
       reportedIndex.value = index;
       setPendingIndex(index);
+      positionedRef.current = true;
+      positioned.value = true;
       scrollViewRef.current?.scrollTo({ y: offset, animated: false });
     },
-    [items.length, scrollY, reportedIndex, scrollViewRef],
+    [items.length, scrollY, reportedIndex, scrollViewRef, positioned],
   );
 
   const renderItem = useCallback(
@@ -347,11 +392,20 @@ export const Picker: React.FC<PickerProps> = ({
       onRequestClose={handleCancel}
     >
       <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
-        <Pressable style={styles.mask} onPress={handleCancel}></Pressable>
-        <Animated.View style={[styles.modalContainer, animatedStyle]}>
+        <Pressable
+          style={styles.mask}
+          accessible={false}
+          onPress={handleCancel}
+        ></Pressable>
+        <Animated.View
+          style={[styles.modalContainer, animatedStyle]}
+          // VoiceOver's two-finger scrub dismisses it as Cancel (w21/357).
+          onAccessibilityEscape={handleCancel}
+        >
           <View style={styles.header}>
             <TouchableOpacity
               testID="picker-cancel"
+              accessibilityRole="button"
               onPress={handleCancel}
               style={styles.headerAction}
             >
@@ -363,11 +417,16 @@ export const Picker: React.FC<PickerProps> = ({
                 {cancelButtonText}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.title} numberOfLines={1}>
+            <Text
+              style={styles.title}
+              numberOfLines={1}
+              accessibilityRole="header"
+            >
               {title}
             </Text>
             <TouchableOpacity
               testID="picker-confirm"
+              accessibilityRole="button"
               onPress={handleDone}
               style={styles.headerAction}
             >
@@ -393,6 +452,8 @@ export const Picker: React.FC<PickerProps> = ({
               onScroll={scrollHandler}
               scrollEventThrottle={16}
               contentOffset={{ x: 0, y: initialScrollY }}
+              onLayout={() => positionWheel(false)}
+              onContentSizeChange={() => positionWheel(true)}
             >
               {/* Add padding items to center the first and last items */}
               <View style={{ height: (WHEEL_HEIGHT - ITEM_HEIGHT) / 2 }} />

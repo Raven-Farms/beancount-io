@@ -35,6 +35,7 @@ describe("ErrorBoundary", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("renders children when nothing throws", () => {
@@ -71,7 +72,10 @@ describe("ErrorBoundary", () => {
 
   it("offers the error behind a collapsed disclosure the reader can copy", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    vi.stubGlobal("navigator", {
+      userAgent: navigator.userAgent,
+      clipboard: { writeText },
+    });
 
     render(
       <ErrorBoundary>
@@ -86,7 +90,6 @@ describe("ErrorBoundary", () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining("Error: secret internal failure"),
     );
-    vi.unstubAllGlobals();
   });
 
   it("offers a full reload when the page predates the current build", () => {
@@ -108,7 +111,6 @@ describe("ErrorBoundary", () => {
 
     fireEvent.click(screen.getByText("Reload page"));
     expect(reload).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
   });
 
   it("leaves sibling content outside the boundary intact", () => {

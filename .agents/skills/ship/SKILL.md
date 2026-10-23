@@ -2,6 +2,7 @@
 name: ship
 description: Ship pending changes on main by pulling with rebase, committing intentionally, and pushing to origin/main. Use only when the user explicitly invokes $ship or asks to ship or publish the current main branch.
 allowed-tools: Bash(git status:*), Bash(git pull:*), Bash(git fetch:*), Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git rebase:*)
+metadata: {"internal": true}
 ---
 
 # Task: Ship the current main branch

@@ -62,3 +62,17 @@ export function asCount(value: unknown): number | null {
   }
   return Math.max(0, Math.trunc(n));
 }
+
+/**
+ * The BQL condition for a ledger's Expenses and Income legs, under the names
+ * the ledger gives those roots (`option "name_expenses" "Gastos"`). The English
+ * names were hard-coded, so a renamed ledger's merchants had no totals and no
+ * recurrence (w21/073).
+ */
+export function moneyRootsBqlFilter(
+  roots: { expenses?: string; income?: string } = {},
+): string {
+  const expenses = roots.expenses || "Expenses";
+  const income = roots.income || "Income";
+  return `(account ~ '^${expenses}' OR account ~ '^${income}')`;
+}

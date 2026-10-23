@@ -2,10 +2,12 @@ import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { type Cache } from "cache-manager";
 import { AppConfig } from "@/config/config";
 import { PaidCustomerPostgresModel } from "@/features/stripe/data/paid-customer-model";
+import { SentBillingEmailPostgresModel } from "@/features/stripe/data/sent-billing-email-model";
 import { ApiKeyPostgresModel } from "@/features/apikeys/data/api-key-model";
 import { AuditEventPostgresModel } from "@/features/audit/data/audit-event-model";
 import { JwtPostgresModel } from "@/features/auth/data/jwt-model";
 import { EmailTokenRedisModel } from "@/features/auth/data/email-token-model";
+import { AuthMailPostgresModel } from "@/features/auth/data/auth-mail-model";
 import { MagicLinkTokenRedisModel } from "@/features/auth/data/magic-link-token-model";
 import { SignupOtpSessionRedisModel } from "@/features/auth/data/signup-otp-session-model";
 import { UserPostgresModel } from "@/features/auth/data/user-model";
@@ -15,16 +17,21 @@ import { PlaidTransactionPostgresModel } from "@/features/plaid/data/plaid-trans
 import { PlaidSyncLogPostgresModel } from "@/features/plaid/data/plaid-sync-log-model";
 import { FeatureUsagePostgresModel } from "@/features/feature-usage/data/feature-usage-model";
 import { CliAuthSessionRedisModel } from "@/features/auth/data/cli-auth-session-model";
+import { OauthGrantPostgresModel } from "@/features/oauth/data/oauth-grant-model";
 import { IModels } from "./types";
 
 export class PostgresRedisImpl implements IModels {
   public paidCustomer: PaidCustomerPostgresModel;
+  public sentBillingEmail: SentBillingEmailPostgresModel;
   public apiKey: ApiKeyPostgresModel;
   public auditEvent: AuditEventPostgresModel;
 
   public jwt: JwtPostgresModel;
 
+  public oauthGrant: OauthGrantPostgresModel;
+
   public emailToken: EmailTokenRedisModel;
+  public authMail: AuthMailPostgresModel;
 
   public magicLinkToken: MagicLinkTokenRedisModel;
 
@@ -56,9 +63,13 @@ export class PostgresRedisImpl implements IModels {
     this.featureUsage = new FeatureUsagePostgresModel();
 
     this.user = new UserPostgresModel();
+    this.authMail = new AuthMailPostgresModel();
     this.paidCustomer = new PaidCustomerPostgresModel();
+    this.sentBillingEmail = new SentBillingEmailPostgresModel();
     this.apiKey = new ApiKeyPostgresModel();
     this.auditEvent = new AuditEventPostgresModel();
+
+    this.oauthGrant = new OauthGrantPostgresModel();
 
     this.jwt = new JwtPostgresModel({
       secret: this.config.jwt.secret,

@@ -136,9 +136,15 @@ const ptImporter: Record<string, TranslationEntry> = {
     message: "O tipo de arquivo atual requer análise por IA",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Atualizar para premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Atualizar para {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Atualizar o plano",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analise arquivos PDF, OFX e imagens automaticamente com IA",
@@ -168,6 +174,15 @@ const ptImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Falha ao analisar arquivo",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "O arquivo não é texto UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Este CSV tem caracteres que não são UTF-8 válido, então importá-lo alteraria o texto de beneficiários e descrições. Salve-o novamente como CSV UTF-8 no seu banco ou aplicativo de planilhas e envie esse arquivo.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -308,6 +323,30 @@ const ptImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Moeda para todas as transações",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} linha ({rows}) está em {symbol} ({currencies}), mas esta importação a lançaria em {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} linhas ({rows}) estão em {symbol} ({currencies}), mas esta importação as lançaria em {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} linhas ({rows}) estão em {symbol} ({currencies}), mas esta importação as lançaria em {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Uma importação lança uma única moeda. Escolha a moeda dessas linhas ou desmarque-as e importe-as separadamente. Nada foi importado.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Atribuir contas de destino",
@@ -460,6 +499,12 @@ const ptImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_many": {
     message: "{count} transações categorizadas com sucesso",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Nenhuma sugestão era confiável o suficiente para preencher uma conta de destino.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "Falha na categorização por IA",

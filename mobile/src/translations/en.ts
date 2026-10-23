@@ -2,6 +2,8 @@ export const en = {
   guestTryExample: "Try an example",
   guestChooseExample: "Choose an example",
   guestReadOnly: "Read-only example",
+  guestSignInHint: "Opens sign in",
+  guestReadOnlyEditor: "Read-only example. Sign in to edit your own ledger.",
   guestExit: "Leave examples",
   guestIntroduction:
     "Explore real reports without an account. These ledgers are read-only.",
@@ -23,6 +25,7 @@ export const en = {
   discoveryTab_explore: "Explore",
   discoverySearch: "Search ledgers",
   discoveryClear: "Clear search",
+  clearSearch: "Clear search",
   discoveryOpen: "Open {{name}}",
   discoveryStar: "Star {{name}}",
   discoveryUnstar: "Unstar {{name}}",
@@ -42,6 +45,15 @@ export const en = {
     "Couldn’t complete that action. Check your connection and ledger access, then try again.",
   ledgerReadOnly:
     "This ledger is read-only. Choose a ledger you can edit to make changes.",
+  ledgerGoneTitle: "This ledger is no longer available",
+  ledgerGoneMessage:
+    "It was deleted, renamed or unshared. Choose another ledger to continue.",
+  ledgerEditorNotUtf8:
+    "This file isn’t UTF-8 text. Editing it here would change some of its characters, so it opens read-only. Edit it on a computer.",
+  ledgerEditorTooLarge:
+    "This file is too large to open on your phone, so it is read-only. Edit it on a computer.",
+  ledgerEditorTooLargeToEdit:
+    "This file is over 1 MiB, more than can be saved from your phone, so it is read-only. Edit it on the web or with the CLI.",
   // bottom tab bar
   home: "Home",
   ledger: "Ledger",
@@ -69,27 +81,34 @@ export const en = {
   merchantsEmptyMessage:
     "Payees from your transactions will show up here as a searchable directory.",
   merchantsNoSearchResults: "No merchants match your search.",
-  merchantsLoadError: "Failed to load merchants: ",
+  merchantsLoadError: "Failed to load merchants",
   merchantsSortByCount: "Sort by transaction count",
   merchantsSortAlphabetical: "Sort alphabetically",
   merchantsRecurringSection: "Recurring",
+  merchantsAllSection: "All merchants",
   merchantsRecurringBadge: "Recurring",
   merchantsCadenceWeekly: "Weekly",
   merchantsCadenceBiweekly: "Every 2 weeks",
+  merchantsCadenceSemimonthly: "Twice a month",
   merchantsCadenceMonthly: "Monthly",
+  merchantsCadenceBimonthly: "Every 2 months",
   merchantsCadenceQuarterly: "Quarterly",
+  merchantsCadenceSemiannual: "Every 6 months",
   merchantsCadenceYearly: "Yearly",
   merchantsCadenceIrregular: "Irregular",
   merchantsCadenceUnknown: "Not enough history",
+  merchantsCadenceInactive: "No recent payments",
   merchantsNextExpected: "Next {{date}}",
   merchantsOverdue: "Overdue",
+  merchantsLastPaid: "Last paid {{date}}",
+  merchantsScheduled: "Scheduled {{date}}",
   // Setting name for the Switch (not an action label) so VoiceOver hears
   // "Recurring, on/off" instead of the contradictory "Mark as not recurring, on".
   merchantsRecurringToggle: "Recurring",
   merchantsRecurringToggleHelper:
     "Whether this merchant is treated as recurring. Manual choices beat automatic detection and stay on this device.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Failed to load merchant: ",
+  merchantDetailLoadError: "Failed to load merchant",
   merchantDetailRetry: "Try again",
   merchantDetailEmptyTitle: "No transactions",
   merchantDetailEmptyMessage: "No transactions matched this merchant exactly.",
@@ -128,6 +147,7 @@ export const en = {
   deleteAccountConfirmMessage:
     'To confirm, please type "sudo delete my account" below:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Type the phrase exactly as shown.",
   deleteAccountConfirmPlaceholder: "Type the phrase here",
   deleteAccountSuccess: "Account deleted",
   deleteAccountFailed: "Couldn't delete your account. Please try again.",
@@ -137,6 +157,7 @@ export const en = {
   accountSettings: "Account",
   supportSettings: "Support",
   signIn: "Sign In",
+  sessionEndedNotice: "Your session ended. Sign in again to continue.",
   signUp: "Sign Up",
   serverSettings: "Server",
   serverSettingsDescription:
@@ -156,6 +177,13 @@ export const en = {
   serverConnectionUnreachable: "Could not reach that server.",
   serverConnectionIncompatible:
     "This server does not expose the required Beancount.io API.",
+  serverConnectionOlder:
+    "This server is older than the app. You can connect, but some features may not work.",
+  serverConnectionNotConfigured: "This server is not set up for sign-in yet.",
+  serverConnectionMismatch:
+    "This address does not match the one the server reports. Open Server settings and test the connection.",
+  serverConnectionCanonical: "This server identifies as {{url}}.",
+  serverUseCanonical: "Use that address",
   serverConnectionAdvisory:
     "You can still save this URL and try signing in when the server is available.",
   restoreDefaultServer: "Restore Beancount.io default",
@@ -176,28 +204,41 @@ export const en = {
   multiPostingsInvalidBalance: "Postings must sum to zero",
   multiPostingsMissingAccount: "All postings need an account",
   multiPostingsZeroAmount: "All postings need a non-zero amount",
+  multiPostingsAmountFormat: "Use digits and one decimal point, like 1234.56",
   removePosting: "Remove posting",
   toggleAmountSign: "Toggle amount sign",
+  postingSignToggle: "Sign for {{account}}",
+  signPlus: "Plus",
+  signMinus: "Minus",
   accountPicker: "Account Picker",
   accountPickerSearchPlaceholder: "Search accounts",
   accountPickerRecent: "Recent",
   accountPickerAllTab: "All",
   accountPickerNoResults: "No matching accounts",
   accountPickerCreate: 'Create "%{name}"',
-  next: "Next",
+  accountPickerClosedOn: "{{name}} was closed on {{date}}",
+  accountPickerOpensOn:
+    "{{name}} opens on {{date}}. Change the date to use it.",
+  accountPickerOpenLater:
+    "Your accounts open on {{date}}. Change the date to use them.",
+  accountPickerNoAccounts: "This ledger has no accounts yet.",
   cancel: "Cancel",
   confirm: "Confirm",
   saving: "Saving...",
+  deleting: "Deleting...",
   saveSuccess: "Transaction saved!",
   saveFailed: "Failed to save",
-  amountEmptyError: "Please input the amount",
-  accountEmptyError: "Please select the from and to accounts",
+  profilePartialSave:
+    "Username saved, but your name couldn't be saved. Try again.",
   accounts: "Accounts",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Account",
   atCost: "{{amount}} at cost",
+  postingCost: "cost {{amount}}",
+  postingPrice: "price {{amount}}",
   notInTotal: "Not in total: {{amounts}}",
+  spendingLastMonthNotInTotal: "Last month, not in total: {{amounts}}",
   atMarket: "{{amount}} at market",
   atMarketValue: "At market value",
   pricesNotUpdatedSince: {
@@ -226,11 +267,15 @@ export const en = {
   equity: "Equity",
   noDataCharts: "Quick add to show charts",
   notEnoughChartData: "Not enough data to chart yet",
+  chartSummary:
+    "From {{start}}, {{startValue}}, to {{end}}, {{endValue}}. Low {{low}}, high {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} since start",
+  chartAdjustHint: "Swipe up or down to step through the months",
+  chartAdjustHintAndroid: "Open the actions menu to step through the months",
   done: "Done",
   payee: "Payee",
   narration: "Narration",
   suggestions: "Suggestions",
-  aiSuggestions: "AI Suggestions",
   from: "From",
   to: "To",
   date: "Date",
@@ -272,9 +317,11 @@ export const en = {
   transactionsWelcomeInstructionFinal:
     "Once you add some transactions, they'll appear here.",
   transactionsNoSearchResults: "No transactions match your search or filters.",
-  transactionsLoadError: "Failed to load transactions: ",
+  transactionsLoadError: "Failed to load transactions",
   // transactions filter modal
   filters: "Filters",
+  filtersActive: "Active: {{count}}",
+  clearAccount: "Clear account",
   filterStatus: "Status",
   filterDateRange: "Date range",
   filterDateRangeInvalid: "End date must be on or after the start date.",
@@ -289,6 +336,7 @@ export const en = {
   transactions: "Transactions",
   search: "Search",
   unknown: "Unknown",
+  datePlaceholder: "YYYY-MM-DD",
   openAccount: "Open Account",
   accountType: "Account type",
   currency: "Currency",
@@ -297,34 +345,74 @@ export const en = {
   chooseCurrency: "Choose currency",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "No currency",
+  openAccountOtherCurrency: "Other…",
+  openAccountOtherCurrencyTitle: "Other currency",
+  openAccountOtherCurrencyMessage:
+    "Enter a commodity code, such as EUR or VTI.",
+  openAccountCurrencyInvalid:
+    "Use capital letters, digits and ' . _ -, starting with a letter, like EUR or VTI.",
   openAccountSaving: "Opening...",
   openAccountFailed: "Couldn't open the account. Please try again.",
   ledgerWouldBreak: "This would add an error to your ledger: {{detail}}",
+  ledgerRefusalLine: "line {{line}}",
+  ledgerRefusalNearEntry: "near this entry",
+  ledgerRefusalQuoteHint: 'To put a quote inside text, write it as \\".',
+  ledgerWriteOffline: "You're offline. Nothing was saved.",
+  ledgerWriteUnconfirmed:
+    "The server didn't confirm the save. Check before trying again.",
+  ledgerWriteRateLimited:
+    "Too many changes at once. Wait a moment and try again.",
+  ledgerInvalidAccount: "{{value}} isn't a valid account name.",
+  ledgerInvalidCurrency: "{{value}} isn't a valid currency.",
+  ledgerInvalidTag:
+    "#{{value}} can't be used as a tag. Use only the letters A–Z, digits and - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} can't be used as a link. Use only the letters A–Z, digits and - _ . /",
+  ledgerInvalidFlag: "{{value}} can't be used as a flag.",
+  ledgerEntryOneAtATime: "Edit one entry at a time.",
+  ledgerEntryIndent: "Indent postings under the date line.",
+  ledgerEntryNotAnEntry:
+    "Options, plugins and includes aren't entries. Change them in the ledger file editor.",
   openAccountInvalidRoot: "Choose a valid account type.",
   openAccountNameRequired: "Enter at least one account name component.",
   openAccountEmptyComponent: "Account components cannot be empty.",
   openAccountNamePreview: "Will be created as {{account}}",
   openAccountAlreadyOpen: "{{account}} is already open in this ledger.",
+  openAccountClosed:
+    "{{account}} was closed on {{date}} and can't be reopened.",
   openAccountUppercaseComponent:
     "Each account component must start with an uppercase letter or a number.",
   openAccountInvalidCharacters:
     "Use only letters, numbers, and hyphens in account names.",
   transaction: "Transaction",
+  transactionActions: "Transaction actions",
   loadingMore: "Loading more...",
   noMoreEntries: "No more entries",
+  loadMoreFailed: "Couldn't load more entries.",
+  a11yTapToExpand: "Double-tap to expand",
+  a11yTapToCollapse: "Double-tap to collapse",
   noEntries: "No entries",
   accountDetailUnavailable:
     "This account isn't available in the selected ledger.",
   transactionDetailUnavailable:
     "This transaction isn't available in the selected ledger.",
+  transactionDetailRemoved:
+    "This transaction was changed or removed. Go back to see the current list.",
+  transactionErrorOpenFile: "Open in the file editor",
+  pluginCopyNotice:
+    "A plugin generated this entry from another one, so it can't be edited or deleted here.",
+  pluginCopyOpenSource: "Open the source entry",
   merchantDetailUnavailable:
     "This merchant isn't available in the selected ledger.",
   commitDetailUnavailable:
     "This change isn't available in the selected ledger.",
-  journalLoadError: "Failed to load journal: ",
+  commitDetailGone: "This commit is no longer available.",
+  fileEditorUnavailable: "This file isn't available in the selected ledger.",
+  journalLoadError: "Failed to load journal",
   // entry context (transactions screen)
   journalError: "Error",
   journalNoData: "No entry context data available",
+  dateSectionHeaderTotal: "{{date}}, total {{total}}",
   journalEntryContext: "Entry Context",
   journalBalancesBefore: "Balances Before Entry",
   journalBalancesAfter: "Balances After Entry",
@@ -333,6 +421,7 @@ export const en = {
   open: "Open",
   close: "Close",
   balance: "Balance",
+  balanceOffBy: "Off by {{amount}}",
   note: "Note",
   document: "Document",
   pad: "Pad",
@@ -340,9 +429,11 @@ export const en = {
   custom: "Custom",
   cleared: "Cleared",
   pending: "Pending",
+  entryUpcoming: "Upcoming",
   other: "Other",
   budget: "Budget",
   metadata: "Metadata",
+  accountOwnPostings: "{{name}} (own)",
   postings: "Postings",
   details: "Details",
   tags: "Tags",
@@ -351,10 +442,15 @@ export const en = {
   reports: "Reports",
   netProfit: "Net Profit",
   cashFlow: "Cash flow",
+  cashFlowRefunds: "Refunds",
+  cashFlowClawbacks: "Clawbacks",
   moneyFlow: "Money flow",
   cashFlowEmpty: "No cash flow in this range",
-  incomeExpenseChartSummary:
-    "Income and expenses over {{count}} months. Income {{income}}, expenses {{expense}}, net {{net}}.",
+  incomeExpenseChartSummary: {
+    one: "Income and expenses over {{count}} month. Income {{income}}, expenses {{expense}}, net {{net}}.",
+    other:
+      "Income and expenses over {{count}} months. Income {{income}}, expenses {{expense}}, net {{net}}.",
+  },
   cashFlowChartSummary:
     "Cash flow from income to expenses. Income {{income}}, expenses {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -375,12 +471,22 @@ export const en = {
   notFoundGoHome: "Go to Home",
   // home dashboard
   seeAll: "See all",
+  seeAllCard: "See all {{title}}",
+  seeAllAccounts: "See all accounts",
   netWorth: "Net Worth",
   noAccounts: "No accounts",
+  reportsNoExpenses: "No expenses in this period",
+  reportsNoIncome: "No income in this period",
   recentTransactions: "Recent Transactions",
   recentTransactionsEmpty: "No transactions yet",
+  recentTransactionsUpcoming:
+    "Nothing up to today. Upcoming entries are listed under Transactions.",
+  recentTransactionsEmptyRange: "No transactions in this range",
   spending: "Spending",
   spendingSubtitle: "This month vs. last month",
+  spendingChartSummary:
+    "Spending: last month {{lastMonth}}, this month {{thisMonth}}.",
+  spendingEmpty: "No spending yet",
   thisMonth: "This month",
   lastMonth: "Last month",
   range1M: "1M",
@@ -390,6 +496,13 @@ export const en = {
   range1Y: "1Y",
   rangeLastYear: "LY",
   rangeAll: "ALL",
+  rangeSpoken1M: "1 month",
+  rangeSpoken3M: "3 months",
+  rangeSpoken6M: "6 months",
+  rangeSpokenYTD: "Year to date",
+  rangeSpoken1Y: "1 year",
+  rangeSpokenLastYear: "Last year",
+  rangeSpokenAll: "All time",
   // edit / delete transaction
   editTransaction: "Edit Transaction",
   deleteTransaction: "Delete",
@@ -398,8 +511,12 @@ export const en = {
     "Are you sure you want to delete this transaction? This action cannot be undone.",
   deleteSuccess: "Transaction deleted",
   deleteFailed: "Failed to delete transaction",
+  deleteTransactionChanged:
+    "This transaction was changed elsewhere. It has been reloaded; try deleting it again.",
   editSuccess: "Transaction saved",
   editFailed: "Failed to save transaction",
+  editTransactionEmpty:
+    "An empty entry can't be saved. To remove the transaction, use Delete on its detail screen.",
   editTransactionLoadFailed: "Failed to load transaction",
   editTransactionSource:
     "Edit raw beancount source below. A stale checksum or invalid beancount will be rejected with an error.",
@@ -412,12 +529,16 @@ export const en = {
   receiptFlashOff: "Off",
   receiptFlashOn: "On",
   receiptRetake: "Retake",
+  receiptTryAgain: "Try again",
   receiptUpload: "Upload",
   receiptOpenSettings: "Open Settings",
+  receiptAllowCamera: "Allow Camera",
   receiptCancel: "Cancel",
   receiptUploading: "Uploading photo…",
+  receiptUploadingProgress: "Uploading photo… {{percent}}%",
   receiptParsing: "AI is reading your receipt…",
   receiptRevealTitle: "Here's what we read",
+  receiptRevealSpoken: "Receipt read: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -437,20 +558,36 @@ export const en = {
   notificationsChangesSection: "Recent Changes",
   notificationsLedgerHealthy: "Ledger is healthy — no errors.",
   notificationsNoChanges: "No recent changes.",
+  notificationsShowOlder: "Show older changes",
+  commitNoMessage: "(no message)",
   // commit detail
   commitDetailAuthor: "Author",
   commitDetailStats: "Stats",
   commitDetailFiles: "Files",
+  commitFileAdded: "Added",
+  commitFileDeleted: "Deleted",
+  commitFileRenamedFrom: "Renamed from {{name}}",
   commitDetailDiff: "Diff",
+  commitDetailShowMore: {
+    one: "Show {{count}} more line",
+    other: "Show {{count}} more lines",
+  },
   commitDetailNoDiff: "No diff available.",
-  commitDetailAdditions: "+{{count}} additions",
-  commitDetailDeletions: "-{{count}} deletions",
+  commitDetailAdditions: {
+    one: "+{{count}} addition",
+    other: "+{{count}} additions",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} deletion",
+    other: "-{{count}} deletions",
+  },
   // ledger file browser
   ledgerLoadError: "Failed to load",
   ledgerEmpty: "No files",
   ledgerEmptyHint: "Create a ledger file here, or pull down to refresh.",
   ledgerRefreshHint: "Pull down to try loading this folder again.",
   ledgerNavigateUp: "Go up one folder",
+  ledgerNavigateUpTo: "Go up to {{folder}}",
   openLedgerDrawer: "Open menu",
   ledgerCreateFile: "Create file",
   ledgerCreateFileTitle: "New Ledger File",
@@ -458,19 +595,33 @@ export const en = {
     "Enter a unique .bean or .beancount filename. If you omit the extension, .bean is added.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "Created {{name}}",
+  ledgerCreateFileSuccessIn: "Created {{name}} in {{ledger}}",
   ledgerCreateFileFailed: "Failed to create file",
+  ledgerFileNameExists: "A file named {{name}} already exists",
+  ledgerFileNameExtension: "Use a .bean or .beancount name",
+  ledgerFileNamePath: "Use a name without \\, .. or empty folder names",
+  ledgerFileNamePortable:
+    'Avoid < > : " | ? *, a part ending in a dot or space, and names like con or nul',
   ledgerDeleteFile: "Delete {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, folder",
+  ledgerFilesFileLabel: "{{name}}, file",
   ledgerDeleteFileTitle: "Delete Ledger File",
   ledgerDeleteFileMessage: 'Delete "{{name}}"? This cannot be undone.',
   ledgerDeleteFileConfirm: "Delete",
   ledgerDeleteFileSuccess: "Deleted {{name}}",
   ledgerDeleteFileFailed: "Failed to delete file",
+  ledgerDeleteFileChanged:
+    "This file changed elsewhere. The list was refreshed; try again.",
   ledgerMainFileProtected: "main.bean cannot be deleted",
   // ledger file editor
   ledgerEditorSave: "Save",
   ledgerEditorSaving: "Saving...",
   ledgerEditorSaveSuccess: "File saved",
   ledgerEditorSaveFailed: "Failed to save",
+  ledgerEditorSaveLeftErrorsTitle: "Saved, with a new ledger error",
+  ledgerEditorSaveLeftErrors:
+    "The file is saved, but your ledger now has an error it didn't have before: {{error}}",
+  ledgerEditorViewErrors: "View errors",
   ledgerEditorLoadFailed: "Failed to load file",
   ledgerEditorFileUnavailable: "This file is no longer in the ledger.",
   ledgerEditorBackToFiles: "Back to Files",
@@ -479,11 +630,36 @@ export const en = {
   ledgerEditorDiscardChanges: "Discard",
   ledgerEditorConflictTitle: "File Changed",
   ledgerEditorConflictMessage:
-    "This file was changed remotely. Discard local changes and reload?",
+    "This file was changed remotely. Save your text over it, or copy your text and load the new version?",
+  ledgerEditorOverwrite: "Overwrite",
+  ledgerEditorCopyReload: "Copy & Reload",
+  ledgerEditorOverwriteTitle: "Overwrite remote changes?",
+  ledgerEditorOverwriteMessage:
+    "Your text replaces the version saved elsewhere. Their changes are lost.",
+  ledgerEditorFileGoneTitle: "File Deleted",
+  ledgerEditorFileGoneMessage:
+    "This file was deleted or moved elsewhere, so it can't be saved. Your text is still here: copy it, or save it as a new file at the same path.",
+  ledgerEditorRecreate: "Save as New File",
+  ledgerEditorSaveFailedHint: "Your text is still here. Try again in a moment.",
+  ledgerEditorAccessRemoved:
+    "You can no longer edit this ledger. Your text is still here: copy it to keep it.",
+  ledgerEditorCopyFailed:
+    "Couldn't copy your text, so the file was not reloaded.",
   ledgerEditorReload: "Reload",
   ledgerEditorKeepEditing: "Keep Editing",
   keyboardAccessoryInsert: "Insert {{symbol}}",
+  keyboardInsertDate: "Insert today's date",
+  keyboardInsertCleared: "Insert cleared flag",
+  keyboardInsertPending: "Insert pending flag",
+  keyboardInsertQuotes: "Insert quotation marks",
+  keyboardInsertColon: "Insert colon",
+  keyboardInsertTab: "Insert tab",
+  keyboardInsertMinus: "Insert minus",
+  keyboardInsertTag: "Insert tag",
+  keyboardInsertLink: "Insert link",
   keyboardAccessoryDismiss: "Hide keyboard",
+  ledgerEditorErrorLine: "line {{line}}",
+  ledgerEditorJumpToLine: "Jump to line {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} error",
     other: "{{count}} errors",
@@ -505,14 +681,23 @@ export const en = {
     "Set a spending target for any account to start tracking against it.",
   budgetEmptyStateCta: "Add your first budget",
   budgetPanelEmpty: "Set a spending target for any account",
+  budgetPanelEmptyGuest: "Sign in to set spending targets",
   budgetPanelRowValue:
     "{{actual}} of {{budget}}, {{percent}}% used, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} of {{budget}}, {{status}}",
+  budgetStartsOn: "Starts {{date}}",
   budgetLoadFailed: "Failed to load budgets",
   budgetIntervalDaily: "Daily",
   budgetIntervalWeekly: "Weekly",
   budgetIntervalMonthly: "Monthly",
   budgetIntervalQuarterly: "Quarterly",
   budgetIntervalYearly: "Yearly",
+  // The cadence as an adjective agreeing with "budget" in budgetDeleteMessage.
+  budgetIntervalAdjDaily: "daily",
+  budgetIntervalAdjWeekly: "weekly",
+  budgetIntervalAdjMonthly: "monthly",
+  budgetIntervalAdjQuarterly: "quarterly",
+  budgetIntervalAdjYearly: "yearly",
   // add / update budget
   budgetAdd: "Add Budget",
   budgetUpdate: "Update Budget",
@@ -526,10 +711,14 @@ export const en = {
   budgetSaveFailed: "Failed to save budget",
   // delete
   budgetDelete: "Delete",
+  budgetUpdateNamed: "Update budget for {{account}}, {{currency}}",
+  budgetDeleteNamed: "Delete budget entry of {{date}}, {{amount}}",
   budgetDeleteTitle: "Delete Budget",
   budgetDeleteMessage:
     "Delete the {{interval}} budget of {{amount}} for {{account}} effective {{date}}? This removes a single entry and cannot be undone.",
   budgetDeleteFailed: "Failed to delete budget",
+  budgetDeleteChanged:
+    "This budget entry changed elsewhere. The history was refreshed; try again.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Ask Beancount.io",
@@ -569,10 +758,16 @@ export const en = {
   createLedgerNameMaxLength: "Name must be 100 characters or fewer.",
   createLedgerNameInvalid: "Name must include at least one letter or number.",
   createLedgerNameConflict: "A ledger with this name already exists.",
+  createLedgerNameReserved:
+    "That name belonged to a ledger that was renamed, and still redirects to it. Choose a different name.",
+  createLedgerSetupUnsupported:
+    "This server does not support guided setup. Go back and choose Starter or Sample to create a ledger with the server's defaults.",
+  createLedgerCreated: "Created {{name}}",
   createLedgerSlugPreview: "Will be created as {{slug}}",
   createLedgerDescription: "Description",
   createLedgerDescriptionPlaceholder: "Optional",
   createLedgerPrivate: "Private",
+  createLedgerPublic: "Public",
   createLedgerTemplate: "Template",
   createLedgerTemplateStarter: "Starter",
   createLedgerTemplateStarterHint:
@@ -583,6 +778,53 @@ export const en = {
   createLedgerTierLimit:
     "The ledger limit has been reached. Another ledger cannot be created.",
   createLedgerGenericError: "Couldn't create the ledger. Please try again.",
+  createLedgerStillCreating:
+    "This ledger is still being created. Wait a few seconds, then tap Create again.",
+  createLedgerNext: "Next",
+  createLedgerBack: "Back",
+  createLedgerStep: "Step {{step}} of {{total}}",
+  createLedgerStartPreset: "Preset",
+  createLedgerStartPresetHint:
+    "Pick a ready-made chart of accounts for what you track: a household, a business, investments.",
+  createLedgerCurrency: "Operating currency",
+  createLedgerHistoryStart: "Books begin",
+  createLedgerOpeningAccount: "Opening account",
+  createLedgerOpeningAmount: "Opening balance (optional)",
+  createLedgerReviewOpening: "Opening balance: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Amount owed (optional)",
+  createLedgerOpeningNone: "Decide later",
+  createLedgerReview: "Review",
+  createLedgerReviewDescription:
+    "This is exactly what will be created. Go back to change anything.",
+  createLedgerAccounts: "Accounts",
+  createLedgerAmountInvalid: "Enter an amount like 100 or -30.50.",
+  createLedgerAmountReenter:
+    "Enter the opening balance again, or choose Decide later. It is not kept in the saved draft.",
+  createLedgerCurrencyInvalid: "Choose a currency code like USD or EUR.",
+  createLedgerHistoryStartInvalid: "Enter a real date like 2026-01-01.",
+  createLedgerPresetPersonal: "Personal ledger",
+  createLedgerPresetPersonalOutcome:
+    "Record a purchase and understand its effect on money remaining.",
+  createLedgerPresetFreelance: "Freelance ledger",
+  createLedgerPresetFreelanceOutcome:
+    "Record customer income or see what an unpaid customer still owes.",
+  createLedgerPresetBusiness: "Business ledger",
+  createLedgerPresetBusinessOutcome:
+    "Establish an opening position and distinguish funding from revenue.",
+  createLedgerPresetPortfolio: "Portfolio ledger",
+  createLedgerPresetPortfolioOutcome:
+    "Record a purchase and verify units, acquisition records, and cash movement.",
+  createLedgerPresetRental: "Rental ledger",
+  createLedgerPresetRentalOutcome:
+    "Record receipts and distinguish rent from a refundable deposit.",
+  createLedgerPresetShared: "Shared expenses ledger",
+  createLedgerPresetSharedOutcome: "Record an advance and see who owes whom.",
+  createLedgerPresetCommunity: "Community ledger",
+  createLedgerPresetCommunityOutcome:
+    "Explain contributions, project spending, and funds remaining.",
+  createLedgerPresetBlank: "Blank ledger",
+  createLedgerPresetBlankOutcome:
+    "Add a chosen structure without removing unwanted categories.",
   createLedgerDrawerRow: "New ledger",
   createLedgerEmptyTitle: "No ledgers yet",
   createLedgerEmptyBody: "Create a book or discover public examples.",
@@ -598,8 +840,13 @@ export const en = {
   expandAccount: "Expand {{account}}",
   collapseAccount: "Collapse {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% of total",
-  budgetChartSummary:
-    "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} periods, {{over}} over target.",
+  budgetChartSummary: {
+    one: "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} period, {{missed}}.",
+    other:
+      "Budget versus actual for {{span}}. Actual {{actual}} of {{budget}} budgeted across {{count}} periods, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} over target",
+  budgetSummaryBelowTarget: "{{count}} below target",
   profile: "Profile",
   signedInAs: "Signed in as {{name}}, {{email}}",
   openSettings: "Opens Settings",
@@ -609,6 +856,7 @@ export const en = {
   profileUsernameHint:
     "Your ledgers’ web addresses start with your username, so changing it changes them too.",
   profileUsernameRequired: "Enter a username",
+  profileNameTooLong: "At most 100 characters.",
   profileUsernameRule:
     "Use 1–20 characters: lowercase a–z, digits 0–9, or underscores.",
   profileUsernameTaken: "That username is already taken",
@@ -616,6 +864,7 @@ export const en = {
   profileEmailReadOnly: "Email can't be changed here",
   profileNotSet: "Not set",
   profilePhotoFromGravatar: "Photo from Gravatar",
+  profileAddGravatar: "Add a photo on Gravatar",
   profileUpdated: "Profile updated",
   multiplePostings: "Multiple postings",
 };

@@ -102,6 +102,14 @@ describe("DashboardCard header at enlarged text", () => {
     expect(title.children).toEqual(["Letzte Transaktionen"]);
     expect(flat(actions.props.style).alignSelf).toBe("flex-end");
     const seeAll = actions.children[0] as Node;
+    // A titled card's button names it (w21/265).
+    expect(seeAll.props.accessibilityLabel).toBe("seeAllCard");
+  });
+
+  it("falls back to the plain label for a card with no title", () => {
+    fontScale = 1;
+    const row = header({ onSeeAll() {} });
+    const seeAll = (row.children[1] as Node).children[0] as Node;
     expect(seeAll.props.accessibilityLabel).toBe("seeAll");
   });
 

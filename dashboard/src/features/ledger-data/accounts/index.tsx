@@ -6,7 +6,7 @@ import {
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
-import { useQuery } from "@apollo/client/react";
+import { useApolloClient, useQuery } from "@apollo/client/react";
 import { GetLedgerAccountDirectivesDocument } from "@/graphql/definitions";
 import { createLedgerId } from "@/common/lib/utils/encode";
 import { PageHeader } from "@/common/components/page-header";
@@ -196,6 +196,7 @@ function AccountActions({
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground hover:text-foreground"
+            data-account-actions={account.account}
           >
             <Ellipsis className="h-4 w-4" />
             <span className="sr-only">
@@ -381,6 +382,36 @@ export default function LedgerAccountsPage() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const rowActionReturnFocusRef = useRef<HTMLElement | null>(null);
   const clearCache = useApolloCacheClear();
+  const client = useApolloClient();
+
+  /**
+   * After a successful write the directory reloads and its rows remount, so
+   * the control the dialog would return to may be gone (w4/238). Wait for the
+   * reload, point the dialog's return target at the settled control, and
+   * focus it if focus fell to the page body meanwhile — whichever of this and
+   * the dialog's own close restore runs first, both land on it.
+   */
+  const refreshAndRefocus = async (settledTarget: () => HTMLElement | null) => {
+    clearCache();
+    try {
+      await client.refetchQueries({
+        include: [GetLedgerAccountDirectivesDocument],
+      });
+    } catch {
+      // The page shows the read's own error state.
+    }
+    requestAnimationFrame(() => {
+      const target = settledTarget();
+      rowActionReturnFocusRef.current = target;
+      const active = document.activeElement;
+      if (active && active !== document.body && active.isConnected) return;
+      (target ?? searchInputRef.current)?.focus();
+    });
+  };
+  const rowActions = (account: string) =>
+    document.querySelector<HTMLElement>(
+      `[data-account-actions="${CSS.escape(account)}"]`,
+    );
 
   const openCloseDialog = (
     account: AccountDirective,
@@ -430,8 +461,11 @@ export default function LedgerAccountsPage() {
 
   const hasActiveFilters = search.length > 0 || typeFilter !== ACCOUNT_TYPE_ALL;
 
+  // The empty state's Clear leaves with its results; hand focus to the
+  // search, as the field's own clear icon does, for the next query (w4/340).
   const clearFilters = () => {
     setListSearch({ search: undefined, type: undefined });
+    searchInputRef.current?.focus();
   };
 
   return (
@@ -510,7 +544,7 @@ export default function LedgerAccountsPage() {
                     variant={isActive ? "secondary" : "ghost"}
                     size="sm"
                     className={cn(
-                      "h-8 shrink-0 rounded-full border px-3 text-xs",
+                      "h-8 shrink-0 rounded-full border px-3 text-xs aria-pressed:forced-selected",
                       isActive
                         ? "border-border shadow-xs"
                         : "border-transparent text-muted-foreground",
@@ -664,7 +698,9 @@ export default function LedgerAccountsPage() {
           }
         }}
         ledgerId={ledgerId}
-        onSuccess={() => clearCache()}
+        onSuccess={() =>
+          void refreshAndRefocus(() => openAccountTriggerRef.current)
+        }
         returnFocusRef={openAccountTriggerRef}
       />
 
@@ -677,7 +713,8 @@ export default function LedgerAccountsPage() {
         }}
         account={deleteTarget}
         ledgerId={ledgerId}
-        onSuccess={() => clearCache()}
+        // The row is gone; Search accounts is the settled target.
+        onSuccess={() => void refreshAndRefocus(() => null)}
         returnFocusRef={rowActionReturnFocusRef}
         fallbackFocusRef={searchInputRef}
       />
@@ -691,7 +728,10 @@ export default function LedgerAccountsPage() {
         }}
         account={closeTarget}
         ledgerId={ledgerId}
-        onSuccess={() => clearCache()}
+        onSuccess={() => {
+          const closed = closeTarget?.account;
+          void refreshAndRefocus(() => (closed ? rowActions(closed) : null));
+        }}
         returnFocusRef={rowActionReturnFocusRef}
         fallbackFocusRef={searchInputRef}
       />

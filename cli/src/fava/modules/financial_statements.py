@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from copy import copy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from beancount.core import flags
+from beancount.core.data import Directive, Transaction
 
 from .chart import ChartModule, DateAndBalance, DateAndBalanceWithAccountBalance
 from ..core.inventory import SimpleCounterInventory
@@ -14,6 +18,33 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..core.tree import SerialisedTreeNode
     from ..ledger import FilteredLedger
     from ..util.date import Interval
+
+
+def _is_clamp_conversion(entry: Directive) -> bool:
+    """Whether an entry is the period clamp's conversion booking (w5/789)."""
+    return (
+        isinstance(entry, Transaction)
+        and entry.flag == flags.FLAG_CONVERSIONS
+        and entry.meta.get("filename") == "<conversions>"
+    )
+
+
+def _without_clamp_conversions(filtered: FilteredLedger) -> FilteredLedger:
+    """The filtered ledger without the time clamp's conversion bookings.
+
+    `TimeFilter` closes the period with a conversion transaction that books
+    the cost residual into the conversions account, so a filtered balance
+    sheet showed that line where the unfiltered report folds the same amount
+    into the valuation adjustment. Presentation hierarchies leave those
+    synthetic bookings out; the residual adjustment absorbs them (w5/789).
+    A booking a user wrote themselves carries their own flag and file, so it
+    stays.
+    """
+    if filtered.time is None:
+        return filtered
+    view = copy(filtered)
+    view.entries = [entry for entry in filtered.entries if not _is_clamp_conversion(entry)]
+    return view
 
 
 @dataclass(frozen=True)
@@ -123,7 +154,7 @@ class FinancialStatementsModule:
         options = filtered.ledger.options
         assets = chart.hierarchy(filtered, options["name_assets"], conversion)
         liabilities = chart.hierarchy(filtered, options["name_liabilities"], conversion)
-        equity = chart.hierarchy(filtered, options["name_equity"], conversion)
+        equity = chart.hierarchy(_without_clamp_conversions(filtered), options["name_equity"], conversion)
         earnings = SimpleCounterInventory()
         for name in (options["name_income"], options["name_expenses"]):
             for currency, amount in chart.hierarchy(filtered, name, conversion).balance_children.items():

@@ -49,6 +49,7 @@ Optional features (`beangulp`, `beanprice`) must be enabled first; see
 from __future__ import annotations
 
 import atexit
+import errno
 import hashlib
 import json
 import os
@@ -67,7 +68,7 @@ from typing import Any, Literal, TextIO
 from cli import config, context, output
 from cli.auth.credentials import load_credentials
 from cli.engine import paths, provision
-from cli.errors import BY_CATEGORY, BeaError, ConflictError, UsageError
+from cli.errors import BY_CATEGORY, BeaError, ConflictError, EngineError, SignalError, UsageError
 
 
 def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
@@ -79,7 +80,7 @@ def run_engine_argv(argv: Sequence[str], *, interactive: bool = False) -> int:
     """
     # Streamed commands have no answer envelope to prove that the program
     # served. A non-Python override can otherwise silently exit successfully.
-    _refuse_unusable_engine()
+    refuse_unusable_engine()
     command, env = helper_command()
     if not interactive:
         return _spawn([*command, *argv], env)
@@ -133,9 +134,16 @@ def run_native(
     process still hears it, and stops the child on its way out.
     """
     command = [str(native_command(name)), *args]
-    return _spawn(
+    code = _spawn(
         command, env if env is not None else _native_env(ledger), deaf_to_interrupt=True, renamed=_BEA_NAMES.get(name)
     )
+    if code != 0 and code <= 128:
+        # The streams are already upstream's; a damaged engine still gets its
+        # remedy named below them (w5/785). Codes above 128 are signal
+        # mappings and EPIPE, which say nothing about the engine's health;
+        # upstream's own failures (and a damaged import) exit 0-2.
+        refuse_unusable_engine()
+    return code
 
 
 #: The `bea` command each upstream program answers for. Its usage errors said
@@ -151,17 +159,31 @@ _BEA_NAMES = {
 
 
 def _renamed(text: str, renamed: tuple[str, str] | None) -> str:
-    """Upstream's `Usage:` and `Try '… --help'` lines with the `bea` command in its program's place."""
+    """Upstream's usage lines with the `bea` command in its program's place.
+
+    Click's `Usage:` and `Try '… --help'`, and argparse's `usage:` and
+    `PROGRAM: error:`, which `treeify` prints: only Click's were renamed, so
+    `bea treeify --nosuch` named `treeify` (w5/846).
+    """
     if renamed is None:
         return text
     program, command = renamed
-    lines = text.splitlines(keepends=True)
-    return "".join(
-        line.replace(f"Usage: {program} ", f"Usage: {command} ").replace(f"Try '{program} ", f"Try '{command} ")
-        if line.startswith("Usage: ") or "Try '" in line
-        else line
-        for line in lines
-    )
+
+    def rename(line: str) -> str:
+        if line.startswith("Usage: ") or "Try '" in line:
+            line = line.replace(f"Usage: {program} ", f"Usage: {command} ")
+            return line.replace(f"Try '{program} ", f"Try '{command} ")
+        if line.startswith((f"usage: {program} ", f"usage: {program}\n", f"{program}: error: ")):
+            return line.replace(program, command, 1)
+        return line
+
+    return "".join(rename(line) for line in text.splitlines(keepends=True))
+
+
+def renamed_usage(text: str, program: str) -> str:
+    """`text` with an upstream program's usage lines naming the `bea` command that answers for it."""
+    command = _BEA_NAMES.get(program)
+    return _renamed(text, (program, command) if command else None)
 
 
 LOAD_CACHE_ENV = "BEANCOUNT_LOAD_CACHE_FILENAME"
@@ -254,7 +276,11 @@ def require_feature(name: str) -> None:
     if name not in known:
         choices = ", ".join(sorted(known)) or "(none)"
         raise UsageError(f"Unknown engine feature '{name}'. Choose one of: {choices}.")
-    if provision.feature_available(name):
+    try:
+        if provision.feature_available(name):
+            return
+    except provision.ProbeNotRun:
+        # Not known to be missing: the command itself reports what it meets.
         return
     override = paths.python_override()
     if override is not None:
@@ -341,6 +367,21 @@ def engine_python() -> Path:
     return provision.ensure_engine()
 
 
+def _suggests_engine_damage(completed: subprocess.CompletedProcess[str]) -> bool:
+    """Whether a failed native run failed the way a damaged engine fails.
+
+    A broken interpreter dies on the import with a traceback; an invalid
+    ledger fails with upstream's own error lines, and a signal death says
+    nothing about the engine's health — not even when the runtime prints a
+    KeyboardInterrupt traceback on its way out. Only a positive exit with a
+    traceback pays for a probe — and the probe loads no ledger, so a
+    crashing user plugin still falls through to the caller's report (w5/785).
+    """
+    if completed.returncode <= 0:
+        return False
+    return "Traceback (most recent call last)" in (completed.stderr or "")
+
+
 def capture_native(
     name: str,
     args: Sequence[str],
@@ -356,9 +397,12 @@ def capture_native(
     and `bea format --check` compares the formatter's output against the file.
     Everything else should use `run_native` and let upstream own the streams.
     """
-    return run_captured(
+    completed = run_captured(
         [str(native_command(name)), *args], env=_native_env(ledger), pass_fds=pass_fds, input_text=input_text
     )
+    if _suggests_engine_damage(completed):
+        refuse_unusable_engine(completed)
+    return completed
 
 
 def check_native(
@@ -412,7 +456,7 @@ def capture_engine(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
     envelope, where `bea` has to read the answer before it can decide what the
     exit status should be.
     """
-    _refuse_unusable_engine()
+    refuse_unusable_engine()
     command, env = helper_command()
     return _run_helper([*command, *argv], env, None)
 
@@ -439,12 +483,17 @@ def native_command(name: str) -> Path:
     filename = f"{name}.exe" if sys.platform == "win32" else name
     for directory in _candidate_bin_dirs():
         executable = directory / filename
-        if executable.exists():
+        if native_tool_problem(executable) is None:
             return executable
 
     directory = paths.bin_dir_for(provision.ensure_engine())
     executable = directory / filename
-    if not executable.exists():
+    problem = native_tool_problem(executable)
+    if problem is not None:
+        # A directory or a file without execute permission is no tool either:
+        # it was returned for being there, and `check -v` died on a raw
+        # `[Errno 13] Permission denied` (w5/863).
+        found = f"no '{name}'" if problem == "missing" else f"a '{name}' that cannot run ({executable} is {problem})"
         # Which installation to blame depends on which one was consulted. Under
         # an override those are different places, and the managed engine named
         # by `engine_root()` is neither the thing that failed nor the thing that
@@ -454,11 +503,11 @@ def native_command(name: str) -> Path:
         override = paths.python_override()
         if override is not None:
             raise BeaError(
-                f"{paths.PYTHON_ENV}={override} names an environment with no '{name}' ({directory}). "
+                f"{paths.PYTHON_ENV}={override} names an environment with {found} ({directory}). "
                 f"Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine would serve."
             )
         raise BeaError(
-            f"The engine environment has no '{name}' ({directory}). "
+            f"The engine environment has {found} ({directory}). "
             f"Remove {paths.engine_root()} and rerun to provision it again."
         )
     return executable
@@ -468,11 +517,37 @@ def native_command(name: str) -> Path:
 NATIVE_TOOLS = ("bean-check", "bean-doctor", "bean-example", "treeify")
 
 
-def missing_native_tools(python: Path) -> list[str]:
-    """The native tools absent beside `python`, where `native_command` looks for them under an override."""
+def native_tool_problem(executable: Path) -> str | None:
+    """Why `executable` cannot run as a native tool — `missing`, `a directory`, … — or None when it can.
+
+    Judged from the file alone; nothing is executed to find out.
+    """
+    try:
+        info = executable.stat()
+    except OSError:
+        return "missing"
+    if stat.S_ISDIR(info.st_mode):
+        return "a directory"
+    if not stat.S_ISREG(info.st_mode):
+        return "not a regular file"
+    if sys.platform != "win32" and not os.access(executable, os.X_OK):
+        return "not executable"
+    return None
+
+
+def native_tools_problem(python: Path) -> str | None:
+    """What stops the native tools beside `python` from running, where `native_command` looks under an override.
+
+    Present was taken for usable: a directory or a mode-644 script read as a
+    tool, so status said usable while `check -v` could not run it (w5/863).
+    """
     directory = paths.bin_dir_for(python)
     suffix = ".exe" if sys.platform == "win32" else ""
-    return [name for name in NATIVE_TOOLS if not (directory / f"{name}{suffix}").exists()]
+    problems = {name: native_tool_problem(directory / f"{name}{suffix}") for name in NATIVE_TOOLS}
+    missing = [name for name, problem in problems.items() if problem == "missing"]
+    broken = [f"{name} ({problem})" for name, problem in problems.items() if problem not in (None, "missing")]
+    parts = ([f"no {', '.join(missing)}"] if missing else []) + ([f"{', '.join(broken)} cannot run"] if broken else [])
+    return f"{'; '.join(parts)} beside {python} ({directory})" if parts else None
 
 
 def _candidate_bin_dirs() -> list[Path]:
@@ -490,7 +565,14 @@ def _candidate_bin_dirs() -> list[Path]:
     return directories
 
 
-def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool = False) -> dict[str, Any]:
+def helper_json(
+    args: Sequence[str],
+    *,
+    stdin: str | None = None,
+    writes: bool = False,
+    env_extra: dict[str, str] | None = None,
+    pass_fds: Sequence[int] = (),
+) -> dict[str, Any]:
     """Run a helper command and return its result, raising what it reports instead.
 
     The frontend renders: this hands back `data` from the envelope and turns a
@@ -510,7 +592,9 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
     request and then answers.
     """
     command, env = helper_command()
-    completed = _run_helper([*command, *args], env, stdin, writes=writes)
+    if env_extra:
+        env = {**(env if env is not None else os.environ), **env_extra}
+    completed = _run_helper([*command, *args], env, stdin, writes=writes, pass_fds=pass_fds)
 
     envelope = _parse(completed, args, writes=writes)
     if not envelope.get("ok"):
@@ -542,6 +626,11 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
         if isinstance(result, dict):
             error.result = result
         error.traceback = trace
+        if completed.stderr.strip():
+            # The reroute note names the root that judged the write; dropped,
+            # a refusal never said (w5/775). Tracebacks travel in the
+            # envelope, so stderr holds only notes and plugin output.
+            output.engine_output(completed.stderr.rstrip())
         raise error
 
     if completed.stderr.strip():
@@ -552,10 +641,17 @@ def helper_json(args: Sequence[str], *, stdin: str | None = None, writes: bool =
 #: How long the helper gets to unwind once we pass a termination signal on. It
 #: only has to drop a staged candidate file, so this is deliberately generous.
 _CLEANUP_GRACE_SECONDS = 5.0
+#: The status of a helper killed when that grace period runs out.
+_KILLED = -signal.SIGKILL if hasattr(signal, "SIGKILL") else None
 
 
 def _run_helper(
-    command: list[str], env: dict[str, str] | None, stdin: str | None, *, writes: bool = False
+    command: list[str],
+    env: dict[str, str] | None,
+    stdin: str | None,
+    *,
+    writes: bool = False,
+    pass_fds: Sequence[int] = (),
 ) -> subprocess.CompletedProcess[str]:
     """`subprocess.run`, except the child is told when the frontend is being stopped.
 
@@ -564,21 +660,30 @@ def _run_helper(
     while it is being rendered. Dying by the signal instead made a
     supervisor's retry record the entry twice (w5/606). Any other stopped
     child still takes this process down with it: a read before a write must
-    not let the write run.
+    not let the write run. A worker-thread write is the exception: nothing
+    can forward a stop to it, so it runs shielded to completion and the
+    approved write always commits and reports (w5/731).
     """
     stopped: list[int] = []
     committed = False
     with _forwarding_teardown(stopped, committed=lambda: committed) as attach:
-        with subprocess.Popen(
+        with _popen(
             command,
             env=env,
             stdin=subprocess.PIPE if stdin is not None else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            pass_fds=pass_fds,
             # Group delivery plus forwarding could otherwise interrupt cleanup twice.
-            # Worker threads cannot forward signals, so their helpers stay in the group.
-            start_new_session=sys.platform != "win32" and threading.current_thread() is threading.main_thread(),
+            # Worker threads cannot forward signals, so their reads stay in the
+            # group and die with the terminal's Ctrl-C. Their writes cannot be
+            # told to stop at all, so those run shielded instead: an approved
+            # write outlives the stop, commits, and reports, and the caller —
+            # an ask worker the turn outlived — joins it before reporting
+            # (w5/731). Only ask writes off the main thread.
+            start_new_session=sys.platform != "win32"
+            and (threading.current_thread() is threading.main_thread() or writes),
         ) as child:
             attach(child)
             # Read stderr here rather than in `communicate`, which hands it over
@@ -597,8 +702,13 @@ def _run_helper(
         # defaults before installing the post-commit handlers left a window
         # where the frontend could die silently over a completed write.
         completed = subprocess.CompletedProcess(command, child.returncode, out, "".join(kept))
-        committed = writes and _answered_success(completed)
-    if stopped and not committed:
+        committed = writes and _reports_commit(completed)
+    # A writer SIGKILLed once the grace period ran out never said whether it
+    # wrote: that is the unknown outcome `_parse` reports as exit 4, not a
+    # silent death (w5/825). One that died of the stop itself did so before
+    # its handlers were installed, with nothing started.
+    unknown = writes and completed.returncode == _KILLED and _envelope(completed) is None
+    if stopped and not committed and not unknown:
         _die_by(stopped[0])
     return completed
 
@@ -639,7 +749,34 @@ def _hold_stops_after_commit(stopped: list[int], previous: list[tuple[int, Any]]
         except (OSError, ValueError):
             continue
     report_stop()
+    if _owns_process:
+        # Handed back on close, the default disposition was in place for the
+        # interpreter's shutdown, and a stop there killed bea after it had
+        # printed the result (w5/825). Held to the end instead, and ignored
+        # from the last exit handler on: the interpreter's teardown resets a
+        # Python handler to the default, but leaves an ignored signal alone.
+        atexit.register(_ignore_stops, [number for number, _ in previous])
+        return
     command.find_root().call_on_close(lambda: _restore_handlers(previous))
+
+
+#: Whether this process is `bea` itself rather than a caller embedding the
+#: app, such as `CliRunner`, which keeps its own handlers afterwards.
+_owns_process = False
+
+
+def own_process() -> None:
+    """Mark this process as `bea` itself: a committed write then holds stops until it exits."""
+    global _owns_process
+    _owns_process = True
+
+
+def _ignore_stops(numbers: list[int]) -> None:
+    for number in numbers:
+        try:
+            signal.signal(number, signal.SIG_IGN)
+        except (OSError, ValueError):
+            continue
 
 
 def _restore_handlers(previous: list[tuple[int, Any]]) -> None:
@@ -654,14 +791,30 @@ def _report_late_stop(number: int) -> None:
     output.note(f"Stopped ({signal.Signals(number).name}) after the write had completed; its result stands.")
 
 
-def _answered_success(completed: subprocess.CompletedProcess[str]) -> bool:
-    if completed.returncode != 0:
-        return False
+def _envelope(completed: subprocess.CompletedProcess[str]) -> dict[str, Any] | None:
     try:
         envelope = json.loads(completed.stdout)
     except ValueError:
+        return None
+    return envelope if isinstance(envelope, dict) else None
+
+
+def _reports_commit(completed: subprocess.CompletedProcess[str]) -> bool:
+    """Whether the helper's answer says a write landed, whatever its exit status.
+
+    A success does, and so does a failure whose result names what was already
+    written: a `--partial` add's rows, or the files a stopped `format -i` had
+    rewritten. Requiring exit 0 as well made a stop that killed the engine
+    after it answered look like no write at all (w5/825).
+    """
+    envelope = _envelope(completed)
+    if envelope is None:
         return False
-    return isinstance(envelope, dict) and envelope.get("ok") is True
+    if envelope.get("ok") is True:
+        return True
+    failure = envelope.get("error")
+    result = failure.get("result") if isinstance(failure, dict) else None
+    return isinstance(result, dict) and bool(result.get("written") or result.get("formatted"))
 
 
 def _die_by(number: int) -> None:
@@ -705,9 +858,10 @@ def _forwarding_teardown(
     ledger and drops it in a `finally`. That cleanup only runs if the child is
     told to stop. Main-thread calls give the helper a separate session, making
     this the only signal-delivery path: a terminal's group-wide Ctrl-C cannot
-    interrupt cleanup again after forwarding. Worker-thread calls keep their
-    helpers in the terminal's group because Python cannot install handlers
-    there. Signals aimed at the frontend alone, such as a supervisor's
+    interrupt cleanup again after forwarding. Worker-thread calls cannot
+    install handlers, so their reads keep their helpers in the terminal's
+    group; their writes run shielded to completion instead (w5/731).
+    Signals aimed at the frontend alone, such as a supervisor's
     termination request, also reach main-thread helpers through this path.
 
     Install before spawning and defer signals until the child handle is ready,
@@ -715,7 +869,9 @@ def _forwarding_teardown(
     restored after the child exits. Once the child is done we re-raise the signal
     with its default disposition, keeping the status the shell reports. A
     caller passing `stopped` gets the signal recorded there instead, and
-    decides once it has read the child's answer.
+    decides once it has read the child's answer. Worker-thread writes skip
+    this path's protection: no handlers install there, and their helpers run
+    shielded to completion instead (w5/731).
     """
     child: subprocess.Popen[str] | None = None
     pending: int | None = None
@@ -784,7 +940,7 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
             except ValueError:
                 name = f"signal {number}"
         else:
-            _refuse_unusable_engine(completed)
+            refuse_unusable_engine(completed)
         if writes:
             # A writer that produced no envelope may or may not have written.
             # Exit 4 says exactly that, and stops a caller from retrying a
@@ -801,10 +957,13 @@ def _parse(completed: subprocess.CompletedProcess[str], args: Sequence[str], *, 
                 details=printed,
             ) from None
         if number > 0:
-            raise BeaError(
+            hint = _signal_hint(number)
+            raise SignalError(
                 f"The Beancount engine was killed by {name} answering "
                 f"'bea-engine {' '.join(args)}' and produced no result.",
-                details=[*printed, _signal_hint(number)],
+                signal_name=name,
+                hint=hint,
+                details=[*printed, hint],
             ) from None
         raise BeaError(
             f"The Beancount engine did not answer 'bea-engine {' '.join(args)}' (exit {completed.returncode}).",
@@ -820,7 +979,8 @@ def engine_load_failure(python: Path) -> str | None:
 
     The probe must say so itself: `/bin/echo` or a stale wrapper exits 0
     without running anything, and a writer then reported an unknown outcome
-    (exit 4) for a write that never started (w5/309).
+    (exit 4) for a write that never started (w5/309). A probe a process or
+    descriptor limit keeps from starting raises `provision.ProbeNotRun`.
     """
     sentinel = "bea-engine-loaded"
     try:
@@ -832,7 +992,12 @@ def engine_load_failure(python: Path) -> str | None:
             text=True,
             check=False,
         )
-    except (OSError, ValueError) as exc:
+    except OSError as exc:
+        if exc.errno in provision.SPAWN_LIMITS:
+            # The probe never ran, so it says nothing about the engine (w5/815).
+            raise provision.ProbeNotRun(exc) from exc
+        return str(exc) or type(exc).__name__
+    except ValueError as exc:
         return str(exc) or type(exc).__name__
     if probe.returncode == 0 and probe.stdout.strip().endswith(sentinel):
         return None
@@ -843,7 +1008,7 @@ def engine_load_failure(python: Path) -> str | None:
     return lines[-1] if lines else "it is not a Python that loads the engine"
 
 
-def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = None) -> None:
+def refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None = None) -> None:
     """Refuse an override or managed interpreter that cannot load the helper.
 
     An override without Beancount died on the helper's first import, which
@@ -861,21 +1026,29 @@ def _refuse_unusable_engine(completed: subprocess.CompletedProcess[str] | None =
     source = resolve_engine()
     if source.tier not in ("override", "managed") or source.python is None:
         return
-    reason = engine_load_failure(source.python)
+    try:
+        reason = engine_load_failure(source.python)
+    except provision.ProbeNotRun:
+        # Unknown is not damaged: the caller reports what happened.
+        return
     if reason is None:
         return
     if source.tier == "override":
+        # The user's own environment: a native tool beside it may still work
+        # when only the helper's import fails, so this stays a plain BeaError
+        # the fail-open pre-checks swallow. A native crash still gets its
+        # remedy through the probe on the native failure itself (w5/785).
         message = (
             f"{paths.PYTHON_ENV}={source.python} names an environment that cannot run the Beancount engine "
             f"({reason}). Correct or unset {paths.PYTHON_ENV}, or run 'bea engine status' to see which engine "
             "would serve."
         )
-    else:
-        message = (
-            f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
-            f"Remove {source.location} and rerun; bea provisions a fresh engine."
-        )
-    raise BeaError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
+        raise BeaError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
+    message = (
+        f"The managed Beancount engine at {source.location} is damaged and cannot load ({reason}). "
+        f"Remove {source.location} and rerun; bea provisions a fresh engine."
+    )
+    raise EngineError(message, traceback=(completed.stderr or None) if completed is not None else None) from None
 
 
 def helper_command() -> tuple[list[str], dict[str, str] | None]:
@@ -918,6 +1091,10 @@ def _helper_env(source_root: Path | None = None) -> dict[str, str] | None:
     inherited = os.environ.get("PYTHONPATH", "")
     search_path = os.pathsep.join([str(root), inherited]) if inherited else str(root)
     env = {**os.environ, "PYTHONPATH": search_path, "PYTHONDONTWRITEBYTECODE": "1"}
+    # Helper output is UTF-8 whatever the parent exports: under utf-16 the
+    # engine probe read gibberish and called a healthy engine damaged
+    # (w5/724), as upstream output already is (w5/404).
+    env["PYTHONIOENCODING"] = "utf-8"
     current = context.current()
     if current.offline:
         env["MANAGED_PRICE_OFFLINE"] = "1"
@@ -955,29 +1132,43 @@ def _spawn(
     tests, or anything else without a fileno), inheritance would write past
     those objects to the process's original fds — so we capture and write
     through `sys.stdout` / `sys.stderr` instead, which is what the caller is
-    actually reading. The one exception to inheritance is stderr beside a
-    stdout pipe; see `_stderr_minus_flush_epilogue`.
+    actually reading. Piped stdout is relayed so an actual EPIPE can be
+    distinguished from a child's independent failure; stderr beside it may
+    also be relayed to drop CPython's failed-flush epilogue.
 
     `renamed` is the `bea` command an upstream program answers for: its stderr
     is then relayed with the program's name replaced in usage lines.
     """
     rename = (Path(command[0]).name, renamed) if renamed else None
     if _stream_is_captured(sys.stdout) or _stream_is_captured(sys.stderr):
-        captured = subprocess.run(
-            command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
-        )
+        try:
+            captured = subprocess.run(
+                command, env=env, capture_output=True, encoding="utf-8", errors="replace", check=False
+            )
+        except OSError as exc:
+            failure = _spawn_failure(command, exc)
+            if failure is None:
+                raise
+            raise failure from exc
         output.replay(captured.stdout, sys.stdout)
         output.replay(_renamed(captured.stderr, rename), sys.stderr)
         returncode = captured.returncode
     else:
-        with _stderr_minus_flush_epilogue(rename) as stderr:
-            returncode = _run_inherited(command, env, stderr, deaf_to_interrupt=deaf_to_interrupt)
-        if returncode > 0 and _downstream_pipe_closed():
-            # The child wrote to the same closed pipe we would have. Upstream is
-            # Python too, so it never sees SIGPIPE either and reports its own
-            # broken stdout as a plain failure — off the 128+N convention the
-            # exit table promises for `bea format … | head`.
-            return 128 + signal.SIGPIPE
+        with _relayed_stdout() as (stdout, failures), _stderr_minus_flush_epilogue(rename) as stderr:
+            if stdout is not None and stderr is None:
+                try:
+                    shared = os.path.samestat(os.fstat(sys.stdout.fileno()), os.fstat(sys.stderr.fileno()))
+                except (OSError, ValueError, AttributeError):
+                    shared = False
+                if shared:
+                    # Keep `2>&1` one byte stream: letting the child's stderr
+                    # bypass our stdout relay could reorder flushed writes.
+                    stderr = stdout
+            returncode = _run_inherited(command, env, stderr, stdout=stdout, deaf_to_interrupt=deaf_to_interrupt)
+        if failures:
+            if failures[0].errno == errno.EPIPE:
+                return 128 + signal.SIGPIPE
+            raise failures[0]
     if returncode < 0:
         return _died_on_signal(-returncode, command)
     if returncode == _FLUSH_FAILED:
@@ -995,7 +1186,12 @@ _FLUSH_FAILED = 120
 
 
 def _run_inherited(
-    command: list[str], env: dict[str, str] | None, stderr: int | None, *, deaf_to_interrupt: bool = False
+    command: list[str],
+    env: dict[str, str] | None,
+    stderr: int | None,
+    *,
+    stdout: int | None = None,
+    deaf_to_interrupt: bool = False,
 ) -> int:
     """`subprocess.run` on our own streams, except a request to stop us stops the child too.
 
@@ -1014,7 +1210,7 @@ def _run_inherited(
     with (
         _stop_passed_on() as attach,
         _interrupt_withheld(deaf_to_interrupt) as hear_interrupts,
-        subprocess.Popen(command, env=env, stderr=stderr) as child,
+        _popen(command, env=env, stdout=stdout, stderr=stderr) as child,
     ):
         attach(child)
         try:
@@ -1023,6 +1219,55 @@ def _run_inherited(
         except BaseException:
             child.kill()
             raise
+
+
+@contextmanager
+def _relayed_stdout() -> Iterator[tuple[int | None, list[OSError]]]:
+    """Observe writes to a downstream pipe without guessing from its state.
+
+    Click catches a child's EPIPE and exits 1 silently. That status and a
+    closed reader cannot distinguish it from a genuine validation failure
+    that never wrote stdout (w5/707). Relay bytes only for a pipe/socket;
+    terminals and regular files retain direct inheritance.
+    """
+    failures: list[OSError] = []
+    try:
+        descriptor = sys.stdout.fileno()
+        mode = os.fstat(descriptor).st_mode
+    except (OSError, ValueError, AttributeError):
+        descriptor, mode = -1, 0
+    if getattr(select, "poll", None) is None or not (stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)):
+        yield None, failures
+        return
+
+    reader, writer = os.pipe()
+
+    def relay() -> None:
+        # Closing this read end on EPIPE also stops the child's next write;
+        # it gets to unwind instead of filling an unconsumed intermediate pipe.
+        with os.fdopen(reader, "rb", buffering=0) as stream:
+            try:
+                while data := stream.read(65536):
+                    while data:
+                        data = data[os.write(descriptor, data) :]
+            except OSError as exc:
+                failures.append(exc)
+
+    worker = threading.Thread(target=relay, daemon=True)
+    worker.start()
+    try:
+        yield writer, failures
+    except BaseException:
+        # The child's owning context has already killed/reaped it. A relay
+        # blocked behind an unread consumer must not delay an interrupt.
+        raise
+    else:
+        os.close(writer)
+        writer = -1
+        worker.join()
+    finally:
+        if writer >= 0:
+            os.close(writer)
 
 
 def run_captured(
@@ -1044,7 +1289,7 @@ def run_captured(
     """
     with (
         _stop_passed_on() as attach,
-        subprocess.Popen(
+        _popen(
             command,
             env=env,
             stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL if stdin_closed else None,
@@ -1335,7 +1580,37 @@ def _signal_hint(number: int) -> str:
             "Upstream's parser crashes this way on a zero divisor in an amount expression, such as "
             "'100/0 EUR'; searching the ledger for '/0' is the first thing to try."
         )
+    # The kernel sends these for a resource limit, which none of the outside
+    # causes below does (w5/816).
+    if number == getattr(signal, "SIGXCPU", None):
+        return "The process used up its CPU-time limit (ulimit -t, RLIMIT_CPU); raise the limit and retry."
+    if number == getattr(signal, "SIGXFSZ", None):
+        return "A file grew past the file-size limit (ulimit -f, RLIMIT_FSIZE); raise the limit and retry."
     return "Nothing in bea sends this signal, so it came from outside: an out-of-memory killer, a timeout, or a kill."
+
+
+def _popen(command: list[str], **options: Any) -> subprocess.Popen[Any]:
+    """`subprocess.Popen`, naming what could not be started, and why, when a limit refuses it.
+
+    Every engine-backed command printed a bare `[Errno 24] Too many open
+    files` or `[Errno 35] Resource temporarily unavailable`, naming neither
+    the engine nor the limit (w5/816).
+    """
+    try:
+        return subprocess.Popen(command, **options)
+    except OSError as exc:
+        failure = _spawn_failure(command, exc)
+        if failure is None:
+            raise
+        raise failure from exc
+
+
+def _spawn_failure(command: Sequence[str], exc: OSError) -> BeaError | None:
+    limit = provision.SPAWN_LIMITS.get(exc.errno) if exc.errno is not None else None
+    if limit is None:
+        return None
+    what = "the Beancount engine" if "bea_engine" in command else Path(command[0]).name
+    return BeaError(f"Could not start {what} ({exc.strerror}: {limit}); nothing was run.")
 
 
 def _stream_is_captured(stream: Any) -> bool:

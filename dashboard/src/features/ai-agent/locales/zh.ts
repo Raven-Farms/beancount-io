@@ -77,7 +77,7 @@ const zhAiAgent: Record<string, TranslationEntry> = {
     description: "Per month pricing suffix",
   },
   "aiAgent.tokensPerMonth": {
-    message: "每月 {count} 个令牌",
+    message: "每月 {count} 个词元",
     description: "Number of AI tokens included in a tier",
   },
   "aiAgent.popular": {

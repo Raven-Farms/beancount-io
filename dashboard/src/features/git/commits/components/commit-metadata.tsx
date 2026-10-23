@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/common/components/ui/tooltip";
-import { useFormatRelativeTime } from "@/common/hooks/use-date-locale";
+import { useHydratedTime } from "@/common/hooks/use-date-locale";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { toast } from "sonner";
 
@@ -25,8 +25,8 @@ export function CommitMetadata({
   stats,
   fileCount,
 }: CommitMetadataProps) {
-  const { t, i18n } = useTranslations();
-  const formatRelativeTime = useFormatRelativeTime();
+  const { t } = useTranslations();
+  const hydratedTime = useHydratedTime();
   const [copied, setCopied] = useState(false);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageParts = message.split("\n");
@@ -34,11 +34,12 @@ export function CommitMetadata({
   const extendedMessage =
     messageParts.length > 1 ? messageParts.slice(1).join("\n").trim() : null;
   const commitDate = new Date(author.date);
-  const relativeTime = formatRelativeTime(commitDate);
-  const exactTime = new Intl.DateTimeFormat(i18n.language, {
+  const exactStyle: Intl.DateTimeFormatOptions = {
     dateStyle: "medium",
     timeStyle: "long",
-  }).format(commitDate);
+  };
+  const exactTime = hydratedTime.exactTime(commitDate, exactStyle);
+  const relativeTime = hydratedTime.relativeTime(commitDate, exactStyle);
   const shortSha = sha.substring(0, 7);
 
   useEffect(

@@ -4,13 +4,27 @@ import { Button } from "@/common/components/ui/button";
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
 
+/** Authored attributes a code element keeps: its anchor id and direction. */
+export interface CodeAttributes {
+  id?: string;
+  dir?: "ltr" | "rtl" | "auto";
+}
+
 interface CodeBlockProps {
   code: string;
   language?: string;
   inline?: boolean;
+  preAttributes?: CodeAttributes;
+  codeAttributes?: CodeAttributes;
 }
 
-export function CodeBlock({ code, language, inline }: CodeBlockProps) {
+export function CodeBlock({
+  code,
+  language,
+  inline,
+  preAttributes,
+  codeAttributes,
+}: CodeBlockProps) {
   const { t } = useTranslations();
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,7 +56,10 @@ export function CodeBlock({ code, language, inline }: CodeBlockProps) {
   // Inline code
   if (inline) {
     return (
-      <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono">
+      <code
+        {...codeAttributes}
+        className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono"
+      >
         {code}
       </code>
     );
@@ -74,8 +91,14 @@ export function CodeBlock({ code, language, inline }: CodeBlockProps) {
           )}
         </Button>
       </div>
-      <pre className="overflow-x-auto p-4 rounded-b-lg bg-muted border border-t-0 border-border !my-0">
-        <code className={language ? `language-${language}` : undefined}>
+      <pre
+        {...preAttributes}
+        className="overflow-x-auto p-4 rounded-b-lg bg-muted border border-t-0 border-border !my-0"
+      >
+        <code
+          {...codeAttributes}
+          className={language ? `language-${language}` : undefined}
+        >
           {code}
         </code>
       </pre>

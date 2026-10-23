@@ -45,11 +45,27 @@ describe("commit message display", () => {
   });
 
   it("shows the subject in Recent Changes, for sight and VoiceOver", () => {
-    expect(renders(screens.notifications, "commit.subject")).toBe(2);
+    // The text, with a fallback for an empty message (w21/224), and the label,
+    // which also carries the author, day and short SHA.
+    expect(
+      renders(screens.notifications, 'commit.subject || t("commitNoMessage")'),
+    ).toBe(1);
+    expect(
+      collect(
+        screens.notifications,
+        (node) =>
+          ts.isJsxExpression(node) &&
+          /^commitRowAccessibilityLabel\(\s*commit\b/.test(
+            node.expression?.getText() ?? "",
+          ),
+      ).length,
+    ).toBe(1);
   });
 
   it("shows the subject and the reflowed body in commit detail", () => {
-    expect(renders(screens.detail, "message.subject")).toBe(1);
+    expect(
+      renders(screens.detail, 'message.subject || t("commitNoMessage")'),
+    ).toBe(1);
     expect(renders(screens.detail, "message.body")).toBe(1);
   });
 

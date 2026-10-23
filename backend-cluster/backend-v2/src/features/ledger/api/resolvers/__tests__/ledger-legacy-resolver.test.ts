@@ -260,9 +260,21 @@ describe("LedgerLegacyResolver", () => {
       );
     });
 
-    it("should fallback to parsing amount as number without currency", async () => {
+    // w21/190: an amount with no currency was assumed to be USD, silently.
+    it("should refuse an amount without a currency instead of assuming USD", async () => {
       const entriesInput = createEntryInput({
         postings: [{ account: "Assets:Cash", amount: "100" }],
+      });
+
+      await expect(
+        mutationResolver.addEntries(entriesInput, mockContext as IContext),
+      ).rejects.toThrow(/followed by a currency/);
+      expect(mockLedgerEntryService.addBulkEntries).not.toHaveBeenCalled();
+    });
+
+    it("should parse a commodity longer than three letters", async () => {
+      const entriesInput = createEntryInput({
+        postings: [{ account: "Assets:Cash", amount: "11.11 MUSD" }],
       });
 
       await mutationResolver.addEntries(entriesInput, mockContext as IContext);
@@ -273,11 +285,10 @@ describe("LedgerLegacyResolver", () => {
         "test-ledger",
         [
           expect.objectContaining({
-            type: "transaction",
             entry: expect.objectContaining({
               postings: [
                 expect.objectContaining({
-                  units: { number: "100", currency: "USD" },
+                  units: { number: "11.11", currency: "MUSD" },
                 }),
               ],
             }),

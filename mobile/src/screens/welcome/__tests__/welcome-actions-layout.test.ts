@@ -17,6 +17,11 @@ let fontScale = 1;
 let guestServer = "";
 let serverUrl = "https://beancount.io/";
 let destination = "";
+let signOutReason: string | null = null;
+const signOutReasonVar = (next?: string | null) => {
+  if (next !== undefined) signOutReason = next;
+  return signOutReason;
+};
 let signIn: Record<string, unknown> = {
   pendingFlow: null,
   failure: null,
@@ -86,9 +91,26 @@ function loadWelcome(): any {
       if (id === "@/components") return { Button: "Button" };
       if (id === "@/components/pressable-scale")
         return { PressableScale: "PressableScale" };
+      if (id === "@/screens/welcome/failure-message")
+        return require("../failure-message");
       if (id === "@/screens/welcome/use-native-sign-in")
         return { useNativeSignIn: () => signIn };
       if (id === "@/assets/images/icon.png") return 1;
+      if (id === "@/common/vars/sign-out-reason") return { signOutReasonVar };
+      if (id === "@/components/inline-error")
+        return {
+          InlineError: ({
+            message,
+            style,
+          }: {
+            message: string;
+            style?: unknown;
+          }) => ({
+            type: "Text",
+            props: { style, accessibilityRole: "alert" },
+            children: [message],
+          }),
+        };
       throw new Error(`Unexpected dependency: ${id}`);
     },
   });
@@ -246,5 +268,35 @@ describe("Welcome actions at every text size", () => {
     const { buttons } = render();
     expect(buttons.map((b) => b.props.disabled)).toEqual([true, true]);
     expect(buttons.map((b) => b.props.loading)).toEqual([false, true]);
+  });
+});
+
+// w21/119: a session that ended mid-action dropped the user on Welcome with no
+// word of why.
+describe("Welcome after the session ended", () => {
+  const texts = (tree: Node) =>
+    find(tree, (n) => n.type === "Text").flatMap((n) => n.children);
+
+  it("says so once, and a new sign-in clears it", () => {
+    let started = "";
+    signIn = {
+      pendingFlow: null,
+      failure: null,
+      start(flow: string) {
+        started = flow;
+      },
+    };
+    signOutReasonVar("sessionEnded");
+    const { tree } = render();
+    expect(texts(tree).includes("sessionEndedNotice")).toBe(true);
+    find(tree, (n) => n.props.testID === "welcome-sign-in")[0].props.onPress();
+    expect(started).toBe("sign_in");
+    expect(signOutReason).toBe(null);
+    expect(texts(render().tree).includes("sessionEndedNotice")).toBe(false);
+  });
+
+  it("says nothing after a normal Log out", () => {
+    signOutReasonVar(null);
+    expect(texts(render().tree).includes("sessionEndedNotice")).toBe(false);
   });
 });

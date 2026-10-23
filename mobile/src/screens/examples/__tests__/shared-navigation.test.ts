@@ -89,6 +89,7 @@ function load(relative: string): any {
         if (id === "@/components/tab-bar-icon")
           return { ...icons, TabBarIcon: "TabBarIcon" };
         if (id === "@/components/haptic-tab") return { HapticTab: "HapticTab" };
+        if (id === "./tab-bar-metrics") return { TAB_BAR_CONTENT_HEIGHT: 80 };
         if (id === "@/common/theme")
           return {
             useTheme: () => ({
@@ -122,6 +123,8 @@ function load(relative: string): any {
           return load("components/ledger-drawer/account-ledger-drawer.tsx");
         if (id === "./ledger-drawer") return { LedgerDrawer: "LedgerDrawer" };
         if (id === "./drawer-ledgers") return drawerLedgers;
+        if (id === "@/common/graphql-error-codes")
+          return { isLedgerGone: () => false };
         if (id === "@/common/horizontal-swipe-owner")
           return { EdgeSwipeGestureProvider: "EdgeSwipeGestureProvider" };
         if (id === "@/common/ledger-directory/ledger-directory-provider")
@@ -161,6 +164,14 @@ function load(relative: string): any {
           return { DashboardScrollView: "ScrollView" };
         if (id === "@/components/button") return { Button: "Button" };
         if (id === "./examples-layout") return {};
+        if (id === "./example-titles")
+          return {
+            EXAMPLE_TITLE_KEYS: [
+              "guestExample0",
+              "guestExample1",
+              "guestExample2",
+            ],
+          };
         if (id === "./example-ledger-provider")
           return { ExampleReadScreen: "ExampleReadScreen" };
         throw new Error(`Unexpected dependency ${id}`);

@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@apollo/client/react";
-import { format, isValid } from "date-fns";
 import {
   GetLedgerAccountDirectivesDocument,
   LedgerEntryType,
@@ -13,11 +12,6 @@ type Availability =
   | { kind: "unknown"; canOpen: boolean }
   | { kind: "closed"; closedAt: string }
   | { kind: "notYetOpen"; openedAt: string };
-
-/** The ledger date an entry is written on, or `null` while the date is invalid. */
-export function entryDay(date: Date | undefined): string | null {
-  return date && isValid(date) ? format(date, "yyyy-MM-dd") : null;
-}
 
 /**
  * Whether a New Entry form may name each account on the entry's date.

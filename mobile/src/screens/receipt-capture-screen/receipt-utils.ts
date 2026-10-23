@@ -1,13 +1,49 @@
+import { formatLedgerDate } from "../../common/date-format";
 import { getFormatDate } from "../../common/format-util";
+import { formatMoneyWithCurrency } from "../../common/number-utils";
 import { graphQLErrorCodes } from "../../common/graphql-error-codes";
 
 /**
- * Resolve the receipt's transaction date. The server may now return an
- * empty/absent date when it can't read one off the receipt — fall back to the
- * client's today so the form always opens with a usable date.
+ * Resolve the receipt's transaction date. The server may return an empty or
+ * absent date when it can't read one off the receipt, and a value that is not
+ * a real `YYYY-MM-DD` day would open the form on an Invalid Date (w21/285):
+ * fall back to the client's today so the form always opens with a usable date.
  */
 export const receiptDate = (date: string | null | undefined): string =>
-  date || getFormatDate(new Date());
+  isIsoDay(date) ? date : getFormatDate(new Date());
+
+const isIsoDay = (date: string | null | undefined): date is string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date ?? "");
+  if (!match) return false;
+  const [year, month, day] = [match[1]!, match[2]!, match[3]!].map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+};
+
+/**
+ * The parsed receipt total as the form's amount text: positive (receipts are
+ * expenses, however the model signed them) and at the precision the parser
+ * returned. A fractional total keeps at least two places ("42.5" is "42.50"),
+ * and a whole one keeps none: the form pads it to the ledger currency's own
+ * minor unit, so a 1500 total saves "1500 JPY" where an always-padded "1500.00"
+ * saved "1500.00 JPY" (w21/389). `toFixed(2)` cut a KWD 12.345 to "12.35" and
+ * binary-rounded 1.005 to "1.00" (w21/069).
+ */
+export const receiptAmountText = (amount: number): string => {
+  const text = String(Math.abs(amount));
+  // Exponent forms (1e-7, 1e21) are not realistic totals; keep them parseable.
+  if (/e/i.test(text)) return Math.abs(amount).toFixed(2);
+  const [whole, fraction] = text.split(".");
+  return fraction === undefined ? whole : `${whole}.${fraction.padEnd(2, "0")}`;
+};
 
 /**
  * Map an internal error code to a translation key.
@@ -22,6 +58,13 @@ export const receiptErrorKey = (
   if (code === "parse_failed") return "receiptParseFailed";
   return "receiptUploadFailed";
 };
+
+/**
+ * Whether trying the same photo again can help. A spent AI quota stays spent;
+ * a dropped connection or an unreadable parse does not (w21/204).
+ */
+export const receiptCanRetry = (code: string): boolean =>
+  code !== "quota_exhausted";
 
 /**
  * Classify a failure thrown by the parse-leg mutation into an internal code.
@@ -79,10 +122,74 @@ export const shotFromLibraryResult = (
   if (!asset?.uri) {
     return null;
   }
-  const mimeType = asset.mimeType ?? "image/jpeg";
-  return {
-    uri: asset.uri,
-    mimeType,
-    filename: asset.fileName ?? `receipt.${mimeToExt(mimeType)}`,
-  };
+  const reported = asset.mimeType ?? "image/jpeg";
+  // The file the picker returned says what it is: on Android it re-encodes a
+  // HEIC photo into a `.jpeg` cache file yet still reports `image/heic` and
+  // the `.heic` name, which the server then refuses (w21/282). Fall back to
+  // the reported type only when the extension says nothing.
+  const fileType = typeOfExtension(extensionOf(asset.uri));
+  const mimeType = fileType ?? reported;
+  const nameType = asset.fileName
+    ? typeOfExtension(extensionOf(asset.fileName))
+    : null;
+  const filename =
+    asset.fileName && (fileType === null || nameType === fileType)
+      ? asset.fileName
+      : `${stem(asset.fileName)}.${fileType ? extensionOf(asset.uri) : mimeToExt(mimeType)}`;
+  return { uri: asset.uri, mimeType, filename };
 };
+
+const EXTENSION_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+};
+
+/** The lower-cased extension of a path or URI, without query or fragment. */
+const extensionOf = (path: string): string => {
+  const name = path.split(/[?#]/u)[0]!.split("/").pop() ?? "";
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? "" : name.slice(dot + 1).toLowerCase();
+};
+
+const typeOfExtension = (extension: string): string | null =>
+  EXTENSION_TYPES[extension] ?? null;
+
+/** A file name without its extension, or `receipt` when there is none. */
+const stem = (fileName: string | null | undefined): string => {
+  const dot = fileName ? fileName.lastIndexOf(".") : -1;
+  const base = fileName && dot > 0 ? fileName.slice(0, dot) : (fileName ?? "");
+  return base || "receipt";
+};
+
+/**
+ * What the "Receipt read" reveal shows and speaks: the date as the reader's
+ * language writes it and the total as money in the ledger's currency. The raw
+ * "2026-03-01" was read by VoiceOver as digits and "1234.50" had no grouping or
+ * currency (w21/538). The form still gets the plain values (`receiptAmountText`).
+ */
+export const receiptRevealFields = (
+  receipt: { payee: string; amount: number; date: string },
+  currency: string,
+  locale: string,
+): { payee: string; amount: string; date: string } => ({
+  payee: receipt.payee,
+  amount: formatMoneyWithCurrency(Math.abs(receipt.amount), currency),
+  date: formatLedgerDate(receipt.date, locale),
+});
+
+/**
+ * Whether the camera screen is still waiting on the system camera prompt: not
+ * granted, the app may still ask, and the one automatic request has not come
+ * back. An undetermined permission is `granted: false`, so the first visit drew
+ * "Camera access is needed… Enable it in Settings" behind the prompt, where
+ * VoiceOver could land once it closed (w21/637). The plain letterbox shows
+ * instead; a refusal on record (`canAskAgain: false`) shows the denied copy at
+ * once.
+ */
+export const cameraPromptPending = (
+  permission: { granted: boolean; canAskAgain: boolean },
+  prompted: boolean,
+): boolean => !permission.granted && permission.canAskAgain && !prompted;

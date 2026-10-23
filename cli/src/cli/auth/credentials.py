@@ -22,13 +22,11 @@ FILE = "file"
 _INVALID_TOKEN = re.compile(r"[^\x21-\x7e]")
 
 
-def _validate_token(token: str) -> str:
+def _validate_token(token: str, *, source: str) -> str:
     if _INVALID_TOKEN.search(token):
-        raise AuthError(
-            "Invalid BEA_TOKEN or stored credential (contains whitespace, "
-            "control or non-ASCII characters). Fix the environment value or run "
-            "'bea cloud login'."
-        )
+        label = "BEA_TOKEN" if source == ENVIRONMENT else "stored credential"
+        remedy = "Fix or unset BEA_TOKEN." if source == ENVIRONMENT else "Run 'bea cloud login' to replace it."
+        raise AuthError(f"Invalid {label} (contains whitespace, control or non-ASCII characters). {remedy}")
     if not token:
         raise AuthError("Not logged in. Run 'bea cloud login', or set BEA_TOKEN.")
     return token
@@ -42,6 +40,18 @@ def _parse_expire_at(expire_at: str) -> datetime:
     if parsed.tzinfo is None:
         raise ValueError("expireAt must include a timezone")
     return parsed.astimezone(UTC)
+
+
+def grant_expiry(expire_at: object) -> datetime:
+    """The aware-UTC expiry of a freshly granted session, or ValueError when it could not be read later.
+
+    The same rules `Credentials.is_expired` applies to the stored file, so a
+    grant is judged before it replaces the credential rather than refused by
+    the next command (w5/894).
+    """
+    if not isinstance(expire_at, str):
+        raise ValueError("expireAt must be a string")
+    return _parse_expire_at(expire_at)
 
 
 @dataclass
@@ -64,7 +74,7 @@ class Credentials:
 def save_credentials(token: str, expire_at: str) -> None:
     # Create the file as 0600 inside a 0700 directory from the start — a
     # write-then-chmod sequence leaks the token under a permissive umask.
-    token = _validate_token(token)
+    token = _validate_token(token, source=FILE)
     directory = config_dir()
     path = credentials_path()
     directory.mkdir(parents=True, exist_ok=True)
@@ -107,6 +117,13 @@ def _read_stored(path: Path) -> str | None:
             "Point BEA_CONFIG_DIR at a directory."
         ) from exc
     except OSError as exc:
+        if not _searchable(path.parent):
+            # A symbolic-link loop or an unsearchable directory is the
+            # directory's fault, not the credential's (w5/811).
+            raise AuthError(
+                f"The bea configuration directory {path.parent} cannot be used ({exc.strerror}), so no credential "
+                "can be read from it. Point BEA_CONFIG_DIR at a directory you can open."
+            ) from exc
         raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
@@ -126,6 +143,13 @@ def _read_stored(path: Path) -> str | None:
         raise UnusableCredentials(path, f"it cannot be read ({type(exc).__name__})") from exc
 
 
+def _searchable(directory: Path) -> bool:
+    try:
+        return stat.S_ISDIR(os.stat(directory).st_mode) and os.access(directory, os.X_OK)
+    except OSError:
+        return False
+
+
 def load_credentials() -> Credentials | None:
     """Return the active credential: `$BEA_TOKEN` if set, otherwise the stored one.
 
@@ -136,7 +160,7 @@ def load_credentials() -> Credentials | None:
     # Empty BEA_TOKEN= is the same as unset: fall through to the stored file
     # (or "Not logged in"), rather than a whitespace-oriented auth error.
     if token:
-        return Credentials(token=_validate_token(token), expire_at=None, source=ENVIRONMENT)
+        return Credentials(token=_validate_token(token, source=ENVIRONMENT), expire_at=None, source=ENVIRONMENT)
     path = credentials_path()
     text = _read_stored(path)
     if text is None:
@@ -160,7 +184,14 @@ def load_credentials() -> Credentials | None:
         # Malformed stored state is treated as expired so require_credentials
         # prompts for a fresh login rather than comparing incompatible types.
         expire_at = "invalid"
-    return Credentials(token=_validate_token(token), expire_at=expire_at, source=FILE)
+    # A stored token bea could not have saved is an unusable file too, which
+    # logout removes: "Not logged in" and "Invalid stored credential" left it
+    # on disk, and logout exited 3 over it (w5/811).
+    if not token:
+        raise UnusableCredentials(path, "its token is empty")
+    if _INVALID_TOKEN.search(token):
+        raise UnusableCredentials(path, "its token contains whitespace, control or non-ASCII characters")
+    return Credentials(token=token, expire_at=expire_at, source=FILE)
 
 
 class UnusableCredentials(AuthError):

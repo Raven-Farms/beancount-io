@@ -4,6 +4,7 @@ The caret was indented by the parser's absolute offset. For a query spanning
 lines that put it alone, far right of every line printed; for `FROM accounts`
 or `FROM balances` in `--json` it counted the quotes the engine adds around the
 table name while the text shown above it had none, so it sat two columns late.
+Wide characters before the token pulled it left by a column each (w5/726).
 """
 
 from __future__ import annotations
@@ -117,3 +118,22 @@ def test_single_line_placement_is_unchanged(tmp_path: Path, query: str, rest: st
     details = _json_details(_bea(tmp_path, "--json", "-f", "main.bean", "query", query))
 
     assert details[:2] == [f"  {query}", f"  {' ' * (len(query) - len(rest))}^"]
+
+
+@pytest.mark.parametrize("flags", [[], ["--json"]], ids=["text", "json"])
+def test_wide_characters_before_the_token_do_not_pull_the_caret_left(tmp_path: Path, flags: list[str]) -> None:
+    from cli.output import display_width
+
+    query = "SELECT payee WHERE payee = '東京' AND AND"
+    result = _bea(tmp_path, *flags, "-f", "main.bean", "query", query)
+
+    lines = _json_details(result) if flags else result.stderr.splitlines()
+    assert result.returncode == 2, result.stdout + result.stderr
+    statement, caret = next(
+        (lines[index], lines[index + 1]) for index, line in enumerate(lines) if line.strip() == query
+    )
+    # The caret line is all ASCII, so its length is the caret's column; the
+    # statement holds two wide characters, two columns past its length (w5/726).
+    assert caret.strip() == "^"
+    assert display_width(query) == len(query) + 2
+    assert len(caret) - 1 == display_width(statement)

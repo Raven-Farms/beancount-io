@@ -55,11 +55,16 @@ export function isDecimalNumber(value: unknown): boolean {
 }
 
 /**
- * Beancount source rejects scientific notation. Keep ordinary decimals
- * (including trailing zeros) byte-identical; expand only finite exponent forms.
+ * Beancount source rejects scientific notation and a bare leading `.`. Keep
+ * ordinary decimals (including trailing zeros) byte-identical; expand only
+ * finite exponent forms, and write `.5` as `0.5`, which the decimal check
+ * accepts and the lexer could not read (w23/043).
  */
 function toBeancountNumber(value: string | number): string {
-  const raw = typeof value === "number" ? String(value) : value;
+  const raw = (typeof value === "number" ? String(value) : value).replace(
+    /^([+-]?)\./,
+    "$10.",
+  );
   if (!/[eE]/.test(raw)) return raw;
   const amount = new BigNumber(raw);
   if (!amount.isFinite()) return raw;
@@ -249,5 +254,6 @@ function toDirective(input: LedgerEntryInput): DirectiveJson {
  * `entryInputToText` outputs onto the file's existing contents.
  */
 export function entryInputToText(input: LedgerEntryInput): string {
-  return `${directiveToText(toDirective(input))}\n`;
+  // The caller's meta values are strings by contract: written as given.
+  return `${directiveToText(toDirective(input), { literalStringMeta: true })}\n`;
 }

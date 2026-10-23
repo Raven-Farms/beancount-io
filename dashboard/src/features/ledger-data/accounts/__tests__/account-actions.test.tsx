@@ -26,6 +26,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({ refetchQueries: async () => [] }),
   useQuery: () => ({
     data: { getLedgerAccountDirectives: [] },
     loading: false,

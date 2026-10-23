@@ -1,6 +1,8 @@
 import {
   alignMonthlySeries,
-  filterSeriesByRange,
+  currentYearMonth,
+  filterFlowSeriesByRange,
+  flowAnchorMonth,
   pointsToMonthlySeries,
   type DateBalancePoint,
   type TimeRange,
@@ -20,6 +22,7 @@ type BalanceSeries =
  * Returns null while the statement is unresolved.
  */
 export function selectStatementAnchorMonth(
+  currentMonth: string,
   ...series: BalanceSeries[]
 ): string | null {
   let latest: string | null = null;
@@ -34,7 +37,8 @@ export function selectStatementAnchorMonth(
       }
     }
   }
-  return latest;
+  // Never after the current month (w21/166).
+  return latest === null ? null : flowAnchorMonth(latest, currentMonth);
 }
 
 /**
@@ -50,6 +54,7 @@ export function selectIncomeExpenseChartSeries(
   expensesData: BalanceSeries,
   netProfitData: BalanceSeries,
   timeRange: TimeRange,
+  currentMonth: string = currentYearMonth(),
 ) {
   const income = pointsToMonthlySeries(currency, incomeData).map((point) => ({
     ...point,
@@ -61,8 +66,8 @@ export function selectIncomeExpenseChartSeries(
     value: -point.value + 0,
   }));
   return alignMonthlySeries({
-    income: filterSeriesByRange(income, timeRange),
-    expense: filterSeriesByRange(expense, timeRange),
-    net: filterSeriesByRange(net, timeRange),
+    income: filterFlowSeriesByRange(income, timeRange, currentMonth),
+    expense: filterFlowSeriesByRange(expense, timeRange, currentMonth),
+    net: filterFlowSeriesByRange(net, timeRange, currentMonth),
   });
 }

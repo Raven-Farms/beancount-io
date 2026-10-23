@@ -9,6 +9,12 @@ Two mechanisms, tested separately because they cover different failures: the
 frontend forwards a termination signal so the child can unwind, and a later
 write sweeps candidates old enough that nothing can still own them, which is the
 only thing that covers SIGKILL.
+
+w5/719 extends the sweep: a candidate whose writer is alive stays locked
+(POSIX) or open (Windows) for its whole lifetime, so one the sweep can take
+is an orphan however young and goes at once. Scratch files that never became
+candidates and pickle-cache sidecars keep the age rule, and every directory
+the write stages into is swept, not just the target's.
 """
 
 from __future__ import annotations
@@ -19,7 +25,9 @@ import subprocess
 import sys
 import textwrap
 import time
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -36,6 +44,23 @@ def _aged(path: Path, seconds: float) -> Path:
     return path
 
 
+@contextmanager
+def _held(path: Path) -> Iterator[None]:
+    """Hold a candidate the way its writer would, on any platform (w5/719)."""
+    if sys.platform == "win32":
+        with open(path, "rb"):
+            yield
+    else:
+        import fcntl
+
+        fd = os.open(path, os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)
+
+
 class TestSweepAbandonedCandidates:
     def test_it_removes_a_candidate_no_live_write_could_own(self, tmp_path: Path) -> None:
         stale = _aged(tmp_path / ".bea-0123456789abcdef.tmp", _ABANDONED_CANDIDATE_SECONDS * 2)
@@ -45,13 +70,34 @@ class TestSweepAbandonedCandidates:
         assert not stale.exists()
 
     def test_it_keeps_a_candidate_a_running_write_may_still_be_using(self, tmp_path: Path) -> None:
-        """Another bea may be mid-write in the same directory; only age makes this safe."""
+        """Another bea may be mid-write in the same directory; the lock, not age, proves liveness (w5/719)."""
+        fresh = tmp_path / ".bea-fedcba9876543210.tmp"
+        fresh.touch()
+
+        with _held(fresh):
+            sweep_abandoned_candidates(tmp_path)
+
+            assert fresh.exists()
+
+    def test_it_removes_a_fresh_candidate_no_write_holds(self, tmp_path: Path) -> None:
+        """An unlocked candidate is an orphan however young: the kill that made it released its lock (w5/719)."""
         fresh = tmp_path / ".bea-fedcba9876543210.tmp"
         fresh.touch()
 
         sweep_abandoned_candidates(tmp_path)
 
-        assert fresh.exists()
+        assert not fresh.exists()
+
+    def test_it_removes_an_aged_scratch_file_but_keeps_a_fresh_one(self, tmp_path: Path) -> None:
+        """Scratch that never became a candidate keeps the age rule (w5/719)."""
+        old = _aged(tmp_path / ".bea-0123456789abcdef.staging", _ABANDONED_CANDIDATE_SECONDS * 2)
+        new = tmp_path / ".bea-fedcba9876543210.staging"
+        new.touch()
+
+        sweep_abandoned_candidates(tmp_path)
+
+        assert not old.exists()
+        assert new.exists()
 
     def test_it_removes_an_abandoned_picklecache_too(self, tmp_path: Path) -> None:
         cache = _aged(tmp_path / "..bea-0123456789abcdef.tmp.picklecache", _ABANDONED_CANDIDATE_SECONDS * 2)
@@ -77,27 +123,61 @@ class TestSweepAbandonedCandidates:
         sweep_abandoned_candidates(tmp_path / "does-not-exist")
 
 
-def test_a_write_clears_abandoned_candidates_beside_the_ledger(tmp_path: Path) -> None:
+def test_a_write_clears_orphaned_candidates_in_every_staging_directory(tmp_path: Path) -> None:
+    """A kill's corpses go at once in the target's and the includers' directories; held ones stay (w5/719)."""
     from typer.testing import CliRunner
 
     from cli.main import app
 
-    runner = CliRunner()
-    created = runner.invoke(app, ["--json", "init", str(tmp_path), "--currency", "USD", "--date", "2026-01-01"])
-    assert created.exit_code == 0, created.output
-    ledger = tmp_path / "main.bean"
-    stale = _aged(tmp_path / ".bea-0123456789abcdef.tmp", _ABANDONED_CANDIDATE_SECONDS * 2)
-    fresh = tmp_path / ".bea-fedcba9876543210.tmp"
-    fresh.touch()
-
-    result = runner.invoke(
-        app,
-        ["--file", str(ledger), "add", "open", "--account", "Expenses:Sweep", "--date", "2026-01-02"],
+    books = tmp_path / "books"
+    (books / "sub").mkdir(parents=True)
+    (books / "main.bean").write_text(
+        'option "operating_currency" "USD"\n2026-01-01 open Assets:Cash USD\n'
+        "2026-01-01 open Expenses:Food USD\n"
+        'include "sub/a.bean"\n',
+        encoding="utf-8",
     )
+    (books / "sub" / "a.bean").write_text(
+        '2026-02-01 txn "A"\n  Expenses:Food  1.00 USD\n  Assets:Cash\n', encoding="utf-8"
+    )
+    orphans = [
+        books / ".bea-0123456789abcdef.tmp",
+        books / "sub" / ".bea-0123456789abcdef.tmp",
+    ]
+    for orphan in orphans:
+        orphan.touch()
+    held = [
+        books / ".bea-fedcba9876543210.tmp",
+        books / "sub" / ".bea-fedcba9876543210.tmp",
+    ]
+    for path in held:
+        path.touch()
 
-    assert result.exit_code == 0, result.output
-    assert not stale.exists()
-    assert fresh.exists()
+    runner = CliRunner()
+    with _held(held[0]), _held(held[1]):
+        result = runner.invoke(
+            app,
+            [
+                "--file",
+                str(books / "main.bean"),
+                "add",
+                "open",
+                "--account",
+                "Expenses:Sweep",
+                "--date",
+                "2026-01-02",
+                "--into",
+                "sub/a.bean",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert all(not orphan.exists() for orphan in orphans)
+        assert all(path.exists() for path in held)
+
+    sweep_abandoned_candidates(books)
+    sweep_abandoned_candidates(books / "sub")
+    assert all(not path.exists() for path in held)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX signal semantics")

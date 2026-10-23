@@ -180,6 +180,56 @@ describe("filterDirectives — AdvancedFilter parity", () => {
     ]);
   });
 
+  // w21/640: the mobile search sends a lone `#tag` as the exact tag, a
+  // case-insensitive prefix of any one tag through `tags:`, or the text. The
+  // `tags:` attribute reads the list as "a, b"; this pins the form it relies on.
+  it("matches the search box's case-insensitive tag and link prefix", () => {
+    const tagged = {
+      type: "transaction",
+      date: "2026-10-12",
+      flag: "*",
+      payee: "QA Ichiran",
+      narration: "ramen",
+      tags: ["Trip", "Japan2026"],
+      links: ["receipt-abc"],
+      postings: [],
+    } as DirectiveJson;
+    const other = {
+      ...tagged,
+      narration: "other",
+      tags: ["nihon-japan"],
+      links: [],
+    } as DirectiveJson;
+    const search = (filter: string) =>
+      filterDirectives([tagged, other], { filter }).map((directive) =>
+        directive.type === "transaction" ? directive.narration : "",
+      );
+    expect(search('#japan2026,tags:"(?:^|, )japan2026","#japan2026"')).toEqual([
+      "ramen",
+    ]);
+    expect(search('#japan,tags:"(?:^|, )japan","#japan"')).toEqual(["ramen"]);
+    expect(search('^receipt,links:"(?:^|, )receipt","\\^receipt"')).toEqual([
+      "ramen",
+    ]);
+  });
+
+  // w21/655: rustledger's note has no tags or links; the parse restores them.
+  it("matches tags and links the parse restored on a note", () => {
+    const note = {
+      type: "note",
+      date: "2024-02-01",
+      account: "Assets:Cash",
+      comment: "dispute filed",
+      tags: ["dispute", "trip"],
+      links: ["case-42"],
+    } as DirectiveJson;
+
+    for (const filter of ["#dispute", "#trip", "^case-42"]) {
+      expect(filterDirectives([note], { filter })).toEqual([note]);
+    }
+    expect(filterDirectives([note], { filter: "#other" })).toEqual([]);
+  });
+
   it("does not expose Object prototype members as directive attributes", () => {
     expect(
       filterDirectives(DIRECTIVES, { filter: "constructor:native" }),
@@ -201,6 +251,30 @@ describe("filterDirectives — AdvancedFilter parity", () => {
     ];
     expect(filterDirectives(unicode, { filter: "Bäckerei" })).toEqual(unicode);
     expect(filterDirectives(unicode, { filter: "咖啡" })).toEqual(unicode);
+  });
+
+  // w21/569: the regex `i` flag never matches `i` against the Turkish `İ`.
+  it("finds a payee with a Turkish dotted capital İ by its plain i", () => {
+    const turkish = (payee: string): DirectiveJson => ({
+      type: "transaction",
+      date: "2024-04-01",
+      flag: "*",
+      payee,
+      narration: "",
+      tags: [],
+      links: [],
+      postings: [],
+    });
+    const isbank = turkish("İşBank ATM");
+    const izmir = turkish("İZMİR Kahve");
+    const other = turkish("Starbucks");
+    const all = [isbank, izmir, other];
+    expect(filterDirectives(all, { filter: "iş" })).toEqual([isbank]);
+    expect(filterDirectives(all, { filter: "izmir" })).toEqual([izmir]);
+    // A search typed with the dotted capital finds it too.
+    expect(filterDirectives(all, { filter: "İş" })).toEqual([isbank]);
+    // And the plain ASCII rule is untouched.
+    expect(filterDirectives(all, { filter: "STAR" })).toEqual([other]);
   });
 
   it("compares only Amount-shaped metadata values", () => {

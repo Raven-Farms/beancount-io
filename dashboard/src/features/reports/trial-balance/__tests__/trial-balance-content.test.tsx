@@ -106,10 +106,12 @@ type TrialBalanceData = React.ComponentProps<
 function Harness({
   onConversionChange,
   data = trialBalanceData as unknown as TrialBalanceData,
+  invert = false,
 }: {
   onConversionChange: (value: "at_cost" | "units" | "at_value") => void;
   /** Override the fixture for a case that needs its own hierarchy. */
   data?: TrialBalanceData;
+  invert?: boolean;
 }) {
   const [selectedTab, setSelectedTab] = useState("assets");
   return (
@@ -123,7 +125,7 @@ function Harness({
       ledgerNameParam="books"
       conversion="at_cost"
       onConversionChange={onConversionChange}
-      invertIncomeLiabilitiesEquity={false}
+      invertIncomeLiabilitiesEquity={invert}
       showZeroBalance
       showZeroTransactions
       showClosedAccounts={false}
@@ -139,36 +141,40 @@ function renderContent(onConversionChange = vi.fn()) {
 }
 
 describe("TrialBalanceContent", () => {
-  it("passes a reconciliation summary row to the hierarchy table", () => {
-    hierarchyListMock.mockClear();
-    render(
-      <Harness
-        onConversionChange={vi.fn()}
-        data={
-          {
-            assetsHierarchyData: hierarchyNode("Assets", { USD: "100" }),
-            expensesHierarchyData: hierarchyNode("Expenses", { USD: "100" }),
-            equityHierarchyData: hierarchyNode("Equity", { USD: "-50" }),
-            liabilitiesHierarchyData: hierarchyNode("Liabilities", {
-              USD: "-50",
-            }),
-            incomeHierarchyData: hierarchyNode("Income", { USD: "-100" }),
-          } as unknown as TrialBalanceData
-        }
-      />,
-    );
+  it.each([false, true])(
+    "passes a reconciliation summary row to the hierarchy table (credits inverted=%s, w4/267)",
+    (invert) => {
+      hierarchyListMock.mockClear();
+      render(
+        <Harness
+          invert={invert}
+          onConversionChange={vi.fn()}
+          data={
+            {
+              assetsHierarchyData: hierarchyNode("Assets", { USD: "100" }),
+              expensesHierarchyData: hierarchyNode("Expenses", { USD: "100" }),
+              equityHierarchyData: hierarchyNode("Equity", { USD: "-50" }),
+              liabilitiesHierarchyData: hierarchyNode("Liabilities", {
+                USD: "-50",
+              }),
+              incomeHierarchyData: hierarchyNode("Income", { USD: "-100" }),
+            } as unknown as TrialBalanceData
+          }
+        />,
+      );
 
-    const props = hierarchyListMock.mock.calls.at(-1)?.[0] as {
-      summaryRows?: Array<{ label: string; balance: Record<string, string> }>;
-    };
+      const props = hierarchyListMock.mock.calls.at(-1)?.[0] as {
+        summaryRows?: Array<{ label: string; balance: Record<string, string> }>;
+      };
 
-    expect(props.summaryRows).toHaveLength(1);
-    expect(props.summaryRows?.[0]).toMatchObject({
-      label: "Reconciliation Difference",
-      balance: { USD: "0" },
-      bold: true,
-    });
-  });
+      expect(props.summaryRows).toHaveLength(1);
+      expect(props.summaryRows?.[0]).toMatchObject({
+        label: "Reconciliation Difference",
+        balance: { USD: "0" },
+        bold: true,
+      });
+    },
+  );
 
   it("shows the assets chart by default", () => {
     renderContent();

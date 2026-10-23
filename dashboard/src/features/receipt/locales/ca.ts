@@ -235,6 +235,12 @@ const caReceipt: Record<string, TranslationEntry> = {
     message: "No s'ha pogut registrar la transacció del rebut",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "És possible que s'hagi registrat igualment; comproveu el Diari abans de tornar-la a registrar.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default caReceipt;

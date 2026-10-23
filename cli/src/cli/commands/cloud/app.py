@@ -23,7 +23,10 @@ cloud_app.add_typer(ledger_app, name="ledger")
 
 @cloud_app.command("login")
 def cloud_login() -> None:
-    """Log in by device flow; credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea."""
+    """Log in by device flow.
+
+    credentials.json goes in $BEA_CONFIG_DIR, $XDG_CONFIG_HOME/bea or ~/.config/bea.
+    """
     context.current().require_network("cloud login")
     import os
 
@@ -53,9 +56,20 @@ def cloud_login() -> None:
 def cloud_logout() -> None:
     """Revoke the token and clear stored credentials."""
     context.current().require_network("cloud logout")
+    import os
+
+    if os.environ.get("BEA_TOKEN"):
+        # Logout never sends this shared token, so even malformed values must
+        # leave it and the stored credential alone, without reading either.
+        output.success(
+            "BEA_TOKEN is set in this shell; 'bea cloud logout' leaves it "
+            "unchanged and does not revoke it. Unset BEA_TOKEN to stop using it."
+        )
+        return
+
     from cli.api.client import bearer_client, call, unwrap_or_none
     from cli.api.rest_client.api.ledger_v_1 import logout
-    from cli.auth.credentials import ENVIRONMENT, UnusableCredentials, clear_credentials, load_credentials
+    from cli.auth.credentials import UnusableCredentials, clear_credentials, load_credentials
     from cli.config import credentials_path
     from cli.errors import BeaError
 
@@ -78,16 +92,6 @@ def cloud_logout() -> None:
         ) from exc
     if creds is None:
         output.success("Already logged out.")
-        return
-    if creds.source == ENVIRONMENT:
-        # `BEA_TOKEN` is the shared, unattended credential: a CI job or a
-        # teammate may be using the same value right now. Revoking it from a
-        # routine logout would silently kill every other consumer, and this
-        # process cannot unset the caller's shell anyway.
-        output.success(
-            "BEA_TOKEN is set in this shell; 'bea cloud logout' leaves it "
-            "unchanged and does not revoke it. Unset BEA_TOKEN to stop using it."
-        )
         return
     import httpx
 
@@ -125,13 +129,22 @@ def cloud_logout() -> None:
             f"the outcome is unknown. {_STILL_VALID}",
             getattr(exc, "request_id", None),
         )
+    except ValueError:
+        # `call` translates response-parsing ValueErrors after a response.
+        # A remaining ValueError is request preparation, not an attempted
+        # revocation: leave the stored credential available to retry.
+        raise
     except Exception as exc:
         reason = to_bea_error(exc)
-        failure = (
-            BeaError,
-            f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}",
-            reason.request_id,
-        )
+        # A 401 whose body lacks the `{ok, error}` envelope (a proxy's or a
+        # framework's `{"message": "Unauthorized"}`) is still a 401: already
+        # revoked, not a failure (w5/812).
+        if reason.http_status != 401:
+            failure = (
+                BeaError,
+                f"server revocation failed: {str(reason).rstrip('.')}. {_STILL_VALID}",
+                reason.request_id,
+            )
     # The local credential goes either way: a server that cannot be reached
     # must not leave a token sitting on this disk.
     try:
@@ -166,7 +179,10 @@ def _failure_name(exc: BaseException) -> str:
 
 @cloud_app.command("status")
 def cloud_status() -> None:
-    """Show who is logged in, where the credential came from, and when it expires."""
+    """Show the current login.
+
+    Who is logged in, where the credential came from, and when it expires.
+    """
     ctx = context.current()
     ctx.require_network("cloud status")
     from cli.api.client import bearer_client, call, unwrap_or_none

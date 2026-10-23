@@ -1,5 +1,5 @@
 import type { DirectiveJson, LedgerOptions } from "@rustledger/wasm";
-import { inheritDirectiveSourceId } from "./provenance";
+import { inheritDirectiveSourceId, markGeneratedDirective } from "./provenance";
 import { pluginError, type PluginContext, type PluginResult } from "./types";
 
 /**
@@ -97,6 +97,7 @@ export function forecast(
           narration: recurrence.narration,
         };
         inheritDirectiveSourceId(directive, occurrence);
+        markGeneratedDirective(occurrence);
         generated.push({ directive: occurrence, sourceOrder });
       }
     } catch (error) {

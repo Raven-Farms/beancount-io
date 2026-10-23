@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import type { DirectiveJson, PostingJson } from "@rustledger/wasm";
 import { getRustledgerWorkerPool } from "./rustledger-worker-pool";
+import type { SourceSyntax } from "./source-slice";
 import { utcDate } from "./utc-date";
 
 /**
@@ -158,21 +159,6 @@ function getEntryAccounts(directive: DirectiveJson): string[] {
   }
 }
 
-/**
- * beancount `account.has_component` — whole `:`-delimited component match.
- * Returns a closure over a regex compiled ONCE per filter evaluation: the
- * previous per-call `new RegExp` compiled entries×accounts times per request
- * (~30k compiles on a 10k-entry ledger). The regex has no flags (notably not
- * `g`/`y`), so `.test` is stateless and the instance is safe to reuse.
- */
-function makeComponentMatcher(
-  component: string,
-): (accountName: string) => boolean {
-  const escaped = escapeRegExp(component);
-  const regex = new RegExp(`(^|:)${escaped}(:|$)`);
-  return (accountName: string): boolean => regex.test(accountName);
-}
-
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -205,35 +191,84 @@ function compileMatcherRegex(search: string): RegExp {
   }
 }
 
-function makeMatcher(search: string): FilterValueMatcher {
-  if (search.length > MAX_FILTER_PATTERN_LENGTH) {
+/**
+ * The Turkish capital dotted İ (U+0130), and the "i" + combining dot a
+ * lowercase pass leaves, as a plain "i". A case-insensitive regex never matches
+ * `i` against `İ` (their case mapping is language-specific, and the `i` flag
+ * uses the language-neutral one), so "iş" and "izmir" missed "İşBank ATM" and
+ * "İZMİR Kahve" (w21/569). Applied to the pattern and to the text it searches.
+ */
+function foldDottedI(text: string): string {
+  return text.replace(/\u0130/gu, "i").replace(/i\u0307/gu, "i");
+}
+
+function makeMatcher(rawSearch: string): FilterValueMatcher {
+  if (rawSearch.length > MAX_FILTER_PATTERN_LENGTH) {
     throw new AdvancedFilterParseError(
       `Filter pattern exceeds ${MAX_FILTER_PATTERN_LENGTH} characters`,
     );
   }
+  const search = foldDottedI(rawSearch);
   try {
     const regex = compileMatcherRegex(search);
-    return (value): boolean => regex.test(stringifyFilterValue(value));
+    return (value): boolean =>
+      regex.test(foldDottedI(stringifyFilterValue(value)));
   } catch {
     // Fava deliberately treats a regex that Python cannot compile as a literal
     // exact match. Keep that behavior after attempting the compatibility
     // translations above.
-    return (value): boolean => stringifyFilterValue(value) === search;
+    return (value): boolean =>
+      foldDottedI(stringifyFilterValue(value)) === search;
   }
 }
 
+/** Characters that make a filter value a pattern rather than an account name. */
+const REGEX_SYNTAX = /[.*+?^${}()|[\]\\]/;
+
+/**
+ * The account filter. A plain account name (letters, digits, `-` and `:`, as
+ * Beancount allows) matches that account, its children, or a whole run of
+ * components anywhere ("Food" → `Expenses:Food`), case-insensitively. Fava's
+ * unanchored search made `Assets:Cash` also return `Assets:CashApp`, and
+ * `Assets:Cas` match at all, under a picker that names one account (w21/113;
+ * the CLI's w5/292). A value with regex syntax keeps Fava's search, so a
+ * pattern such as `^Expenses:(Food|Rent)` still works. One rule for REST,
+ * GraphQL and MCP, which all filter here.
+ */
 function applyAccountFilter(
   directives: DirectiveJson[],
   value: string,
 ): DirectiveJson[] {
   if (!value) return directives;
-  const match = makeMatcher(value);
-  const hasComponent = makeComponentMatcher(value);
+  const matches = makeAccountNameMatcher(value);
   return directives.filter((directive) =>
-    getEntryAccounts(directive).some(
-      (name) => hasComponent(name) || match(name),
-    ),
+    getEntryAccounts(directive).some((name) => matches(name)),
   );
+}
+
+/**
+ * Whether an account name satisfies an account filter: the one rule behind the
+ * main journal and the legacy journal endpoint (REST, GraphQL and MCP), so
+ * `Assets:Cash` returns the same accounts from both (w21/328).
+ */
+export function makeAccountNameMatcher(
+  value: string,
+): (accountName: string) => boolean {
+  const matches = REGEX_SYNTAX.test(value)
+    ? makeMatcher(value)
+    : makeComponentRunMatcher(value);
+  return (accountName) => matches(accountName);
+}
+
+/** A whole run of `:`-delimited components, case-insensitively. */
+function makeComponentRunMatcher(run: string): FilterValueMatcher {
+  if (run.length > MAX_FILTER_PATTERN_LENGTH) {
+    throw new AdvancedFilterParseError(
+      `Filter pattern exceeds ${MAX_FILTER_PATTERN_LENGTH} characters`,
+    );
+  }
+  const regex = new RegExp(`(^|:)${escapeRegExp(run)}(:|$)`, "i");
+  return (value): boolean => regex.test(stringifyFilterValue(value));
 }
 
 // ── Advanced filter (core/filters.py FilterSyntaxLexer + FilterSyntaxParser) ──
@@ -548,8 +583,8 @@ function tagPredicate(tag: string): EntryPredicate {
     if (target.kind !== "directive") return false;
     const directive = target.directive;
     if (directive.type === "transaction") return directive.tags.includes(tag);
-    if (directive.type === "document") {
-      return (directive.tags ?? []).includes(tag);
+    if (directive.type === "document" || directive.type === "note") {
+      return ((directive as SourceSyntax).tags ?? []).includes(tag);
     }
     return false;
   };
@@ -560,8 +595,8 @@ function linkPredicate(link: string): EntryPredicate {
     if (target.kind !== "directive") return false;
     const directive = target.directive;
     if (directive.type === "transaction") return directive.links.includes(link);
-    if (directive.type === "document") {
-      return (directive.links ?? []).includes(link);
+    if (directive.type === "document" || directive.type === "note") {
+      return ((directive as SourceSyntax).links ?? []).includes(link);
     }
     return false;
   };

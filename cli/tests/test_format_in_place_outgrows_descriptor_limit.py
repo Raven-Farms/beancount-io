@@ -147,7 +147,7 @@ def test_past_the_hard_limit_each_file_is_rewritten_under_its_own_lock(
         replaced_under[file] = list(held)
         real_replace(file, candidate, original, original_stat)
 
-    monkeypatch.setattr(formatting, "_descriptors_allow", lambda locks: False)
+    monkeypatch.setattr(ledger_write, "descriptors_allow", lambda locks: False)
     monkeypatch.setattr(ledger_write, "lock_file", recording_lock)
     monkeypatch.setattr(ledger_write, "replace_checked", recording_replace)
 

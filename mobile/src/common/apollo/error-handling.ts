@@ -1,7 +1,6 @@
-import { flushSession, sessionVar } from "@/common/vars";
 import { router } from "expo-router";
-import { purgeApolloCache } from "@/common/apollo/cache-persist";
-import { teardownSessionCaches } from "@/common/apollo/session-teardown";
+import { sessionVar } from "@/common/vars";
+import { signOutReasonVar } from "@/common/vars/sign-out-reason";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { createAuthErrorLink } from "@/common/apollo/auth-error-link";
 import { clearGuestVisit } from "@/common/guest/guest-state";
@@ -10,20 +9,17 @@ import { invalidateAuthorization } from "@/common/oauth/authorization-context";
 let teardownInFlight: Promise<void> | null = null;
 
 function teardownAndRoute(): Promise<void> {
+  // Not the user's own Log out: Welcome says the session ended (w21/119).
+  signOutReasonVar("sessionEnded");
   clearGuestVisit();
   invalidateAuthorization();
   if (!teardownInFlight) {
-    teardownInFlight = oauthTokenManager
-      .cancelPendingRefreshes()
-      .then(() => import("@/common/apollo/client"))
-      .then(({ apolloClient }) =>
-        teardownSessionCaches({
-          clearSession: () => sessionVar(null),
-          flushSession,
-          purgePersistedCache: purgeApolloCache,
-          clearInMemoryStore: () => apolloClient.clearStore(),
-        }),
-      )
+    // The same cleanup as Log out: a revoked session must not leave its
+    // Create Ledger draft, Recent accounts or merchant overrides for the next
+    // account on this device (w21/071). Imported lazily because it reaches the
+    // Apollo client, which imports this link.
+    teardownInFlight = import("@/common/server-url-actions")
+      .then(({ clearServerScopedState }) => clearServerScopedState())
       .finally(() => {
         router.replace("/auth/welcome");
         teardownInFlight = null;

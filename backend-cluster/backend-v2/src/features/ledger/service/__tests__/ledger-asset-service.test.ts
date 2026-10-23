@@ -26,7 +26,10 @@ const mockAssetStorage = {
 };
 
 const mockConfig = {
-  server: { url: "https://beancount.io/" },
+  // w23/023: the backend's own host differs from the public origin; the URL
+  // must name the origin MCP tokens are minted for, never this one.
+  server: { url: "https://api.v3.example.invalid" },
+  oauth: { issuer: "https://beancount.io/" },
 };
 
 const IDENTITY: Identity = {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import re
 from abc import ABC, abstractmethod
 from decimal import Decimal
@@ -396,6 +397,18 @@ class TimeFilter(EntryFilter):
         self.date_range = DateRange(begin, end)
 
     def apply(self, entries: Sequence[Directive]) -> Sequence[Directive]:
+        if self.date_range.begin <= datetime.date.min:
+            # Nothing is dated before the calendar's first day, so there is no
+            # opening to transfer or summarize, and both date theirs a day
+            # earlier: `-t 0001` overflowed into "Invalid time filter" (w5/842).
+            from beancount.parser import options as options_lib
+            from beancount.ops.summarize import conversions, truncate
+
+            _, current_conversions = options_lib.get_current_accounts(self._options)  # type: ignore[arg-type]
+            truncated = truncate(entries, self.date_range.end)  # type: ignore[arg-type]
+            return conversions(  # type: ignore[return-value]
+                truncated, current_conversions, self._options["conversion_currency"], self.date_range.end
+            )
         clamped_entries, _ = clamp_opt(
             entries,  # type: ignore[arg-type]
             self.date_range.begin,
@@ -463,7 +476,7 @@ def account_predicate(value: str | None, roots: Sequence[str] = DEFAULT_ROOTS) -
     # its prefix sibling `Expenses:FoodTruck`, as an unanchored regex search
     # would (w5/292). Anything else — a single word, lower case, or a real
     # pattern — keeps the documented regular-expression search.
-    if account.is_valid(value) or value in roots:
+    if account.is_valid(value) or value in roots or _loads_as_account(value):
         # Beancount.io change: `has_component` searches for the components
         # anywhere in a name, so `Expenses:Travel` also matched
         # `Assets:Reimbursable:Expenses:Travel`, and a bare root, read as a
@@ -477,6 +490,18 @@ def account_predicate(value: str | None, roots: Sequence[str] = DEFAULT_ROOTS) -
     # for an invalid one the wrapper read `*Food*` as "component Foo, then
     # d*", silently dropping Expenses:FoodTruck (w5/502).
     return Match(value)
+
+
+def _loads_as_account(value: str) -> bool:
+    """Whether the loader reads `value` as an account `is_valid` refuses.
+
+    Beancount.io change: a CJK, Thai or combining-mark leaf (`Expenses:Food:中餐`)
+    loads and reports, but fell through to the unanchored search and pulled in
+    `Expenses:Food:中餐厅` (w5/829).
+    """
+    from bea_engine.ledger.text import _loads_as_account as loads
+
+    return loads(value)
 
 
 class AccountFilter(EntryFilter):

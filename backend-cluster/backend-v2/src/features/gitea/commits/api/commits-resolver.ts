@@ -1,7 +1,10 @@
 import { Resolver, Query, Arg, Ctx, Int } from "type-graphql";
 import { AllowAnonymous } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
-import type { ICommitsService } from "../service/commits-service";
+import {
+  MAX_COMMITS_PAGE_SIZE,
+  type ICommitsService,
+} from "../service/commits-service";
 import { CommitListItem, CommitDetails } from "./commits-resolver.types";
 
 @Resolver()
@@ -16,7 +19,11 @@ export class CommitsResolver {
     @Arg("ledgerId") ledgerId: string,
     @Arg("branch", { defaultValue: "main" }) branch: string,
     @Arg("page", () => Int, { defaultValue: 1 }) page: number,
-    @Arg("limit", () => Int, { defaultValue: 30 }) limit: number,
+    @Arg("limit", () => Int, {
+      defaultValue: 30,
+      description: `Commits per page, 1 to ${MAX_COMMITS_PAGE_SIZE}; a larger value is refused.`,
+    })
+    limit: number,
     @Ctx() ctx: IContext,
   ): Promise<CommitListItem[]> {
     return this.commitsService.listCommits({

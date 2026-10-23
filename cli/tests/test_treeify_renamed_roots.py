@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,37 @@ def test_no_column_names_the_loose_option(tmp_path: Path) -> None:
     result = _bea(tmp_path, "treeify", "plain.txt")
     assert result.returncode == 2
     assert "pass -A (loose accounts) or your own -r pattern" in result.stderr
+
+
+def test_a_colon_in_a_narration_does_not_take_a_renamed_account_column(tmp_path: Path) -> None:
+    """The column is decided once per input, whatever the root names (w5/769)."""
+    (tmp_path / "main.bean").write_text(
+        'option "name_assets" "Aktiva"\noption "name_income" "Ertraege"\n'
+        "2024-01-01 open Aktiva:Depot:Cash USD\n2024-01-01 open Ertraege:Dividenden USD\n"
+        '2024-01-05 * "NYSE:IBM Dividende"\n  Aktiva:Depot:Cash  10.00 USD\n  Ertraege:Dividenden\n'
+    )
+    listing = _bea(tmp_path, "--file", "main.bean", "query", "SELECT narration, account, position")
+    assert listing.returncode == 0, listing.stderr
+    (tmp_path / "q.txt").write_text(listing.stdout)
+
+    tree = _bea(tmp_path, "treeify", "q.txt")
+
+    assert tree.returncode == 0, tree.stderr
+    for drawn in ("|-- Aktiva", "`-- Depot", "`-- Cash", "`-- Ertraege", "`-- Dividenden"):
+        assert drawn in tree.stdout, tree.stdout
+    assert tree.stdout.count("NYSE:IBM Dividende") == 2, tree.stdout
+
+
+def test_a_100k_character_line_finishes_in_linear_time(tmp_path: Path) -> None:
+    """The per-position lookahead rescanned every line: 100k chars took 52 s (w5/769)."""
+    (tmp_path / "long.txt").write_text("Assets:Cash  10 USD\n" + "x " * 50000 + "\n")
+    started = time.monotonic()
+    result = _bea(tmp_path, "treeify", "long.txt")
+    elapsed = time.monotonic() - started
+
+    assert result.returncode == 0, result.stderr
+    assert "Cash" in result.stdout
+    assert elapsed < 5, elapsed
 
 
 @pytest.mark.parametrize("narration", ["NYSE:IBM dividend", "Ref:A12 transfer"])

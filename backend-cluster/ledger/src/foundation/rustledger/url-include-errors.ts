@@ -16,10 +16,7 @@ const ENGINE_READ_FAILURE = "failed to read file ";
  * status carries the cause. Any other URL is not something the service will
  * ever fetch, and the message says why.
  */
-function urlIncludeMessage(
-  target: string,
-  origins: readonly string[],
-): string {
+function urlIncludeMessage(target: string, origins: readonly string[]): string {
   const decision = parseManagedPriceUrl(target, origins);
   if (decision.allowed) {
     return `include "${target}": managed price source is unavailable; no validated price feed could be fetched yet (see the ledger's managed price status)`;
@@ -28,7 +25,7 @@ function urlIncludeMessage(
 }
 
 /**
- * Name a URL include the way the user wrote it.
+ * Name an include the way the user wrote it, and say where it is.
  *
  * rustledger resolves `include "https://host/p"` like any path: joined to the
  * including file's directory and normalized, so it reports
@@ -36,7 +33,8 @@ function urlIncludeMessage(
  * absent from the ledger. The engine's report is replaced with one that
  * quotes the target, points at the `include` line, and says whether the URL
  * is a managed price source that is currently unavailable or not an allowed
- * source at all.
+ * source at all. A missing plain path gets the same treatment: located at its
+ * `include` line, reading "Included file not found: <as written>" (w21/189).
  */
 export function reportUrlIncludes(
   errors: BeancountError[],
@@ -45,15 +43,19 @@ export function reportUrlIncludes(
 ): BeancountError[] {
   const urlIncludes = new Map<
     string,
-    { file: string; line: number; target: string }
+    { file: string; line: number; target: string; url: boolean }
   >();
   for (const [file, content] of Object.entries(files)) {
     for (const { target, line } of extractIncludeDeclarations(content)) {
-      if (!isUrlIncludeTarget(target)) continue;
       // The key the engine reports: the same join-and-normalize it applies.
       const engineKey = resolveIncludeTarget(file, target);
       if (!urlIncludes.has(engineKey)) {
-        urlIncludes.set(engineKey, { file, line, target });
+        urlIncludes.set(engineKey, {
+          file,
+          line,
+          target,
+          url: isUrlIncludeTarget(target),
+        });
       }
     }
   }
@@ -67,7 +69,12 @@ export function reportUrlIncludes(
       if (rest.startsWith(`${engineKey}: `)) {
         return {
           ...error,
-          message: urlIncludeMessage(include.target, origins),
+          // A plain path is just a file that is not in the repository: the
+          // engine's "file not found in virtual filesystem: <resolved path>"
+          // named neither what the user typed nor where (w21/189).
+          message: include.url
+            ? urlIncludeMessage(include.target, origins)
+            : `Included file not found: ${include.target}`,
           file: include.file,
           line: include.line,
         };

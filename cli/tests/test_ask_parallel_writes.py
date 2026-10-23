@@ -34,7 +34,7 @@ def _run(ledger: Path, answers: dict[str, str]) -> tuple[list[str], list[str], i
     peak = 0
     guard = threading.Lock()
 
-    def confirm(directive: str, _target: str, _warnings: list[str]) -> str:
+    def confirm(directive: str, _target: str, _warnings: list[str], _proposal: object) -> str:
         nonlocal active, peak
         with guard:
             active += 1

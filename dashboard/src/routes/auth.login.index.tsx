@@ -18,20 +18,34 @@ const loginSearchSchema = z.object({
     "google_not_allowed",
     "google_blocked",
   ]),
+  recovery: z
+    .unknown()
+    .transform((value) =>
+      typeof value === "string" && /^rcv_[a-f0-9]{64}$/.test(value)
+        ? value
+        : undefined,
+    )
+    .optional(),
 });
 
 export const Route = createFileRoute("/auth/login/")({
   component: LoginPage,
   beforeLoad: loginBeforeLoad,
   validateSearch: (search) => loginSearchSchema.parse(search),
-  head: ({ match }) =>
-    createHeadMeta(
+  head: ({ match }) => {
+    const privateRecovery = Boolean(match.search.recovery);
+    const head = createHeadMeta(
       match.context.localization.i18n,
       getSEOMetadata(
         match.context.localization.i18n,
         "seo.login.title",
         "seo.login.description",
       ),
-    ),
+      { noIndex: privateRecovery },
+    );
+    if (privateRecovery)
+      head.meta.push({ name: "referrer", content: "no-referrer" });
+    return head;
+  },
   // ssr: false,
 });

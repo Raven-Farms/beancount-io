@@ -124,3 +124,16 @@ describe("brand-matcher", () => {
     });
   });
 });
+
+// w21/172: an accented letter counted as a word boundary.
+describe("matchBrand inside accented words", () => {
+  it("does not match a brand inside a word with accents", () => {
+    expect(matchBrand("Café Amazonía")).toBe(null);
+    expect(matchBrand("Büro Amazonē")).toBe(null);
+  });
+
+  it("still matches the brand as a whole word beside accented ones", () => {
+    expect(matchBrand("Café Amazon")).toBe("amazon.com");
+    expect(matchBrand("Amazonas Cafe")).toBe(null);
+  });
+});

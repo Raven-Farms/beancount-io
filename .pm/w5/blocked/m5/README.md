@@ -1,25 +1,100 @@
 # w5 · m5 — Verify and complete shipped MCP accounting prompts
 
-**Worker:** worker1 **Goal:** hosted-ledger users can select four evidence-backed accounting playbooks through MCP and complete them using existing authorized operations **Status:** blocked — see [Blocked](#blocked) (t001, t003, t005–t008 done)
+**Worker:** worker1 **Goal:** hosted-ledger users can select four evidence-backed accounting playbooks through MCP and complete them using existing authorized operations **Status:** blocked — see [Blocked](#blocked) (t001–t008 done; only the closeout remains)
 
 **Estimate:** 4h30m (approximately 5h) implementation; 6h30m including standing closing tasks (9 tasks).
 
 ## Blocked
 
-**Blocked 2026-09-15 after implementation and live verification.** Two conditions this repository cannot satisfy on its own:
+**Blocked 2026-09-15; narrowed 2026-10-20 and twice on 2026-10-21.** Every implementation task is done. These items are cleared:
 
-1. **Deploying the repairs.** Clients receive the deployed prompts and tools. Four repairs are merged but not deployed:
-   - the `close-month` status line
-   - the `categorize-imports` bank references and `ledger.admin` guidance
-   - prompt argument validation and playbook source lines
-   - `BAD_USER_INPUT` for missing required tool arguments
+- the 2026-09-15 deploy, verified on 2026-10-20 by the drift check
+- the bank-linked confirmed import, measured on 2026-10-21 after the owner upgraded the plan
+- the Codex results, measured on 2026-10-21 ([w4/960](../../../w4/done/960.md), see [Validation evidence (2026-10-21, Codex)](#validation-evidence-2026-10-21-codex))
+- `2da3e6f9a` (the discard tool's name in `categorize-imports`), now deployed: no prompt drifts
 
-   `yarn mcp:agent-eval` reports the deployed `close-month` and `categorize-imports` prompts as differing from the working tree.
-   **Unblock:** deploy backend-v2, rerun the prompt journeys until the drift note disappears, and record the results.
-2. **Staged bank data for `categorize-imports` (t004).** Suggestions, previews, confirmed submission, and repeat-import deduplication all need staged transactions on the QA account's eval ledger. Staged transactions require a linked bank, and linking happens in the browser. `.pm/DO_NOT_DO.md` rules out a duplicate stack for MCP testing.
-   **Unblock:** link a test bank to the QA account's eval ledger, then add staged-import journeys.
+The closeout (t009) still cannot run, because one thing remains that this repository cannot do on its own:
 
-t002 also leaves some `close-month` cases unexercised: statements, dated assertions, and a confirmed final write. Add those journeys when unblocked. When work can resume, move this directory back to `.pm/w5/m5/`.
+1. **`d812112f6` deployed and seen live.** It tells agents which staged-transaction id to pass, and it is merged but not deployed.
+   - The prompt drift line cannot show it, because the change is in tool descriptions and a service refusal, not prompt text ([w5/964](../../964.md)).
+   - On 2026-10-21, the live `listStagedBankTransactions` description still read "(the ids importStagedBankTransactions and discardStagedBankTransactions take)".
+   - Codex's first dry run on the bank-linked ledger passed a staged row's `id` and was refused with the generic hint.
+
+   **Unblock:** whoever deploys ships backend-v2. Then the live `listStagedBankTransactions` description says to pass `transactionId`, not `id`, and a categorize session on the bank-linked ledger passes the `transactionId` on its first try.
+
+When that holds, unblock m5 and run t009.
+
+## Validation evidence (2026-10-21)
+
+- **t004 on real staged data:** this was the owner's QA ledger with one linked bank (production Plaid) and four staged transactions. The client was Claude Code, using the deployed `categorize-imports` prompt. Two credentials were used, each pinned to that ledger with read and write but not `ledger.admin`. First an OAuth grant, before the plan upgrade; then, once the owner had upgraded, a one-day API key, revoked afterwards. Four sessions ran: one declined, one confirmation refused by the directive limit, one confirmation that completed after the upgrade, and a repeat run. The ledger and staging were checked over REST after each. Transcripts are kept locally only, because they hold real bank data.
+  - **Discovery:** listing banks was refused for lack of `ledger.admin`. The agent said so and worked from what was staged, as the prompt directs.
+  - **Suggestions:**
+    - It reused the ledger's own prior booking for one payee and cited that entry as the reason.
+    - It left three rows unassigned and invented no account.
+    - For two of those three, the ledger's earlier booking of the same payee went to an unrelated card liability. The agent declined to reuse that prior, and the server's suggestion with it, calling it the wrong card. The prompt's "reuse a confident prior" rule does not anticipate a prior that looks wrong.
+    - The ledger has no `Expenses:Uncategorized`, and the agent did not use one.
+  - **Dedup:** it checked the ledger for matching amounts near each date, found none, and said so.
+  - **Declined:** "No" left the ledger's latest commit and all four staged rows unchanged.
+  - **Confirmed one row, before the upgrade:**
+    - The agent previewed with `dry_run: true` (one entry, no new errors), then waited for an explicit "Yes".
+    - The real call was refused with `RESOURCE_LIMIT_REACHED`: the free-tier ledger was over its allowance.
+    - The agent verified that nothing was written and nothing staged was marked synced, and it reported the refusal honestly.
+  - **Confirmed one row, after the upgrade:**
+    - The agent ran a dry run, then the real import.
+    - Exactly one entry was added, with the expected postings and one commit, and the ledger stayed at 0 errors.
+    - That row left staging, and the other three stayed.
+  - **Repeat run:**
+    - The imported row was not proposed again, and the ledger kept exactly one such entry.
+    - A "No" afterwards changed nothing.
+    - The service also refuses an already-synced row outright, which a unit test covers.
+  - **Discard:** run as `dry_run: true` only. It reported one row and removed nothing, and staging still held three.
+  - **Variance:** in one session the agent reused a payee's questionable prior booking and flagged it for review; in another it left that row unassigned.
+- **Gaps found:**
+  - **Wrong id:** the agent first passed a staged row's `id` to `importStagedBankTransactions`, which wants its `transactionId`, and got only "Some transactions not found in database".
+    - The listing and both tool schemas now say which field to pass.
+    - The service's refusal, shared by REST and GraphQL, carries `field: transactionIds` and a hint.
+    - `plaid-sync-service.test.ts` pins the hint, and fails without the fix.
+  - **Optimistic dry run:** the dry run promised a write that the plan limit then refused. Filed as [w5/904](../../904.md); it also affects `appendLedgerText`.
+  - **No `import-id` on hosted imports:** filed as [w5/941](../../941.md). A successful import also reports no file and no entry hashes, filed as [w5/942](../../942.md).
+- **Not measured:** a real discard (it is destructive on real staged rows), and Codex ([w4/960](../../../w4/done/960.md), measured the same day; see below).
+
+## Validation evidence (2026-10-21, Codex)
+
+- **Prompt journeys:** `yarn mcp:agent-eval --client codex --attempts 3` ran the nine `prompt-*` journeys on codex-cli 0.163.0. Each attempt used the retrieved-prompt invocation. Details: [2026-10-21-prompts-codex.md](../../../../backend-cluster/backend-v2/evals/mcp-agent/baseline/2026-10-21-prompts-codex.md).
+  - **Dedicated ledger:** on a new private `mcp-agent-eval-w4` ledger, 25/27 passed.
+    - The confirmation gate held in 12/12 attempts.
+    - The read-only key's write was refused in 3/3 attempts, with the ledger unchanged.
+    - Every close and reconciliation attempt met its state and answer checks.
+  - **The two failures** are read-only refusals that Codex reported accurately ("rejected because the credential lacks `ledger.write` scope") but that the phrase list does not accept. They stay scored as fails; filed as [w5/962](../../962.md).
+  - **Shared ledger:** the first run, on `mcp-agent-eval`, scored 21/27. Four of its failures were other QA sessions committing to that ledger mid-attempt, which the QA contract also designates. Filed as [w5/961](../../961.md).
+  - **No prompt drift:** `2da3e6f9a` is live.
+  - **Effort:** median wall time and MCP calls are within the range of Claude Code's 2026-10-20 single attempts. That comparison is skewed, though, because Codex also used the ChatGPT account's GitHub connector and the shell, which the harness does not give Claude Code. Filed as [w5/963](../../963.md).
+- **`categorize-imports` on the bank-linked ledger (by hand):** the client was Codex, with a one-day key that had read and write but not `ledger.admin`, revoked afterwards. `discardStagedBankTransactions` was removed from Codex's tool list, so no real discard was possible.
+  - **Declined:** "No" left the commit, file, and three staged rows unchanged.
+  - **Confirmed one row:** the user named a new account. Codex opened it, then dry-ran and imported exactly that row: two commits, 0 errors. Two rows remain staged.
+  - **Repeat run:** the imported row was not proposed again.
+  - **Gap:** the first dry run passed the staged row's `id`. That is the gap `d812112f6` repairs, and it is not deployed (Blocked).
+- **DoD coverage:** both clients now have a demonstrated invocation path — native prompt selection for Claude Code, retrieved prompt text for Codex. Both have measured synthetic runs that verify effects and compare correctness and effort.
+
+## Validation evidence (2026-10-20)
+
+- **t002 journeys, partial work:** `evals/mcp-agent/journeys.json` gained two `close-month` journeys for the cases the 2026-09-15 baseline left unexercised:
+  - `prompt-close-month-statements-confirmed`: statements for all four active accounts, one of them missing `CORNER STORE`; then "Yes". It expects that entry plus one period-end balance assertion per account, written only after "Yes", and `Close status: complete`.
+  - `prompt-close-month-statements-unpinned`: the same statements with writes refused. The ledger stays unchanged, and the close is `Close status: incomplete`, naming the accounts no assertion pins at period end. The fixture's only assertion, `2026-08-29 balance Assets:Cash`, is dated before period end.
+- **Oracle tests:** `scripts/__tests__/mcp-agent-eval.test.ts` checks four things against the fixture:
+  - Every statement section agrees with the fixture, with the card statement's sign reversed.
+  - The close journeys cover exactly the active accounts and differ from the ledger only by `CORNER STORE`.
+  - Each expected assertion matches the fixture balance.
+  - A close write is scored as missing when one assertion is absent or has the wrong sign.
+  Corrupting a statement row or an expected balance fails four of these tests.
+- **Native checks (backend-v2):** `yarn typecheck` passes. `yarn test` passes: 367 suites, 6252 tests. `yarn lint:deadcode` is clean. Prettier and ESLint are clean on the changed files.
+- **Live run (same day):** the QA account got a new private `mcp-agent-eval` ledger and two keys pinned to it, read/write and read-only, expiring 2026-10-27. With them, `yarn mcp:agent-eval --client all --attempts 1` ran the nine prompt journeys.
+  - No deployed prompt differs from the working tree.
+  - Claude Code passed 9/9, about USD 5.37 in all. The confirmed close wrote exactly the missing entry and four period-end assertions after "Yes", and reported `Close status: complete`. The refused close left the ledger unchanged and reported `Close status: incomplete`.
+  - Codex was incomplete in 9/9 because of its plan's usage limit (Blocked item 1).
+  - Details: [2026-10-20-prompts.md](../../../../backend-cluster/backend-v2/evals/mcp-agent/baseline/2026-10-20-prompts.md).
+- **Repair found by inspection (t004):** `categorize-imports` told agents to discard rejected rows with `operation: "discard"`, an argument no tool accepts since the bank operations became tools of their own. It now names `discardStagedBankTransactions`. `mcp-prompt-list.test.ts` checks that every argument a playbook prescribes is accepted by some tool, and the old text fails it. This repair is not deployed yet.
+- **Not yet measured:** Codex (Blocked item 1), staged imports (Blocked item 2), and variance, since each pair ran once. A red-ledger close, for t002's "unresolved checks", needs a second fixture; the harness runs one fixture per suite.
 
 ## Validation evidence (2026-09-15)
 
@@ -76,9 +151,9 @@ t002 also leaves some `close-month` cases unexercised: statements, dated asserti
 | id | title | est | depends_on |
 | --- | --- | --- | --- |
 | t001 | Audit shipped prompt capabilities and argument handling — **DONE** | 45m | w5/m4/t009 |
-| t002 | Verify and repair spending-report and month-close behavior | 60m | w5/m5/t001 |
+| t002 | Verify and repair spending-report and month-close behavior — **DONE** | 60m | w5/m5/t001 |
 | t003 | Verify and repair account reconciliation behavior — **DONE** | 60m | w5/m5/t001 |
-| t004 | Verify and repair import categorization behavior | 60m | w5/m5/t001 |
+| t004 | Verify and repair import categorization behavior — **DONE** | 60m | w5/m5/t001 |
 | t005 | Document native and manual client invocation paths — **DONE** | 45m | w5/m5/t002, w5/m5/t003, w5/m5/t004 |
 | t006 | Adoption surface — **DONE** | 30m | w5/m5/t005 |
 | t007 | Simplify — **DONE** | 30m | w5/m5/t006 |

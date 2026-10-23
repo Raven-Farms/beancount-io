@@ -29,11 +29,13 @@ import {
   type SetStateAction,
 } from "react";
 import { useLocalStorageState } from "@/common/hooks/use-local-storage-state";
+import { decodeStringList } from "@/common/lib/storage/decode-string-list";
 import { useLedgerSearchParams } from "@/common/hooks/use-ledger-search-params";
 import { NewDirectiveDialog } from "@/features/journal/components/new-directive-dialog";
 import { EntryContextDialog } from "@/features/journal/components/entry-context-dialog";
 import { ExportJournalButton } from "@/features/journal/components/export-journal-button";
 import { JournalFilters } from "@/features/journal/components/journal-filters";
+import { JOURNAL_SUBTYPES } from "@/features/journal/components/journal-filter-buttons";
 import { JournalPagination } from "@/features/journal/components/journal-pagination";
 import {
   JournalLoadingState,
@@ -56,6 +58,24 @@ import { normalizeListSearchOffset } from "@/common/lib/list-search-params";
 
 const DEFAULT_DIRECTIVE_TYPES: DirectiveType[] = [DirectiveType.TRANSACTION];
 const DEFAULT_STRING_FILTER: string[] = [];
+
+// Saved filters are decoded before they reach the filters or the query: a
+// wrong-shaped list falls back to the default, and only values the filter
+// offers survive, since the API rejects any other kind (w4/m39).
+const allowedListStorage = <T extends string>(
+  allowed: ReadonlySet<string>,
+) => ({
+  deserializer: (raw: string) =>
+    decodeStringList(raw, (value): value is T => allowed.has(value)),
+});
+const directiveTypesStorage = allowedListStorage<DirectiveType>(
+  new Set(Object.values(DirectiveType)),
+);
+const transactionSubtypesStorage = allowedListStorage(
+  JOURNAL_SUBTYPES.transaction,
+);
+const documentSubtypesStorage = allowedListStorage(JOURNAL_SUBTYPES.document);
+const customSubtypesStorage = allowedListStorage(JOURNAL_SUBTYPES.custom);
 
 const JournalContent = () => {
   const { t } = useTranslations();
@@ -80,21 +100,25 @@ const JournalContent = () => {
     useLocalStorageState<DirectiveType[]>(
       `journal.${ledgerId}.directiveTypes`,
       DEFAULT_DIRECTIVE_TYPES,
+      directiveTypesStorage,
     );
   const [selectedTransactionSubtypes, setSelectedTransactionSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.transactionSubtypes`,
       DEFAULT_STRING_FILTER,
+      transactionSubtypesStorage,
     );
   const [selectedDocumentSubtypes, setSelectedDocumentSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.documentSubtypes`,
       DEFAULT_STRING_FILTER,
+      documentSubtypesStorage,
     );
   const [selectedCustomSubtypes, setSelectedCustomSubtypes] =
     useLocalStorageState<string[]>(
       `journal.${ledgerId}.customSubtypes`,
       DEFAULT_STRING_FILTER,
+      customSubtypesStorage,
     );
   const [showMetadata, setShowMetadata] = useLocalStorageState(
     `journal.${ledgerId}.showMetadata`,

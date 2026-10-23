@@ -50,12 +50,15 @@ function load(file: string): any {
           return { useGuest: () => guest };
         if (id === "@/common/ledger-access")
           return require("../../ledger-access");
+        if (id === "@/common/graphql-error-codes")
+          return require("../../graphql-error-codes");
         if (id === "@/generated-graphql/graphql")
           return {
             useListLedgersQuery: () => {
               listReads += 1;
               return {};
             },
+            useLedgerReadContextQuery: () => ({}),
             useGetLedgerQuery: (options: { skip: boolean }) => {
               permissionSkip = options.skip;
               return {
@@ -81,11 +84,28 @@ function load(file: string): any {
         if (id === "@expo/vector-icons") return {};
         if (id === "@/components/stack-back-button")
           return { StackBackButton: "Back" };
+        if (id === "@/common/hooks/use-foreground-refresh")
+          return { useForegroundRefresh: () => undefined };
         if (id === "@/common/ledger-directory/ledger-directory-provider")
           return {
             LedgerDirectoryProvider: () => {
               throw new Error("Guest must not mount an account directory");
             },
+            useOptionalLedgerDirectory: () => null,
+          };
+        if (id === "@/components/inline-error")
+          return {
+            InlineError: ({
+              message,
+              style,
+            }: {
+              message: string;
+              style?: unknown;
+            }) => ({
+              type: "Text",
+              props: { style, accessibilityRole: "alert" },
+              children: [message],
+            }),
           };
         throw new Error(`Unexpected dependency: ${id}`);
       },

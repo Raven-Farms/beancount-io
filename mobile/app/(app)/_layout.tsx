@@ -6,6 +6,7 @@ import { useTheme } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { LedgerDirectoryProvider } from "@/common/ledger-directory/ledger-directory-provider";
 import { StackBackButton } from "@/components/stack-back-button";
+import { useForegroundRefresh } from "@/common/hooks/use-foreground-refresh";
 
 /** Cold deep links need a tabs anchor so Back has somewhere to land. */
 export const unstable_settings = {
@@ -16,6 +17,8 @@ export default function AppLayout() {
   const session = useReactiveVar(sessionVar);
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
+  // Mounted tabs catch up with outside changes on return to the app (w21/024).
+  useForegroundRefresh(Boolean(session));
   if (!session) {
     return <Redirect href="/auth/welcome" />;
   }

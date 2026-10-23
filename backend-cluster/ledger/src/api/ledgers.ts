@@ -11,9 +11,16 @@ import { countDirectivesForRepo } from "@/core/directive-limit";
 import { slugify, validateLedgerName } from "@/shared/ledger-name";
 import { boolQuery, intQuery, strQuery } from "./query-params";
 import {
+  dedupeById,
+  mightBeOwnerName,
+  repoMatchesTerm,
+  searchTerms,
+} from "./ledger-search";
+import {
   BadUserInputError,
   ForbiddenError,
   InternalServerError,
+  LedgerNameReservedError,
   UnauthenticatedError,
 } from "@/shared/errors";
 
@@ -40,6 +47,14 @@ interface LedgerPublic {
   updated_at: string;
   permissions: PermissionPublic | null;
 }
+
+const COMMIT_SHA_RE = /^[0-9a-f]{7,64}$/i;
+
+/** Gitea's largest page, and how many of them a word search reads (w21/245). */
+const SEARCH_FETCH_LIMIT = 50;
+const SEARCH_FETCH_PAGES = 6;
+/** Page size when the caller sends none, as Gitea's own default. */
+const SEARCH_DEFAULT_LIMIT = 20;
 
 export function toLedgerPublic(repo: Repository): LedgerPublic {
   return {
@@ -112,6 +127,28 @@ async function findExistingRepo(
   }
 }
 
+/**
+ * Why a name `findExistingRepo` resolved is not free. The host answers a
+ * renamed repository's former name with the repository it now names, so a
+ * different `full_name` means the name is reserved, not a ledger (w23/061).
+ */
+function nameTakenError(
+  owner: string,
+  name: string,
+  found: Repository,
+): BadUserInputError | LedgerNameReservedError {
+  const fullName = found.full_name;
+  if (
+    typeof fullName === "string" &&
+    fullName.toLowerCase() !== `${owner}/${name}`.toLowerCase()
+  ) {
+    return new LedgerNameReservedError(name, fullName);
+  }
+  return new BadUserInputError(
+    `A ledger with the name '${name}' already exists. Please choose a different name.`,
+  );
+}
+
 export function setLedgersHandler(router: Router): void {
   // operationId: listLedgers — GET /ledgers
   router.get("/ledgers", authMiddleware, async (ctx) => {
@@ -142,11 +179,13 @@ export function setLedgersHandler(router: Router): void {
     }
     const client = giteaClientForRequest(ctx);
 
-    if (await findExistingRepo(client, auth.username, repoName, "create")) {
-      throw new BadUserInputError(
-        `A ledger with the name '${repoName}' already exists. Please choose a different name.`,
-      );
-    }
+    const existing = await findExistingRepo(
+      client,
+      auth.username,
+      repoName,
+      "create",
+    );
+    if (existing) throw nameTakenError(auth.username, repoName, existing);
 
     const created = await client.user.createCurrentUserRepo({
       name: repoName,
@@ -192,8 +231,7 @@ export function setLedgersHandler(router: Router): void {
   router.get("/ledgers/search", authMiddleware, async (ctx) => {
     const client = giteaClientForRequest(ctx);
     const q = ctx.query;
-    const res = await client.repos.repoSearch({
-      q: strQuery(q.q),
+    const filters = {
       topic: boolQuery(q.topic),
       includeDesc: boolQuery(q.include_desc),
       uid: intQuery(q.uid),
@@ -208,13 +246,100 @@ export function setLedgersHandler(router: Router): void {
       exclusive: boolQuery(q.exclusive),
       sort: strQuery(q.sort),
       order: strQuery(q.order),
-      page: intQuery(q.page),
-      limit: intQuery(q.limit),
-    });
-    const body = res.data as { ok?: boolean; data?: Repository[] };
+    };
+    const page = intQuery(q.page);
+    const limit = intQuery(q.limit);
+    const terms = searchTerms(strQuery(q.q));
+
+    // Owners among the words: a word naming a user or organization lists that
+    // owner's ledgers, which a substring search of names never did. Not when
+    // the caller already pinned an owner with `uid`.
+    const owners = new Map<string, number>();
+    if (terms.length > 0 && filters.uid === undefined) {
+      await Promise.all(
+        [...new Set(terms.filter(mightBeOwnerName))]
+          .slice(0, 5)
+          .map(async (term) => {
+            try {
+              const res = await client.users.userGet(term);
+              const id = (res.data as { id?: number }).id;
+              if (typeof id === "number") owners.set(term, id);
+            } catch {
+              // Not an owner: an ordinary word.
+            }
+          }),
+      );
+    }
+
+    // One word that names no owner: Gitea's own search, as before.
+    if (terms.length <= 1 && owners.size === 0) {
+      const res = await client.repos.repoSearch({
+        // Blank text is no search at all.
+        q: terms.length === 0 ? undefined : strQuery(q.q),
+        ...filters,
+        page,
+        limit,
+      });
+      const body = res.data as { ok?: boolean; data?: Repository[] };
+      ctx.body = successResponse({
+        data: (body.data ?? []).map(toLedgerPublic),
+        ok: body.ok ?? null,
+      });
+      return;
+    }
+
+    // Several words, or an owner: every word must be found in `owner/name` or
+    // the description. Gitea is asked about the longest word (any ledger that
+    // matches all of them matches that one), plus the owner's ledgers when a
+    // word names an owner; the rest is filtered here and then paged.
+    const primary = terms.reduce((best, term) =>
+      term.length > best.length ? term : best,
+    );
+    const fetchAll = async (
+      params: Parameters<typeof client.repos.repoSearch>[0],
+    ): Promise<{ repos: Repository[]; ok: boolean | null }> => {
+      const repos: Repository[] = [];
+      let ok: boolean | null = null;
+      for (
+        let upstreamPage = 1;
+        upstreamPage <= SEARCH_FETCH_PAGES;
+        upstreamPage++
+      ) {
+        const res = await client.repos.repoSearch({
+          ...params,
+          page: upstreamPage,
+          limit: SEARCH_FETCH_LIMIT,
+        });
+        const body = res.data as { ok?: boolean; data?: Repository[] };
+        ok = ok ?? body.ok ?? null;
+        const batch = body.data ?? [];
+        repos.push(...batch);
+        if (batch.length < SEARCH_FETCH_LIMIT) break;
+      }
+      return { repos, ok };
+    };
+    const byWord = await fetchAll({ ...filters, q: primary });
+    const ownerId = owners.get(primary);
+    const byOwner =
+      ownerId === undefined
+        ? { repos: [] as Repository[], ok: null }
+        : await fetchAll({ ...filters, uid: ownerId });
+    const matched = dedupeById([...byWord.repos, ...byOwner.repos]).filter(
+      (repo) =>
+        terms.every(
+          (term) =>
+            term === primary ||
+            repoMatchesTerm(
+              { full_name: repo.full_name, description: repo.description },
+              term,
+            ),
+        ),
+    );
+    const size = limit ?? SEARCH_DEFAULT_LIMIT;
+    const start = ((page ?? 1) - 1) * size;
     ctx.body = successResponse({
-      data: (body.data ?? []).map(toLedgerPublic),
-      ok: body.ok ?? null,
+      data: matched.slice(start, start + size).map(toLedgerPublic),
+      ok: byWord.ok ?? byOwner.ok,
     });
   });
 
@@ -233,17 +358,23 @@ export function setLedgersHandler(router: Router): void {
   //
   // Exists for enforcement points that cannot count for themselves.
   // Same counter the app write path and the dashboard use, so counts cannot
-  // disagree about what a directive is.
+  // disagree about what a directive is. `?ref=<commit sha>` counts that commit
+  // instead of HEAD (a pull request's head, for merge).
   router.get(
     "/ledgers/:owner/:repo_name/directive-count",
     authMiddleware,
     async (ctx) => {
+      const ref = strQuery(ctx.query.ref);
+      if (ref !== undefined && !COMMIT_SHA_RE.test(ref)) {
+        throw new BadUserInputError("ref must be a commit SHA");
+      }
       const client = giteaClientForRequest(ctx);
       ctx.body = successResponse(
         await countDirectivesForRepo(
           client,
           ctx.params.owner,
           ctx.params.repo_name,
+          ref,
         ),
       );
     },
@@ -278,9 +409,7 @@ export function setLedgersHandler(router: Router): void {
             ? await client.repos.repoGet(owner, repoName)
             : undefined;
           if (!validTargetId || source?.data?.id !== targetId) {
-            throw new BadUserInputError(
-              `A ledger with the name '${slugifiedName}' already exists. Please choose a different name.`,
-            );
+            throw nameTakenError(owner, slugifiedName, target);
           }
         }
       }

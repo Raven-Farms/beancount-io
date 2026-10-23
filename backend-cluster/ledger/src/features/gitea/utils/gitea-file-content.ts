@@ -39,6 +39,13 @@ function assertWithinByteLimit(size: number, maxBytes?: number): void {
   }
 }
 
+/**
+ * A file `requireUtf8` refused: invalid UTF-8, or NUL-bearing binary data.
+ * Its own class so the FileMap loader can keep the ledger readable around a
+ * file nothing includes (w23/011).
+ */
+export class UndecodableTextError extends BadUserInputError {}
+
 function decodeText(buffer: Buffer, limits: GiteaTextReadLimits): string {
   assertWithinByteLimit(buffer.byteLength, limits.maxBytes);
   if (limits.requireUtf8 !== true) return buffer.toString("utf-8");
@@ -46,12 +53,12 @@ function decodeText(buffer: Buffer, limits: GiteaTextReadLimits): string {
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
   } catch {
-    throw new BadUserInputError(
+    throw new UndecodableTextError(
       "Included ledger files must be valid UTF-8 text",
     );
   }
   if (text.includes("\0")) {
-    throw new BadUserInputError(
+    throw new UndecodableTextError(
       "Included ledger files must be text, not binary data",
     );
   }
@@ -161,22 +168,19 @@ async function rawDataToBuffer(
 }
 
 /**
- * Decode a Gitea contents response, falling back to the raw/media endpoint for
- * blobs larger than Gitea's inline-content limit. A contents response with a
- * valid SHA and `content: null` is an existing large file, never an empty file.
+ * The bytes of a blob Gitea left out of its contents response (`content:
+ * null`), fetched from the raw endpoint. Throws `ResourceLimitReachedError`
+ * past `maxBytes` while streaming.
  */
-export async function readGiteaFileText(
+export async function readGiteaRawBuffer(
   repos: GiteaRawFileClient,
   owner: string,
   repo: string,
   filepath: string,
   response: GiteaTextContents,
   query?: { ref?: string },
-  limits: GiteaTextReadLimits = {},
-): Promise<string> {
-  const inline = decodeInlineContent(response, limits);
-  if (inline !== undefined) return inline;
-
+  maxBytes?: number,
+): Promise<Buffer> {
   if (!response.sha) {
     throw new InternalServerError(
       `Gitea omitted both content and SHA for ledger file "${filepath}"`,
@@ -199,7 +203,7 @@ export async function readGiteaFileText(
     params?: { format?: "blob" | "raw" },
   ) => Promise<{ data: unknown }>;
   const raw = await fetchRaw(owner, repo, filepath, query, {
-    format: limits.maxBytes === undefined ? "blob" : "raw",
+    format: maxBytes === undefined ? "blob" : "raw",
   });
   const responseLike = raw as unknown as {
     data?: unknown;
@@ -207,11 +211,39 @@ export async function readGiteaFileText(
     arrayBuffer?: unknown;
   };
   const payload =
-    limits.maxBytes === undefined
+    maxBytes === undefined
       ? responseLike.data
       : responseLike.body !== undefined ||
           typeof responseLike.arrayBuffer === "function"
         ? responseLike
         : responseLike.data;
-  return decodeText(await rawDataToBuffer(payload, limits.maxBytes), limits);
+  return rawDataToBuffer(payload, maxBytes);
+}
+
+/**
+ * Decode a Gitea contents response, falling back to the raw/media endpoint for
+ * blobs larger than Gitea's inline-content limit. A contents response with a
+ * valid SHA and `content: null` is an existing large file, never an empty file.
+ */
+export async function readGiteaFileText(
+  repos: GiteaRawFileClient,
+  owner: string,
+  repo: string,
+  filepath: string,
+  response: GiteaTextContents,
+  query?: { ref?: string },
+  limits: GiteaTextReadLimits = {},
+): Promise<string> {
+  const inline = decodeInlineContent(response, limits);
+  if (inline !== undefined) return inline;
+  const raw = await readGiteaRawBuffer(
+    repos,
+    owner,
+    repo,
+    filepath,
+    response,
+    query,
+    limits.maxBytes,
+  );
+  return decodeText(raw, limits);
 }

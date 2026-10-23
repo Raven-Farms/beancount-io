@@ -31,21 +31,15 @@ export const BALANCE_CONVERSION = "at_cost";
 export const VALUATION_CONVERSION = "at_value";
 
 /**
- * The key a balance map's figure in `currency` is read from: the currency
- * itself, or USD when the map has no entry for it.
- */
-export function operatingKey(
-  balanceChildren: Record<string, number | string> | null | undefined,
-  currency: string,
-): string {
-  return balanceChildren && currency in balanceChildren ? currency : "USD";
-}
-
-/**
  * Resolve a single currency balance from a beancount `balance_children` /
- * `balance` map: prefer the active currency, fall back to USD, coerce string
- * amounts to numbers, and treat missing/invalid values as 0. Shared by the
- * account selectors so the string/number + USD-fallback rules live in one place.
+ * `balance` map in the active currency, coercing string amounts to numbers and
+ * treating missing/invalid values as 0. Shared by the account selectors so the
+ * string/number rules live in one place.
+ *
+ * A map without the active currency reads 0: it used to read its USD entry,
+ * which callers then printed with the active currency's symbol, so a EUR
+ * ledger showed its dollar accounts as euros (w21/058). Its other holdings are
+ * what `notInTotalOf` discloses.
  */
 export function resolveCurrencyBalance(
   balanceChildren: Record<string, number | string> | null | undefined,
@@ -54,7 +48,7 @@ export function resolveCurrencyBalance(
   if (!balanceChildren) {
     return 0;
   }
-  const value = balanceChildren[operatingKey(balanceChildren, currency)] ?? 0;
+  const value = balanceChildren[currency] ?? 0;
   if (typeof value === "string") {
     const parsed = Number(value);
     return isNaN(parsed) ? 0 : parsed;

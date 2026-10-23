@@ -7,16 +7,31 @@ describe("selectSectionsPending", () => {
     expect(
       selectSectionsPending({
         errorsLoaded: false,
+        errorsFailed: false,
         commitsLoading: false,
         commitsLoaded: true,
       }),
     ).toEqual({ errorsPending: true, commitsPending: false });
   });
 
+  // w21/068: a failed errors query never loads, so the section shimmered
+  // forever with no message or retry.
+  it("ends the errors skeleton when its first load failed", () => {
+    expect(
+      selectSectionsPending({
+        errorsLoaded: false,
+        errorsFailed: true,
+        commitsLoading: false,
+        commitsLoaded: true,
+      }),
+    ).toEqual({ errorsPending: false, commitsPending: false });
+  });
+
   it("does not hold the commits skeleton for the errors query", () => {
     expect(
       selectSectionsPending({
         errorsLoaded: true,
+        errorsFailed: false,
         commitsLoading: true,
         commitsLoaded: false,
       }),
@@ -27,6 +42,7 @@ describe("selectSectionsPending", () => {
     expect(
       selectSectionsPending({
         errorsLoaded: true,
+        errorsFailed: false,
         commitsLoading: true,
         commitsLoaded: true,
       }),
@@ -57,5 +73,14 @@ describe("Notifications screen wiring", () => {
     expect(source.includes("isFirstLoad")).toBe(false);
     expect(source.includes("{errorsPending ? (")).toBe(true);
     expect(source.includes("{commitsPending ? (")).toBe(true);
+  });
+
+  it("shows a failed errors load with Try again rather than the healthy state", () => {
+    expect(source.includes('errorsLoadState === "failed" ? (')).toBe(true);
+    expect(
+      source.includes(
+        "<CardLoadFailure onRetry={() => void refetchErrors()} />",
+      ),
+    ).toBe(true);
   });
 });

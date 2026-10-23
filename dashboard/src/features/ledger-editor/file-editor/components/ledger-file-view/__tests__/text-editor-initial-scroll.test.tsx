@@ -8,6 +8,8 @@ const editor = {
   focus: vi.fn(),
   deltaDecorations: vi.fn(() => []),
   onDidScrollChange: vi.fn(),
+  onDidCompositionStart: vi.fn(),
+  onDidCompositionEnd: vi.fn(),
   getVisibleRanges: vi.fn(() => []),
   getDomNode: vi.fn(() => null),
   getModel: vi.fn(() => ({

@@ -44,6 +44,11 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "Confirmeu la vostra contrasenya",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Trieu una contrasenya (mínim 8 caràcters)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Crear compte",
     description: "Button to submit registration",
@@ -180,6 +185,12 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "L'inici de sessió ha fallat",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Massa intents d'inici de sessió. Espereu uns minuts i torneu-ho a provar, o restabliu la contrasenya.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Tancar sessió",
     description: "Button label to log out",
@@ -198,11 +209,12 @@ const caAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "La contrasenya ha de tenir almenys 6 caràcters",
+    message: "La contrasenya ha de tenir almenys 8 caràcters",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "La contrasenya ha de tenir com a màxim 128 caràcters",
+    message:
+      "La contrasenya és massa llarga. Utilitzeu com a màxim 72 caràcters; les lletres accentuades, els alfabets no llatins i els emojis compten com a 2 a 4 cadascun.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -247,9 +259,21 @@ const caAuth: Record<string, TranslationEntry> = {
     message: "La contrasenya és obligatòria",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Aquesta contrasenya ha aparegut en una filtració de dades. Trieu-ne una que no feu servir enlloc més.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "La contrasenya s'assembla massa al vostre correu electrònic o nom d'usuari.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
     message:
-      "La vostra contrasenya s'ha restablert. Redirigint a l'inici de sessió...",
+      "La vostra contrasenya s'ha restablert i s'ha tancat la sessió a tots els dispositius i aplicacions connectades. Redirigint a l'inici de sessió...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -756,6 +780,78 @@ const caAuth: Record<string, TranslationEntry> = {
       "L'inici de sessió amb contrasenya està desactivat en aquest servidor. Continua amb Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Verifica el correu per iniciar la sessió",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Obre l’enllaç del correu de recuperació i introdueix-ne el codi i la contrasenya actual.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Envia un correu de recuperació",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "S’està enviant el correu de recuperació...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Si aquesta adreça té un compte, aviat rebràs un correu de recuperació. Obre’n l’enllaç per continuar. Un correu de recuperació recent encara és vàlid.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Envia un altre correu de recuperació",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Torna-ho a provar a les {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Codi de verificació de sis dígits",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Introdueix el codi de sis dígits del correu de recuperació.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "El correu, el codi o la contrasenya són incorrectes, o el codi ha caducat. Pots demanar un nou correu de recuperació.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "No s’ha pogut demanar el correu de recuperació. Torna-ho a provar.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message:
+      "L’inici de sessió no està disponible temporalment. Torna-ho a provar.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "El codi caduca al cap de 10 minuts i permet un sol intent de contrasenya.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Verifica i inicia la sessió",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "S’està verificant...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

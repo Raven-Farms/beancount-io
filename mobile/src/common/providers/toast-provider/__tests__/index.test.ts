@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import {
   DEFAULT_TOAST_DURATION,
+  MAX_ERROR_TOAST_DURATION,
+  MAX_LOADING_TOAST_DURATION,
   requireToastContext,
   toastDuration,
   withToast,
@@ -27,6 +29,42 @@ describe("toast queue", () => {
       5000,
     );
     expect(toastDuration({ message: "x", type: "text", duration: 0 })).toBe(
+      DEFAULT_TOAST_DURATION,
+    );
+  });
+
+  it("keeps a loading toast up until its work settles (w21/299)", () => {
+    // "Saving…" showed for two seconds and nothing for the rest of a 6 s write.
+    expect(toastDuration({ message: "Saving…", type: "loading" })).toBe(
+      MAX_LOADING_TOAST_DURATION,
+    );
+    expect(MAX_LOADING_TOAST_DURATION > 6000).toBe(true);
+    // Only a loading toast: the others keep their durations.
+    expect(toastDuration({ message: "Saved", type: "success" })).toBe(
+      DEFAULT_TOAST_DURATION,
+    );
+    // A caller that names a duration still gets it.
+    expect(
+      toastDuration({ message: "x", type: "loading", duration: 3000 }),
+    ).toBe(3000);
+  });
+
+  it("gives an error toast time to be read, within a cap", () => {
+    // A 26-word refusal used to vanish after two seconds (w21/001).
+    expect(toastDuration({ message: "Network down", type: "error" })).toBe(
+      DEFAULT_TOAST_DURATION + 60 * "Network down".length,
+    );
+    expect(toastDuration({ message: "x".repeat(400), type: "error" })).toBe(
+      MAX_ERROR_TOAST_DURATION,
+    );
+    expect(
+      toastDuration({
+        message: "x".repeat(400),
+        type: "error",
+        duration: 3000,
+      }),
+    ).toBe(3000);
+    expect(toastDuration({ message: "x".repeat(400), type: "success" })).toBe(
       DEFAULT_TOAST_DURATION,
     );
   });

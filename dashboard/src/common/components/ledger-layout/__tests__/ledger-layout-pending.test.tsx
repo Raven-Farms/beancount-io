@@ -14,6 +14,11 @@ const { useRouterState, useParams, useLocation, useNavigate, useQuery } =
     useQuery: vi.fn(),
   }));
 
+// The failed-renewal banner reads billing state the shell under test does
+// not provide; it has its own tests.
+vi.mock("@/common/components/billing/failed-renewal-banner", () => ({
+  FailedRenewalBanner: () => null,
+}));
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useRouterState,
@@ -52,6 +57,10 @@ vi.mock("../ledger-sidebar", () => ({
 
 vi.mock("../ledger-layout-background-queries", () => ({
   LedgerLayoutBackgroundQueries: () => null,
+}));
+
+vi.mock("../ledger-layout-loading", () => ({
+  LedgerLayoutLoading: () => <div data-testid="ledger-loading" />,
 }));
 
 vi.mock("../layout-header", () => ({
@@ -186,4 +195,135 @@ describe("LedgerLayout pending outlet", () => {
       }
     },
   );
+});
+
+/**
+ * A successful write evicts the cached ledger and it reloads. The layout must
+ * keep the same ledger's page mounted meanwhile — replacing it unmounted the
+ * page and dropped keyboard focus to the body (w4/238).
+ */
+describe("LedgerLayout while its ledger reloads", () => {
+  const ledger = (fullName: string) => ({
+    id: fullName,
+    name: fullName.split("/")[1],
+    fullName,
+    options: {},
+    favaOptions: {},
+  });
+
+  beforeEach(() => {
+    const pathname = "/ledger/open_ledger/minimax/accounts";
+    const state = {
+      isLoading: false,
+      location: { pathname, search: {} },
+      matches: [{ pathname, search: {} }],
+    };
+    useRouterState.mockImplementation(
+      ({ select }: { select: (s: unknown) => unknown }) =>
+        select({ ...state, pendingMatches: [state.location] }),
+    );
+    useParams.mockReturnValue({
+      ledgerOwner: "open_ledger",
+      ledgerName: "minimax",
+    });
+    useLocation.mockReturnValue({ pathname });
+  });
+  afterEach(cleanup);
+
+  it("keeps the mounted page through a same-ledger reload", () => {
+    useQuery.mockReturnValue({
+      data: { getLedger: ledger("open_ledger/minimax") },
+      loading: false,
+      refetch: vi.fn(),
+    });
+    const { rerender } = render(<LedgerLayout />);
+    const outlet = screen.getByTestId("ledger-outlet");
+
+    useQuery.mockReturnValue({
+      data: undefined,
+      previousData: { getLedger: ledger("open_ledger/minimax") },
+      loading: true,
+      refetch: vi.fn(),
+    });
+    rerender(<LedgerLayout />);
+    expect(screen.getByTestId("ledger-outlet")).toBe(outlet);
+  });
+
+  it("never shows another ledger's data while switching", () => {
+    useQuery.mockReturnValue({
+      data: undefined,
+      previousData: { getLedger: ledger("open_ledger/other") },
+      loading: true,
+      refetch: vi.fn(),
+    });
+    render(<LedgerLayout />);
+    expect(screen.queryByTestId("ledger-outlet")).not.toBeInTheDocument();
+    expect(screen.getByTestId("ledger-loading")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Choosing another commit keeps the Version History workspace mounted with
+ * its loaded pages; leaving it for another page still hides the old outlet
+ * (w4/246).
+ */
+describe("LedgerLayout commit selection", () => {
+  const commit = (sha: string) => ({
+    routeId: "/ledger/$ledgerOwner/$ledgerName/commit/$commitSha",
+    pathname: `/ledger/open_ledger/minimax/commit/${sha}`,
+    search: {},
+  });
+
+  beforeEach(() => {
+    useParams.mockReturnValue({
+      ledgerOwner: "open_ledger",
+      ledgerName: "minimax",
+    });
+    useLocation.mockReturnValue({ pathname: commit("aaa").pathname });
+    useQuery.mockReturnValue({
+      data: {
+        getLedger: {
+          id: "open_ledger/minimax",
+          name: "minimax",
+          fullName: "open_ledger/minimax",
+          options: {},
+          favaOptions: {},
+        },
+      },
+      loading: false,
+      refetch: vi.fn(),
+    });
+  });
+  afterEach(cleanup);
+
+  const pendingTo = (next: {
+    routeId: string;
+    pathname: string;
+    search: object;
+  }) =>
+    useRouterState.mockImplementation(
+      ({ select }: { select: (s: unknown) => unknown }) =>
+        select({
+          isLoading: true,
+          location: next,
+          matches: [commit("aaa")],
+          pendingMatches: [next],
+        }),
+    );
+
+  it("keeps the workspace while another commit loads", () => {
+    pendingTo(commit("bbb"));
+    render(<LedgerLayout />);
+    expect(screen.getByTestId("ledger-outlet")).toBeInTheDocument();
+  });
+
+  it("still hides it when leaving for another page", () => {
+    pendingTo({
+      routeId: "/ledger/$ledgerOwner/$ledgerName/journal",
+      pathname: "/ledger/open_ledger/minimax/journal",
+      search: {},
+    });
+    render(<LedgerLayout />);
+    expect(screen.queryByTestId("ledger-outlet")).not.toBeInTheDocument();
+  });
 });

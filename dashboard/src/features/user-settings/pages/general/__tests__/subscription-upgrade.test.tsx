@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CheckoutReturnTo } from "@/graphql/definitions";
 import { SubscriptionSection } from "../subscription-section";
 import {
   MOCK_TIER_QUOTAS,
@@ -14,7 +15,9 @@ const {
   mockResumeSubscription,
   mockCreateStripePortalSession,
   mockCreateSubscriptionSession,
-  mockUpgradeSubscription,
+  mockRunPreview,
+  mockChangePlan,
+  mockPreviewFor,
   mockToastSuccess,
   mockToastError,
   mockToastInfo,
@@ -27,7 +30,9 @@ const {
   mockResumeSubscription: vi.fn(),
   mockCreateStripePortalSession: vi.fn(),
   mockCreateSubscriptionSession: vi.fn(),
-  mockUpgradeSubscription: vi.fn(),
+  mockRunPreview: vi.fn(),
+  mockChangePlan: vi.fn(),
+  mockPreviewFor: { fn: (_priceId: string): unknown => undefined },
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
   mockToastInfo: vi.fn(),
@@ -36,7 +41,20 @@ const {
   mockUseAllTierQuotas: vi.fn(),
 }));
 
+const { mockTrack, mockCelebrate } = vi.hoisted(() => ({
+  mockTrack: vi.fn(),
+  mockCelebrate: vi.fn(),
+}));
+vi.mock("@/common/analytics", () => ({ track: mockTrack }));
+vi.mock("@/features/user-settings/lib/celebrate", () => ({
+  celebrate: mockCelebrate,
+}));
+
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -70,12 +88,28 @@ vi.mock(
     }),
   }),
 );
-vi.mock("@/features/user-settings/hooks/use-upgrade-subscription", () => ({
-  useUpgradeSubscription: () => ({
-    upgradeSubscription: mockUpgradeSubscription,
-    loading: false,
-  }),
-}));
+// The sheet previews when it opens; this keeps the preview's result in state
+// so the sheet re-renders with it, as Apollo's lazy query does.
+vi.mock("@/features/user-settings/hooks/use-plan-change", async () => {
+  const React = await import("react");
+  return {
+    usePreviewPlanChange: () => {
+      const [data, setData] = React.useState<unknown>(undefined);
+      const run = React.useCallback(
+        (options: { variables: { priceId: string } }) => {
+          mockRunPreview(options);
+          const next = mockPreviewFor.fn(options.variables.priceId);
+          setData(next);
+          return Promise.resolve({ data: next });
+        },
+        [],
+      );
+      return [run, { data, loading: false, error: undefined }];
+    },
+    useChangePlan: () => [mockChangePlan, { loading: false }],
+    useCancelScheduledPlanChange: () => [vi.fn(), { loading: false }],
+  };
+});
 vi.mock("sonner", () => ({
   toast: {
     success: mockToastSuccess,
@@ -174,16 +208,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     i18n: { language: "en" },
   }),
 }));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
-}));
 
 function setUserLimits(
   tier = "FREE" as string,
@@ -239,107 +263,121 @@ beforeEach(() => {
   setUserLimits();
 });
 
-describe("Upgrade Options", () => {
-  it("should show upgrade cards for premium user (Growth + Org only)", () => {
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+const PRICES = {
+  premiumMonthly: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+  premiumYearly: "price_1US5htEqsEqs2tLVENCzLaZB",
+  growthMonthly: "price_1SyPdaEqsEqs2tLViLPUDoVi",
+  growthYearly: "price_1SyPdbEqsEqs2tLV7PJyWZed",
+  organizationMonthly: "price_1SyPdcEqsEqs2tLVCWEgU1PZ",
+};
 
-    render(<SubscriptionSection />);
+const PRORATION_DATE = 1792238400;
+function previewData(priceId: string, kind: string) {
+  return {
+    previewPlanChange: {
+      __typename: "PlanChangePreview",
+      kind,
+      refusal: null,
+      effect: kind === "NEW" ? "CHECKOUT" : "IMMEDIATE",
+      currentPriceId: null,
+      targetPriceId: priceId,
+      currency: "usd",
+      amountDueToday: 9000,
+      creditApplied: kind === "NEW" ? 0 : 999,
+      nextAmount: 9999,
+      nextChargeAt: "2027-10-17T12:00:00Z",
+      effectiveAt: "2026-10-17T12:00:00Z",
+      prorationDate: kind === "NEW" ? null : PRORATION_DATE,
+      alternativePriceId: null,
+      limitChanges: [],
+      paymentMethod: null,
+    },
+  };
+}
 
-    expect(
-      screen.getByText("userSettings.upgradeYourPlan"),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("aiAgent.premiumTier")).toBeInTheDocument(); // in banner
-    expect(screen.getByText("aiAgent.growthTier")).toBeInTheDocument();
-    expect(screen.getByText("aiAgent.organizationTier")).toBeInTheDocument();
+const card = (tier: string) => within(screen.getByTestId(`plan-card-${tier}`));
+
+function showSubscription(data = mockActiveSubscriptionData) {
+  mockUseQuery.mockReturnValue({
+    data,
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
   });
+}
 
-  it("should show all 3 upgrade cards for free user", () => {
-    setUserLimits("FREE");
-    mockUseQuery.mockReturnValue({
-      data: mockNoSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    render(<SubscriptionSection />);
-
-    expect(
-      screen.getByText("userSettings.upgradeYourPlan"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("aiAgent.premiumTier")).toBeInTheDocument();
-    expect(screen.getByText("aiAgent.growthTier")).toBeInTheDocument();
-    expect(screen.getByText("aiAgent.organizationTier")).toBeInTheDocument();
+function premiumSubscriber() {
+  setUserLimits("PREMIUM", {
+    aiCfoTokensUsed: 50,
+    aiCfoTokensMax: 100,
+    ledgersUsed: 2,
+    ledgersMax: 5,
+    collaboratorsPerLedgerMax: 5,
   });
+  // The fixture subscription bills monthly.
+  showSubscription(mockActiveSubscriptionData);
+}
 
-  it("should not show upgrade section for organization user", () => {
-    setUserLimits("ORGANIZATION", {
-      aiCfoTokensUsed: 500,
-      aiCfoTokensMax: 2000,
-      ledgersUsed: 10,
-      ledgersMax: 100,
-      collaboratorsPerLedgerMax: 50,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    render(<SubscriptionSection />);
-
-    expect(
-      screen.queryByText("userSettings.upgradeYourPlan"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("should not show upgrade section for enterprise user", () => {
-    setUserLimits("ENTERPRISE", {
-      aiCfoTokensUsed: 100,
-      aiCfoTokensMax: -1,
-      ledgersUsed: 5,
-      ledgersMax: -1,
-      collaboratorsPerLedgerMax: -1,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockNoSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    render(<SubscriptionSection />);
-
-    expect(
-      screen.queryByText("userSettings.upgradeYourPlan"),
-    ).not.toBeInTheDocument();
+beforeEach(() => {
+  mockPreviewFor.fn = (priceId) => previewData(priceId, "NEW");
+  Object.defineProperty(window, "location", {
+    value: { href: "", search: "" },
+    writable: true,
+    configurable: true,
   });
 });
 
-describe("Upgrade Flow", () => {
-  it("should call createSubscriptionSession when free user clicks upgrade", async () => {
+describe("Plan row", () => {
+  it("shows every tier on yearly billing by default, with Growth as most popular", () => {
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+
+    render(<SubscriptionSection />);
+
+    for (const tier of [
+      "FREE",
+      "PREMIUM",
+      "GROWTH",
+      "ORGANIZATION",
+      "ENTERPRISE",
+    ]) {
+      expect(screen.getByTestId(`plan-card-${tier}`)).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("button", { name: "userSettings.yearly" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(card("GROWTH").getByText("aiAgent.popular")).toBeInTheDocument();
+    expect(
+      card("PREMIUM").queryByText("aiAgent.popular"),
+    ).not.toBeInTheDocument();
+    expect(
+      card("PREMIUM").getByText("userSettings.billedYearly"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a free user every paid tier and keeps Free as the current plan", () => {
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+
+    render(<SubscriptionSection />);
+
+    for (const tier of ["PREMIUM", "GROWTH", "ORGANIZATION"]) {
+      expect(
+        card(tier).getByRole("button", { name: "aiAgent.upgradeCta" }),
+      ).toBeEnabled();
+    }
+    expect(
+      card("FREE").getByRole("button", { name: "userSettings.currentPlan" }),
+    ).toBeDisabled();
+    expect(
+      card("ENTERPRISE").getByRole("link", { name: "userSettings.contactUs" }),
+    ).toHaveAttribute("href", "https://beancount.io/tg");
+  });
+
+  it("previews a free user's choice, then checks out on the cycle they chose", async () => {
     const user = userEvent.setup();
     setUserLimits("FREE");
-    mockUseQuery.mockReturnValue({
-      data: mockNoSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
+    showSubscription(mockNoSubscriptionData);
     mockCreateSubscriptionSession.mockResolvedValue({
       data: {
         createSubscriptionSession: {
@@ -349,133 +387,161 @@ describe("Upgrade Flow", () => {
       },
     });
 
-    // Mock window.location.href
-    Object.defineProperty(window, "location", {
-      value: { href: "", search: "" },
-      writable: true,
-      configurable: true,
-    });
-
     render(<SubscriptionSection />);
-
-    // Find upgrade buttons (from aiAgent.upgradeCta)
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    expect(upgradeButtons.length).toBe(3); // 3 tiers for free user
-
-    // Click the first one (premium)
-    await user.click(upgradeButtons[0]);
+    await user.click(
+      card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.premiumYearly,
+      },
+    });
+    expect(mockCreateSubscriptionSession).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeContinueToCheckout",
+      }),
+    );
 
     await waitFor(() => {
       expect(mockCreateSubscriptionSession).toHaveBeenCalledWith({
         variables: {
-          clientId: "test-client",
-          priceId: "price_premium",
+          clientId: "beancount-web-prod",
+          priceId: PRICES.premiumYearly,
+          returnTo: CheckoutReturnTo.Billing,
         },
       });
     });
+    expect(window.location.href).toBe(
+      "https://checkout.stripe.com/session/test",
+    );
   });
 
-  it("should call upgradeSubscription when paid user with Stripe sub clicks upgrade", async () => {
-    const user = userEvent.setup();
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    mockUpgradeSubscription.mockResolvedValue({
-      data: {
-        upgradeSubscription: {
-          success: true,
-          message: "Subscription upgraded successfully.",
-        },
-      },
-    });
-
-    render(<SubscriptionSection />);
-
-    // Premium user sees growth + org upgrade cards
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    expect(upgradeButtons.length).toBe(2);
-
-    // Click upgrade → should call upgradeSubscription (not portal or checkout)
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalledWith({
-        variables: { clientId: "test-client", priceId: "price_growth" },
-      });
-    });
-
-    // Should NOT call createSubscriptionSession
-    expect(mockCreateSubscriptionSession).not.toHaveBeenCalled();
-    // Should NOT call portal session
-    expect(mockCreateStripePortalSession).not.toHaveBeenCalled();
-  });
-
-  it("should show error toast when checkout fails for free user", async () => {
+  it("checks a free user out monthly when they pick the monthly cycle", async () => {
     const user = userEvent.setup();
     setUserLimits("FREE");
-    mockUseQuery.mockReturnValue({
-      data: mockNoSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
-
+    showSubscription(mockNoSubscriptionData);
     mockCreateSubscriptionSession.mockResolvedValue({
       data: {
-        createSubscriptionSession: {
-          success: false,
-          sessionUrl: null,
-          message: "Card declined",
-        },
+        createSubscriptionSession: { success: true, sessionUrl: "https://x" },
       },
     });
 
     render(<SubscriptionSection />);
-
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
+    await user.click(
+      card("GROWTH").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeContinueToCheckout",
+      }),
+    );
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Card declined");
+      expect(mockCreateSubscriptionSession).toHaveBeenCalledWith({
+        variables: {
+          clientId: "beancount-web-prod",
+          priceId: PRICES.growthMonthly,
+          returnTo: CheckoutReturnTo.Billing,
+        },
+      });
+    });
+    expect(mockTrack).toHaveBeenCalledWith("billing_toggle_changed", {
+      to: "monthly",
+      surface: "settings_billing",
+    });
+    expect(mockTrack).toHaveBeenCalledWith("checkout_started", {
+      target_tier: "GROWTH",
+      surface: "settings_billing",
     });
   });
 
-  it("should show error toast when checkout throws for free user", async () => {
+  it("does not count a click on the cycle already shown", async () => {
     const user = userEvent.setup();
     setUserLimits("FREE");
-    mockUseQuery.mockReturnValue({
-      data: mockNoSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
-    });
+    showSubscription(mockNoSubscriptionData);
+    mockTrack.mockClear();
 
-    mockCreateSubscriptionSession.mockRejectedValue(
-      new Error("Network failure"),
+    render(<SubscriptionSection />);
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.yearly" }),
     );
+
+    expect(
+      mockTrack.mock.calls.filter(
+        ([event]) => event === "billing_toggle_changed",
+      ),
+    ).toEqual([]);
+  });
+
+  it("labels each choice for a monthly subscriber the way the server classifies it", async () => {
+    const user = userEvent.setup();
+    premiumSubscriber();
 
     render(<SubscriptionSection />);
 
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
+    // Yearly: every paid tier from Premium monthly is a switch to yearly.
+    expect(
+      card("PREMIUM").getByRole("button", {
+        name: "userSettings.switchToYearly",
+      }),
+    ).toBeEnabled();
+    expect(
+      card("GROWTH").getByRole("button", {
+        name: "userSettings.switchToYearly",
+      }),
+    ).toBeEnabled();
+    // Free is a downgrade, which waits for the renewal date and is not live yet.
+    expect(
+      card("FREE").getByRole("button", { name: "userSettings.downgrade" }),
+    ).toBeDisabled();
 
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("common.errors.generic");
-    });
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
+    expect(
+      card("PREMIUM").getByRole("button", { name: "userSettings.currentPlan" }),
+    ).toBeDisabled();
+    expect(
+      card("GROWTH").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    ).toBeEnabled();
   });
 
-  it("should show only organization upgrade for growth user", () => {
+  it("changes a subscriber's plan in place at the previewed proration time", async () => {
+    const user = userEvent.setup();
+    premiumSubscriber();
+    mockPreviewFor.fn = (priceId) => previewData(priceId, "TO_YEARLY");
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
+    });
+
+    render(<SubscriptionSection />);
+    await user.click(
+      card("GROWTH").getByRole("button", {
+        name: "userSettings.switchToYearly",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
+
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.growthYearly,
+        prorationDate: PRORATION_DATE,
+      },
+    });
+    expect(mockCreateSubscriptionSession).not.toHaveBeenCalled();
+  });
+
+  it("opens the sheet for changes that wait for renewal, saying so on the card", async () => {
+    const user = userEvent.setup();
     setUserLimits("GROWTH", {
       aiCfoTokensUsed: 200,
       aiCfoTokensMax: 500,
@@ -483,23 +549,276 @@ describe("Upgrade Flow", () => {
       ledgersMax: 20,
       collaboratorsPerLedgerMax: 10,
     });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
+    const yearly = structuredClone(mockActiveSubscriptionData);
+    yearly.subscriptionStatus.subscriptions[0].items[0].price.interval = "year";
+    showSubscription(yearly);
+    mockPreviewFor.fn = (priceId) => previewData(priceId, "SPLIT");
+
+    render(<SubscriptionSection />);
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
+
+    expect(
+      card("GROWTH").getByRole("button", {
+        name: "userSettings.switchToMonthly",
+      }),
+    ).toBeEnabled();
+    expect(
+      card("ORGANIZATION").getByText("userSettings.planChangeAtRenewal"),
+    ).toBeInTheDocument();
+    await user.click(
+      card("ORGANIZATION").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.organizationMonthly,
+      },
+    });
+  });
+
+  it("shows checkout errors to a free user", async () => {
+    const user = userEvent.setup();
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+    mockCreateSubscriptionSession
+      .mockResolvedValueOnce({
+        data: {
+          createSubscriptionSession: {
+            success: false,
+            sessionUrl: null,
+            message: "Card declined",
+          },
+        },
+      })
+      .mockRejectedValueOnce(new Error("Network failure"));
+
+    render(<SubscriptionSection />);
+    await user.click(
+      card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    const checkout = screen.getByRole("button", {
+      name: "userSettings.planChangeContinueToCheckout",
+    });
+    await user.click(checkout);
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith("Card declined"),
+    );
+    await user.click(checkout);
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenLastCalledWith("common.errors.generic"),
+    );
+  });
+});
+
+describe("Pay yearly offer", () => {
+  it("offers a monthly subscriber their plan on yearly billing and switches it in place", async () => {
+    const user = userEvent.setup();
+    premiumSubscriber();
+    mockPreviewFor.fn = (priceId) => previewData(priceId, "TO_YEARLY");
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "PREMIUM" } },
+    });
+
+    render(<SubscriptionSection />);
+    const offer = within(screen.getByTestId("pay-yearly-offer"));
+    expect(offer.getByText("userSettings.payYearlyOffer")).toBeInTheDocument();
+    await user.click(
+      offer.getByRole("button", { name: "userSettings.switchToYearly" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
+
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: PRICES.premiumYearly,
+        prorationDate: PRORATION_DATE,
+      },
+    });
+  });
+
+  it("is absent for a free user and for a yearly subscriber", () => {
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+    const { unmount } = render(<SubscriptionSection />);
+    expect(screen.queryByTestId("pay-yearly-offer")).not.toBeInTheDocument();
+    unmount();
+
+    premiumSubscriber();
+    const yearly = structuredClone(mockActiveSubscriptionData);
+    yearly.subscriptionStatus.subscriptions[0].items[0].price.interval = "year";
+    showSubscription(yearly);
+    render(<SubscriptionSection />);
+    expect(screen.queryByTestId("pay-yearly-offer")).not.toBeInTheDocument();
+  });
+});
+
+describe("Checkout return", () => {
+  /** A Premium subscriber whose latest invoice is the given one. */
+  function returnedWith(latestInvoice: {
+    id: string;
+    amountPaid: number;
+    billingReason: string;
+    created?: string;
+  }) {
+    premiumSubscriber();
+    const data = structuredClone(mockActiveSubscriptionData);
+    data.subscriptionStatus.subscriptions[0].latestInvoice = {
+      __typename: "SubscriptionInvoice",
+      currency: "usd",
+      created: new Date().toISOString(),
+      ...latestInvoice,
+    };
+    showSubscription(data);
+  }
+  const purchases = () =>
+    mockTrack.mock.calls.filter(([event]) => event === "purchase");
+
+  it("counts Checkout's first invoice once it is recorded, and celebrates it once", () => {
+    returnedWith({
+      id: "in_checkout",
+      amountPaid: 1499,
+      billingReason: "subscription_create",
+    });
+
+    const { rerender } = render(<SubscriptionSection checkoutReturned />);
+    rerender(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([
+      [
+        "purchase",
+        expect.objectContaining({
+          transaction_id: "in_checkout",
+          value: 14.99,
+          currency: "USD",
+        }),
+      ],
+    ]);
+    expect(mockCelebrate).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts and celebrates a fully discounted Checkout like any other", () => {
+    returnedWith({
+      id: "in_checkout_free",
+      amountPaid: 0,
+      billingReason: "subscription_create",
+    });
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([
+      [
+        "purchase",
+        expect.objectContaining({
+          transaction_id: "in_checkout_free",
+          value: 0,
+        }),
+      ],
+    ]);
+    expect(mockCelebrate).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts and celebrates nothing when the latest invoice is a renewal", () => {
+    returnedWith({
+      id: "in_renewal",
+      amountPaid: 1499,
+      billingReason: "subscription_cycle",
+    });
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("counts and celebrates nothing when the confirmation link is opened a day later", () => {
+    // A bookmark or another browser: the purchase was counted when it happened.
+    returnedWith({
+      id: "in_old",
+      amountPaid: 1499,
+      billingReason: "subscription_create",
+      created: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+    });
+
+    render(<SubscriptionSection checkoutReturned />);
+
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("counts nothing on an ordinary Billing visit, even right after a purchase", () => {
+    returnedWith({
+      id: "in_visit",
+      amountPaid: 1499,
+      billingReason: "subscription_create",
     });
 
     render(<SubscriptionSection />);
 
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("counts nothing while the webhook has not recorded the subscription", () => {
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+
+    render(<SubscriptionSection checkoutReturned />);
+
     expect(
-      screen.getByText("userSettings.upgradeYourPlan"),
+      within(screen.getByTestId("checkout-confirmation")).getByText(
+        "userSettings.checkoutConfirming",
+      ),
     ).toBeInTheDocument();
-    // Should only show organization
-    expect(screen.getByText("aiAgent.organizationTier")).toBeInTheDocument();
-    // Should not show premium or growth as upgrade options
-    // (growth is in the banner, not in upgrade cards)
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    expect(upgradeButtons).toHaveLength(1);
+    expect(purchases()).toEqual([]);
+    expect(mockCelebrate).not.toHaveBeenCalled();
+  });
+
+  it("remembers where a purchase began and offers the way back once it is recorded", async () => {
+    const user = userEvent.setup();
+    setUserLimits("FREE");
+    showSubscription(mockNoSubscriptionData);
+    mockCreateSubscriptionSession.mockResolvedValue({
+      data: {
+        createSubscriptionSession: {
+          success: true,
+          sessionUrl: "https://checkout.stripe.com/session/test",
+        },
+      },
+    });
+
+    const { unmount } = render(
+      <SubscriptionSection returnTo="/ledger/alice/books" />,
+    );
+    await user.click(
+      card("PREMIUM").getByRole("button", { name: "aiAgent.upgradeCta" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeContinueToCheckout",
+      }),
+    );
+    await waitFor(() =>
+      expect(window.location.href).toBe(
+        "https://checkout.stripe.com/session/test",
+      ),
+    );
+    unmount();
+
+    // Stripe returns after payment; the webhook has recorded the subscription.
+    premiumSubscriber();
+    render(<SubscriptionSection checkoutReturned />);
+    const confirmation = within(screen.getByTestId("checkout-confirmation"));
+    expect(
+      confirmation.getByText("userSettings.checkoutDone"),
+    ).toBeInTheDocument();
+    expect(
+      confirmation.getByRole("link", { name: "userSettings.backToWork" }),
+    ).toHaveAttribute("href", "/ledger/alice/books");
   });
 });

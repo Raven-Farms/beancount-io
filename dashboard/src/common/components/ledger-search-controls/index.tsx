@@ -98,10 +98,7 @@ export const LedgerSearchControls = ({
     filterType: keyof LedgerSearchParams,
     value: string,
   ) => {
-    setSearchParams({
-      ...searchParams,
-      [filterType]: value,
-    });
+    setSearchParams({ [filterType]: value });
   };
 
   const handleClearAll = () => {

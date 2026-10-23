@@ -13,11 +13,13 @@ import {
 } from "./aggregate-payees";
 import type { RecurrenceVerdict } from "./detect-recurrence";
 import {
+  endedBeforeSeriesWindow,
   resolveRecurringVerdict,
   type RecurringOverride,
   type ResolvedCadence,
   type ResolvedRecurring,
 } from "./resolve-recurring";
+import { merchantKey } from "../../../common/merchant-key";
 
 type MerchantSectionKey = "recurring" | "all";
 
@@ -31,7 +33,7 @@ export interface MerchantListItem {
 export interface MerchantSection {
   key: MerchantSectionKey;
   /** Translation key for the section header; null = no header chrome. */
-  titleKey: "merchantsRecurringSection" | null;
+  titleKey: "merchantsRecurringSection" | "merchantsAllSection" | null;
   data: MerchantListItem[];
 }
 
@@ -40,7 +42,7 @@ export type OverrideLookup = (payee: string) => RecurringOverride | null;
 /**
  * Build directory sections. Search filters both; sort applies only inside the
  * general section — the Recurring pin keeps detection/override order
- * (next-expected ascending, overdue first).
+ * (next-expected ascending, overdue first, lapsed series last).
  */
 export function buildMerchantSections(
   merchants: readonly MerchantAggregate[],
@@ -50,15 +52,18 @@ export function buildMerchantSections(
   overrideForPayee: OverrideLookup,
   searchQuery: string,
   sort: MerchantSort,
+  today?: string,
 ): MerchantSection[] {
   const filtered = filterMerchants([...merchants], searchQuery);
 
   const items: MerchantListItem[] = filtered.map((merchant) => {
-    const detection = detections.get(merchant.payee) ?? null;
+    const key = merchantKey(merchant.payee);
+    const detection = detections.get(key) ?? null;
     const resolved = resolveRecurringVerdict(
       detection,
       overrideForPayee(merchant.payee),
-      enoughHistory.has(merchant.payee),
+      enoughHistory.has(key),
+      today !== undefined && endedBeforeSeriesWindow(merchant.lastDate, today),
     );
     return {
       merchant,
@@ -95,7 +100,9 @@ export function buildMerchantSections(
   if (general.length > 0) {
     sections.push({
       key: "all",
-      titleKey: null,
+      // Untitled on its own; under a Recurring section it needs a heading, or
+      // every merchant reads as recurring (w21/020).
+      titleKey: recurring.length > 0 ? "merchantsAllSection" : null,
       data: general,
     });
   }
@@ -103,6 +110,12 @@ export function buildMerchantSections(
 }
 
 function compareRecurring(a: MerchantListItem, b: MerchantListItem): number {
+  // A stopped series sorts below every live one, whatever its stale date.
+  const aLapsed = a.resolved.detection?.isLapsed ? 1 : 0;
+  const bLapsed = b.resolved.detection?.isLapsed ? 1 : 0;
+  if (aLapsed !== bLapsed) {
+    return aLapsed - bLapsed;
+  }
   const aOver = a.resolved.detection?.isOverdue ? 0 : 1;
   const bOver = b.resolved.detection?.isOverdue ? 0 : 1;
   if (aOver !== bOver) {
@@ -129,16 +142,24 @@ export function cadenceLabelKey(
       return "merchantsCadenceWeekly";
     case "biweekly":
       return "merchantsCadenceBiweekly";
+    case "semimonthly":
+      return "merchantsCadenceSemimonthly";
     case "monthly":
       return "merchantsCadenceMonthly";
+    case "bimonthly":
+      return "merchantsCadenceBimonthly";
     case "quarterly":
       return "merchantsCadenceQuarterly";
+    case "semiannual":
+      return "merchantsCadenceSemiannual";
     case "yearly":
       return "merchantsCadenceYearly";
     case "irregular":
       return "merchantsCadenceIrregular";
     case "unknown":
       return "merchantsCadenceUnknown";
+    case "inactive":
+      return "merchantsCadenceInactive";
     default:
       return null;
   }

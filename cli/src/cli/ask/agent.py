@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import threading
+import warnings
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from pydantic_ai import Agent, AgentRunResult, ModelRetry, RunContext
 from pydantic_ai.exceptions import AgentRunError, ModelAPIError, ModelHTTPError, UsageLimitExceeded
-from pydantic_ai.messages import ModelMessage, ModelResponse
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models import ModelRequestParameters
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
@@ -20,7 +23,7 @@ from pydantic_ai.usage import UsageLimits
 
 from cli import output
 from cli.ask.results import format_result
-from cli.ask.skills import AgentSkill, build_skills_index_prompt
+from cli.ask.skills import MAX_BODY, AgentSkill, build_skills_index_prompt
 from cli.engine import launch
 from cli.errors import BeaError, LedgerError, error_from_status, redirect_error, request_id_from
 from cli.errors import server_message as _server_message
@@ -125,13 +128,33 @@ MAX_OUTPUT_TOKENS = 1500
 #: the cap fell, mid-figure included, and printed as if complete (w5/546).
 CUT_OFF_NOTICE = "The answer reached the per-answer limit and was cut off; ask a narrower question."
 
+#: Said when the provider's content filter stopped an answer partway: the text
+#: printed above is its beginning only, and the length wording would mislead
+#: about what to try instead (w5/745).
+FILTER_NOTICE = (
+    "The answer was stopped by the provider's content filter and is incomplete; rephrase the question and retry."
+)
 
-def cut_off(result: AgentRunResult[str]) -> bool:
-    """Whether a run's final answer stopped at the output cap instead of finishing."""
+
+def cut_off_notice(result: AgentRunResult[str]) -> str | None:
+    """The notice a run's final answer needs, when part of it is not the whole.
+
+    An answer cut at the output cap and one stopped by the content filter both
+    print their partial text; only the notice keeps either from reading as
+    complete. A fully filtered answer carries no text to mistake, so it needs
+    no notice.
+    """
     for message in reversed(result.all_messages()):
         if isinstance(message, ModelResponse):
-            return getattr(message, "finish_reason", None) == "length"
-    return False
+            reason = getattr(message, "finish_reason", None)
+            if reason == "length":
+                return CUT_OFF_NOTICE
+            if reason == "content_filter" and any(
+                isinstance(part, TextPart) and part.content for part in message.parts
+            ):
+                return FILTER_NOTICE
+            return None
+    return None
 
 
 def usage_limits() -> UsageLimits:
@@ -150,7 +173,7 @@ class WritePermission:
     deny_all: bool = False
     #: Called with the directive text and the append destination the engine's
     #: dry run resolved — never the root ledger, which `--into` makes wrong.
-    confirm_fn: Callable[[str, str, list[str]], str] | None = None
+    confirm_fn: Callable[[str, str, list[str], dict[str, Any]], str] | None = None
 
 
 @dataclass
@@ -162,8 +185,19 @@ class BqlDeps:
     #: What this question has written: one (directive count, file) per approved
     #: write that landed. A failure report must not deny a write that happened —
     #: told "nothing was written", a user retries and duplicates the entry
-    #: (w1/095). `translated_failures` resets it at the start of every turn.
+    #: (w1/095). `begin_turn` resets it at the start of every turn.
     writes: list[tuple[int, str]] = field(default_factory=list)
+    #: Set when the turn is interrupted: a write that has not shown its panel
+    #: returns "Write cancelled" instead of prompting or writing (w5/731).
+    #: Replaced every turn, and read through the snapshot a worker took when
+    #: its call started, so a worker the turn outlived still sees its own
+    #: turn's cancellation.
+    cancel_event: threading.Event = field(default_factory=threading.Event)
+    #: One write at a time: the SDK runs a reply's sync tools at once in
+    #: worker threads, and two consent selectors must never share the
+    #: terminal (w5/544). The REPL also takes it after an interrupt, so an
+    #: approved write landing then records before it is reported (w5/731).
+    write_lock: threading.Lock = field(default_factory=threading.Lock)
 
 
 def written_so_far(deps: BqlDeps | None) -> str:
@@ -175,6 +209,20 @@ def written_so_far(deps: BqlDeps | None) -> str:
         per_file[target] = per_file.get(target, 0) + count
     landed = ", ".join(f"{count} directive(s) to {target}" for target, count in per_file.items())
     return f"this question had already written {landed}, which stay in your ledger"
+
+
+def begin_turn(deps: BqlDeps) -> None:
+    """Reset the turn's write record and interrupt flag for a new question.
+
+    The REPL resets when the turn begins, so a turn cancelled before its run
+    — inside the spinner startup — reports only what it wrote: nothing
+    (w5/734). `translated_failures` resets again at the run, which keeps
+    `--print` (and any caller that never began a turn) correct; the second
+    reset is harmless, and a worker its turn outlived still reads the flag
+    snapshot it took when its call started.
+    """
+    deps.writes.clear()
+    deps.cancel_event = threading.Event()
 
 
 @contextmanager
@@ -204,19 +252,23 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
     `deps` is the turn's state: its record of writes is cleared on entry, so
     every arm can say what this question actually wrote — "nothing" only when
     that is true — instead of a claim written for `--print`, where writes are
-    impossible (w1/095).
+    impossible (w1/095). The interrupt flag is replaced too, so last turn's
+    Ctrl-C never cancels this turn's writes (w5/731).
     """
     if deps is not None:
-        deps.writes.clear()
+        begin_turn(deps)
     try:
         yield
     except ModelHTTPError as exc:
         if 300 <= exc.status_code < 400:
             raise _naming_writes(redirect_error(exc.status_code, getattr(exc, "headers", None)), deps) from exc
+        request_id = request_id_from(getattr(exc, "headers", None))
         quota = _quota_refusal(exc.body, written_so_far(deps))
         if quota is not None:
-            raise BeaError(quota) from exc
-        raise _naming_writes(error_from_status(exc.status_code, _server_message(exc.body)), deps) from exc
+            raise BeaError(quota, request_id=request_id) from exc
+        raise _naming_writes(
+            error_from_status(exc.status_code, _server_message(exc.body), request_id=request_id), deps
+        ) from exc
     except ModelAPIError as exc:
         # The SDK wraps redirects as ModelAPIError rather than ModelHTTPError,
         # just like connection failures. Inspect the actual cause before
@@ -244,12 +296,13 @@ def translated_failures(deps: BqlDeps | None = None) -> Iterator[None]:
         ) from exc
 
 
-def _naming_writes(error: BeaError, deps: BqlDeps | None) -> BeaError:
-    """The status table's sentence, plus the write it would otherwise leave out.
+def _naming_writes[T: BaseException](error: T, deps: BqlDeps | None) -> T:
+    """The failure's sentence, plus the write it would otherwise leave out.
 
-    Those sentences make no claim about the ledger, so nothing is added when the
-    question wrote nothing; after a write, silence reads as "nothing happened"
-    and invites the retry that duplicates the entry.
+    Translated sentences make no claim about the ledger, and failures no arm
+    translates make none either, so nothing is added when the question wrote
+    nothing; after a write, silence reads as "nothing happened" and invites
+    the retry that duplicates the entry.
     """
     if deps is not None and deps.writes:
         clause = written_so_far(deps)
@@ -269,10 +322,7 @@ def _model_api_error(exc: BaseException) -> BeaError:
 
     from cli.errors import to_bea_error
 
-    cause: BaseException | None = exc
-    seen: set[int] = set()
-    while cause is not None and id(cause) not in seen:
-        seen.add(id(cause))
+    for cause in _causes(exc):
         response = getattr(cause, "response", None)
         if isinstance(response, httpx.Response):
             if 300 <= response.status_code < 400:
@@ -288,7 +338,6 @@ def _model_api_error(exc: BaseException) -> BeaError:
             )
         if isinstance(cause, httpx.TransportError):
             return to_bea_error(cause)
-        cause = cause.__cause__ or cause.__context__
     return BeaError(f"Could not reach the server ({type(exc).__name__}).")
 
 
@@ -327,10 +376,12 @@ def ledger_root_names(file: Path) -> dict[str, str]:
     on a ledger with `option "name_expenses" "Aufwand"` a model following them
     queried roots that hold nothing and read the 0 rows as no data (w5/403).
     Read as text: the frontend never loads the ledger, and Beancount takes
-    these options from the root file, the last one winning.
+    these options from the root file, the last one winning. A leading UTF-8
+    BOM is dropped, or it hid the first option when that was the rename
+    (w5/891).
     """
     try:
-        text = file.read_text(encoding="utf-8", errors="replace")
+        text = file.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
         return {}
     named = {_DEFAULT_ROOTS[key]: name for key, name in _ROOT_OPTION.findall(text)}
@@ -357,6 +408,73 @@ class UnreadableModelReply(Exception):
         self.status = status
 
 
+#: Model attempts per request: the first try plus two retries, the count the
+#: SDK client's own default made. Retries live here instead of in that setting
+#: so a failure that cannot heal is reported after one request instead of
+#: billed three times (w5/745).
+_MODEL_ATTEMPTS = 3
+
+
+def _causes(exc: BaseException) -> Iterator[BaseException]:
+    """The exception and its causes, without looping on a cycle."""
+    seen: set[int] = set()
+    cause: BaseException | None = exc
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        yield cause
+        cause = cause.__cause__ or cause.__context__
+
+
+def _decode_status(exc: BaseException) -> int | None:
+    """The status whose body claims an encoding it was not sent in, if any.
+
+    A 200 labelled gzip but not gzipped reaches bea as a connection error with
+    an `httpx.DecodingError` in its cause chain: the bytes arrived, they just
+    cannot be read. That is an unreadable reply, not an unreachable server —
+    and sending it again bills the same question for the same failure.
+    """
+    import httpx
+
+    status: int | None = None
+    found = False
+    for cause in _causes(exc):
+        if isinstance(cause, httpx.DecodingError):
+            found = True
+        if status is None:
+            response = getattr(cause, "response", None)
+            code = getattr(cause, "status_code", None)
+            if isinstance(response, httpx.Response):
+                status = response.status_code
+            elif isinstance(code, int):
+                status = code
+    if not found:
+        return None
+    return status if status is not None else 200
+
+
+def _answered(exc: BaseException) -> bool:
+    """Whether the cause chain carries the server's HTTP response.
+
+    A response means the server was reached and spoke — a redirect, refused at
+    once and never followed (w5/679). Only a failure with no response at all —
+    refused, reset, timed out — is a connection worth retrying.
+    """
+    import httpx
+
+    return any(isinstance(getattr(cause, "response", None), httpx.Response) for cause in _causes(exc))
+
+
+def _retryable_status(exc: ModelHTTPError) -> bool:
+    """Whether an HTTP failure may heal on another attempt.
+
+    The client's own retry set, which this loop carries: a timeout, a lock, a
+    rate limit, or a 5xx — unless the server itself says not to retry.
+    """
+    if exc.status_code not in (408, 409, 429) and exc.status_code < 500:
+        return False
+    return (exc.headers or {}).get("x-should-retry") != "false"
+
+
 class _ProxyChatModel(OpenAIChatModel):
     """The chat model, with a reply its SDK cannot read raised as one exception.
 
@@ -369,6 +487,12 @@ class _ProxyChatModel(OpenAIChatModel):
     and a `"type": "custom"` tool call the SDK's own `RuntimeError` (w5/547).
     Only the model call is wrapped, so a fault in bea's own tools is never
     reported as the server's.
+
+    The wrap also carries the request retries the client's own setting used
+    to: transient failures get their attempts, while a body in an encoding it
+    was not sent in is reported after the first (w5/745). And warnings stay
+    inside the wrap — a wrong-typed field warns from within the reply's parse,
+    and the warning would otherwise print ahead of bea's own sentence.
     """
 
     async def request(
@@ -379,21 +503,42 @@ class _ProxyChatModel(OpenAIChatModel):
     ) -> ModelResponse:
         from openai import APIResponseValidationError
 
-        try:
-            return await super().request(messages, model_settings, model_request_parameters)
-        except APIResponseValidationError as exc:
-            raise UnreadableModelReply(exc.response.status_code) from exc
-        except (ValueError, IndexError, KeyError, TypeError, RecursionError) as exc:
-            # The SDK parses only a successful body; any other status raises its
-            # status error, which arrives as `ModelHTTPError`. `ValueError`
-            # covers `JSONDecodeError` and `UnicodeDecodeError`.
-            raise UnreadableModelReply(200) from exc
-        except RuntimeError as exc:
-            # Only the SDK's refusal of a custom tool call: its own run failures
-            # (`AgentRunError`) are `RuntimeError`s too, and are reported apart.
-            if type(exc) is not RuntimeError or not str(exc).startswith("Custom tool calls"):
+        for attempt in range(_MODEL_ATTEMPTS):
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    return await super().request(messages, model_settings, model_request_parameters)
+            except APIResponseValidationError as exc:
+                raise UnreadableModelReply(exc.response.status_code) from exc
+            except ModelHTTPError as exc:
+                # `ModelHTTPError` subclasses `ModelAPIError`, so this arm is
+                # first: a refused credential or bad request reports at once.
+                if _retryable_status(exc) and attempt + 1 < _MODEL_ATTEMPTS:
+                    await asyncio.sleep(0.5 * 2**attempt)
+                    continue
                 raise
-            raise UnreadableModelReply(200) from exc
+            except ModelAPIError as exc:
+                status = _decode_status(exc)
+                if status is not None:
+                    raise UnreadableModelReply(status) from exc
+                if _answered(exc):
+                    raise
+                if attempt + 1 < _MODEL_ATTEMPTS:
+                    await asyncio.sleep(0.5 * 2**attempt)
+                    continue
+                raise
+            except (ValueError, IndexError, KeyError, TypeError, RecursionError) as exc:
+                # The SDK parses only a successful body; any other status raises its
+                # status error, which arrives as `ModelHTTPError`. `ValueError`
+                # covers `JSONDecodeError` and `UnicodeDecodeError`.
+                raise UnreadableModelReply(200) from exc
+            except RuntimeError as exc:
+                # Only the SDK's refusal of a custom tool call: its own run failures
+                # (`AgentRunError`) are `RuntimeError`s too, and are reported apart.
+                if type(exc) is not RuntimeError or not str(exc).startswith("Custom tool calls"):
+                    raise
+                raise UnreadableModelReply(200) from exc
+        raise AssertionError("unreachable: the loop returns, raises, or retries")
 
 
 def make_agent(
@@ -402,9 +547,24 @@ def make_agent(
     api_key: str,
     skills: list[AgentSkill] | None = None,
 ) -> Agent[BqlDeps, str]:
+    from openai import AsyncOpenAI
+    from pydantic_ai.models import create_async_http_client
+
     model = _ProxyChatModel(
         model_name,
-        provider=OpenAIProvider(base_url=base_url, api_key=api_key),
+        # The client's own retries are off: `_ProxyChatModel.request` retries
+        # transient failures itself, so a body in the wrong encoding is
+        # reported after one request instead of billed three times (w5/745).
+        # The transport stays the provider's own, which never follows a
+        # redirect (w5/679): only the retry count changes.
+        provider=OpenAIProvider(
+            openai_client=AsyncOpenAI(
+                base_url=base_url,
+                api_key=api_key,
+                max_retries=0,
+                http_client=create_async_http_client(),
+            )
+        ),
     )
     system_prompt = _SYSTEM_PROMPT
     if skills:
@@ -433,10 +593,15 @@ def make_agent(
         """
         if not query.strip():
             raise ModelRetry("The query is empty. Send a BQL SELECT statement.")
+        if "\x00" in query:
+            # A NUL cannot cross into the helper's argv (`Popen` raises
+            # `ValueError`), and BQL could not parse it anyway (w5/744).
+            raise ModelRetry("The query contains a NUL byte, which Beancount cannot parse. Send the query without it.")
         try:
             # Rows and columns, not the rendered table: the row count, a visible
             # zero and a bounded result all need the typed shape (`ask.results`).
-            data = launch.helper_json(["query", "--file", str(ctx.deps.file), query, "--format", "json"])
+            # After `--`, so a query that begins with a dash stays a query.
+            data = launch.helper_json(["query", "--file", str(ctx.deps.file), "--format", "json", "--", query])
         except BeaError as exc:
             raise ModelRetry(_query_failure(exc)) from exc
         return format_result(query, data)
@@ -447,8 +612,6 @@ def make_agent(
     # and both dry runs predated either write (w5/544). One write at a time,
     # each dry run after the last write; a lock, not `sequential=True`, since
     # the ask extra accepts pydantic-ai releases older than that option.
-    write_lock = threading.Lock()
-
     @agent.tool()
     def write_directive(ctx: RunContext[BqlDeps], directive: str) -> str:
         """Append Beancount directive text (one or more directives) to the ledger file.
@@ -458,17 +621,36 @@ def make_agent(
         declines it; in non-interactive mode writes are skipped. Returns one line: how many
         directives were added and to which file, or why nothing was written.
         """
-        with write_lock:
+        # The turn's own flag, not the live one: the REPL replaces it every
+        # turn, and a worker the turn outlived must still see its own turn's
+        # cancellation (w5/731).
+        cancelled = ctx.deps.cancel_event
+        if cancelled.is_set():
+            return "Write cancelled"
+        with ctx.deps.write_lock:
+            if cancelled.is_set():
+                return "Write cancelled"
             perm = ctx.deps.write_permission
             if perm.deny_all:
                 return "Write denied (you denied all writes this session)."
+            if not perm.approve_all and perm.confirm_fn is None:
+                # Before the dry run, not after: its answer told the model
+                # whether any path exists — "File does not exist" against
+                # "Write skipped" — one bit per call, with no one watching (w5/848).
+                return "Write skipped (non-interactive mode does not support writes)."
             argv = ["append", "--file", str(ctx.deps.file), "--text", "-"]
             if ctx.deps.into is not None:
                 argv += ["--into", str(ctx.deps.into)]
             try:
                 preview = launch.helper_json([*argv, "--dry-run"], stdin=directive)
             except BeaError as exc:
+                if cancelled.is_set():
+                    # The stop killed the dry run, not the directive (w5/731).
+                    return "Write cancelled"
                 return _write_rejection(exc)
+            if cancelled.is_set():
+                # The turn died during the dry run: no panel after it (w5/731).
+                return "Write cancelled"
             if not perm.approve_all:
                 if perm.confirm_fn is None:
                     return "Write skipped (non-interactive mode does not support writes)."
@@ -480,8 +662,16 @@ def make_agent(
                 # proposal's tab indentation showed as `\x09` and was then written
                 # as aligned spaces (w5/374).
                 shown = preview.get("text")
+                # How many directives, and the lines a new include starts with:
+                # the panel said "this directive" over 60 transactions, and the
+                # seeded `option "name_*"` line was written unseen (w5/849).
+                proposal = {
+                    "count": int(preview.get("count") or 1),
+                    "seed": str(preview.get("seed") or ""),
+                    "created": bool(preview.get("created")),
+                }
                 answer = perm.confirm_fn(
-                    shown if isinstance(shown, str) else directive, str(preview["target"]), warnings
+                    shown if isinstance(shown, str) else directive, str(preview["target"]), warnings, proposal
                 )
                 if answer == "a":
                     perm.approve_all = True
@@ -490,6 +680,9 @@ def make_agent(
                     return "Write denied."
                 elif answer == "n":
                     return "Write cancelled by user."
+            if cancelled.is_set():
+                # Answered, then the turn died before the write landed (w5/731).
+                return "Write cancelled"
             try:
                 result = launch.helper_json(
                     [*argv, "--token", json.dumps(preview["token"])],
@@ -497,6 +690,10 @@ def make_agent(
                     writes=True,
                 )
             except BeaError as exc:
+                if cancelled.is_set():
+                    # The turn is gone and its report is already decided; the
+                    # failure dies with it instead of misnaming it (w5/731).
+                    return "Write cancelled"
                 return _write_rejection(exc)
             ctx.deps.writes.append((int(result["written"]), str(result["target"])))
             return f"Added {result['written']} directive(s) to {result['target']}."
@@ -508,7 +705,10 @@ def make_agent(
         if skill is None:
             available = ", ".join(ctx.deps.skills) or "none"
             return f"Skill '{name}' not found. Available skills: {available}."
-        return skill.body or "(no body content)"
+        body = skill.body or "(no body content)"
+        if len(body) > MAX_BODY:
+            return f"{body[:MAX_BODY]}\n\n[Skill body cut at {MAX_BODY:,} of {len(body):,} characters.]"
+        return body
 
     return agent
 

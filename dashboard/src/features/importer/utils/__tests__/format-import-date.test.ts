@@ -39,4 +39,21 @@ describe("formatImportDateForDisplay", () => {
     );
     expect(formatImportDateForDisplay("", "en-US")).toBe("");
   });
+  /** Years 0–99 are not remapped to 1900–1999 (w4/277). */
+  it.each(["UTC", "America/Los_Angeles", "Pacific/Apia"])(
+    "keeps years below 100 exact in %s",
+    (timeZone) => {
+      process.env.TZ = timeZone;
+      expect(formatImportDateForDisplay("0001-01-01", "en-US")).toBe("1/1/1");
+      expect(formatImportDateForDisplay("0004-02-29", "en-US")).toBe("2/29/4");
+      expect(formatImportDateForDisplay("0099-12-31", "en-US")).toBe(
+        "12/31/99",
+      );
+      expect(formatImportDateForDisplay("0100-01-01", "en-US")).toBe("1/1/100");
+      expect(formatImportDateForDisplay("0001-01-01", "de-DE")).toBe("1.1.1");
+      expect(formatImportDateForDisplay("0003-02-29", "en-US")).toBe(
+        "0003-02-29",
+      );
+    },
+  );
 });

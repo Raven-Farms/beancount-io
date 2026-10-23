@@ -13,7 +13,6 @@ export interface TierInfo {
   key: SubscriptionTier;
   userTier: UserTier;
   rank: number;
-  price: string;
   labelKey: string;
   popular?: boolean;
 }
@@ -23,14 +22,12 @@ export const TIERS: TierInfo[] = [
     key: "premium",
     userTier: "PREMIUM",
     rank: 1,
-    price: "$14.99",
     labelKey: "aiAgent.premiumTier",
   },
   {
     key: "growth",
     userTier: "GROWTH",
     rank: 2,
-    price: "$99.99",
     labelKey: "aiAgent.growthTier",
     popular: true,
   },
@@ -38,7 +35,6 @@ export const TIERS: TierInfo[] = [
     key: "organization",
     userTier: "ORGANIZATION",
     rank: 3,
-    price: "$499.99",
     labelKey: "aiAgent.organizationTier",
   },
 ];
@@ -47,7 +43,25 @@ export function getTierInfo(tier: UserTier): TierInfo | null {
   return TIERS.find((t) => t.userTier === tier) ?? null;
 }
 
+/** The message key naming a tier's plan, Free and Enterprise included. */
+export function planLabelKey(tier: UserTier): string {
+  if (tier === "ENTERPRISE") return "userSettings.enterprisePlan";
+  return getTierInfo(tier)?.labelKey ?? "userSettings.freePlan";
+}
+
 export function getUpgradeTiers(tier: UserTier): TierInfo[] {
   const currentRank = TIER_RANK[tier] ?? 0;
   return TIERS.filter((t) => t.rank > currentRank);
+}
+
+/** The next tier up, for a prompt about a limit the current tier hits. */
+export function getNextTier(tier: UserTier): TierInfo | null {
+  return getUpgradeTiers(tier)[0] ?? null;
+}
+
+/** The paid tier a subscription key names; every key has one. */
+export function tierInfoByKey(key: SubscriptionTier): TierInfo {
+  const info = TIERS.find((tier) => tier.key === key);
+  if (!info) throw new Error(`Unknown subscription tier ${key}`);
+  return info;
 }

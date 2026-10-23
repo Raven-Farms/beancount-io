@@ -1,5 +1,13 @@
-mutation CancelSubscription($clientId: String!, $subscriptionId: String!) {
-  cancelSubscription(clientId: $clientId, subscriptionId: $subscriptionId) {
+mutation CancelSubscription(
+  $clientId: String!
+  $subscriptionId: String!
+  $reason: CancellationReason
+) {
+  cancelSubscription(
+    clientId: $clientId
+    subscriptionId: $subscriptionId
+    reason: $reason
+  ) {
     success
     message
   }
@@ -12,8 +20,16 @@ mutation ResumeSubscription($clientId: String!, $subscriptionId: String!) {
   }
 }
 
-mutation CreateSubscriptionSession($clientId: String!, $priceId: String!) {
-  createSubscriptionSession(clientId: $clientId, priceId: $priceId) {
+mutation CreateSubscriptionSession(
+  $clientId: String!
+  $priceId: String!
+  $returnTo: CheckoutReturnTo
+) {
+  createSubscriptionSession(
+    clientId: $clientId
+    priceId: $priceId
+    returnTo: $returnTo
+  ) {
     success
     sessionId
     sessionUrl
@@ -30,12 +46,35 @@ mutation CreateStripePortalSession($clientId: String!) {
   }
 }
 
-mutation UpgradeSubscription($clientId: String!, $priceId: String!) {
-  upgradeSubscription(clientId: $clientId, priceId: $priceId) {
-    success
+mutation ChangePlan(
+  $clientId: String!
+  $priceId: String!
+  $prorationDate: Int
+) {
+  changePlan(
+    clientId: $clientId
+    priceId: $priceId
+    prorationDate: $prorationDate
+  ) {
+    status
+    kind
+    refusal
     message
     clientSecret
+    hostedInvoiceUrl
     subscriptionId
     newTier
+    currentPeriodEnd
+    effectiveAt
+    invoiceId
+    amountCharged
+    currency
+  }
+}
+
+mutation CancelScheduledPlanChange($clientId: String!) {
+  cancelScheduledPlanChange(clientId: $clientId) {
+    success
+    message
   }
 }

@@ -82,12 +82,13 @@ describe("New Transaction discard guard", () => {
   );
 
   it("asks before a dirty draft is removed, with the shared unsaved-changes strings", () => {
-    expect(source.includes('addListener("beforeRemove"')).toBe(true);
-    expect(source.includes("savedOutRef.current || !hasUnsavedChanges")).toBe(
-      true,
-    );
-    expect(source.includes('t("ledgerEditorUnsavedTitle")')).toBe(true);
-    expect(source.includes('t("ledgerEditorDiscardChanges")')).toBe(true);
+    // The shared guard, which also blocks iOS's swipe-back and carries the
+    // unsaved-changes strings (w21/150; its own tests cover the alert).
+    expect(
+      source.includes(
+        "useUnsavedChangesGuard(hasUnsavedChanges, savedOutRef);",
+      ),
+    ).toBe(true);
     expect(source.includes("isTransactionDraftDirty(")).toBe(true);
   });
 

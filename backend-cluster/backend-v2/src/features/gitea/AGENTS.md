@@ -9,7 +9,7 @@ Git-server integration for API reads, commits and pull requests, user activity, 
 - `commits/`, `pull-request/`, `feed/`, `user-profile/` — GraphQL resolvers and domain services.
 - `api/git-proxy-handler.ts` — allowlisted smart-HTTP transport. It is not a general Gitea REST proxy.
 - `ssh/` — SSH authentication and git-over-HTTP bridge.
-- `policy/` — shared push-policy logic used by both HTTP and SSH transports.
+- `policy/` — shared push-policy logic used by both HTTP and SSH transports, and the directive-limit verdict a pull-request merge uses.
 
 Application services should depend on `IGiteaClientFactory` from `src/foundation/clients/gitea-client-factory.ts`; it provisions the appropriate low-level client without exposing user credentials.
 
@@ -34,6 +34,7 @@ remain session-only.
 
 - HTTP and SSH must enforce the same repository-path grammar, `refs/heads/main` rule, and directive-limit decision. Shared decisions belong in `policy/`; transport files should only parse/encode their protocol.
 - The directive-limit gate asks about the ledger's current count, not the contents of the incoming pack. It deliberately fails open when the limit/count service cannot answer so users are not locked out of shrinking a ledger through the app.
+- A pull-request merge is checked precisely instead (`evaluateMergeDirectiveLimit`): its head and merge base are commits the ledger service can count, so the merge is refused only when the projected ledger (HEAD + head − merge base) ends over the limit and bigger. It fails open the same way.
 - Keep refusal wording and sideband behavior aligned across both transports.
 - The SSH proxy remains disabled unless both `SSH_PROXY_ENABLED` and `SSH_PROXY_HOST_KEY` are configured. The host key must be the existing Gitea host key or clients will receive a host-key-changed warning.
 

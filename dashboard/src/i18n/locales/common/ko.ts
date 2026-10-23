@@ -392,6 +392,11 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "다운로드",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "파일을 다운로드하지 못했습니다. 다시 시도해 주세요.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "추가 작업",
     description: "Label for dropdown menu with additional actions",
@@ -729,6 +734,11 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "계정을 찾을 수 없습니다",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message: "추천 항목을 불러오지 못했습니다. 값은 직접 입력할 수 있습니다.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "파일 검색...",
     description: "Placeholder for ledger file search",
@@ -1046,6 +1056,25 @@ const koCommon: Record<string, TranslationEntry> = {
     message: "모두 확인했습니다",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "{card}(으)로 {plan} 요금을 결제하지 못했습니다. {plan}을(를) 유지하려면 {date}까지 업데이트하세요.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "결제 수단 업데이트",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "카드",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "지금은 닫기",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

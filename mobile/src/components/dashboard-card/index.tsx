@@ -123,6 +123,7 @@ export function DashboardCard({
             <Text
               key={fontScale}
               style={[styles.title, stacked && { flex: 0 }]}
+              accessibilityRole="header"
             >
               {title}
             </Text>
@@ -137,7 +138,11 @@ export function DashboardCard({
                 onPress={onSeeAll}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel={t("seeAll")}
+                // Names its card: four buttons all called "See all" could not
+                // be told apart by Voice Control or the rotor (w21/265).
+                accessibilityLabel={
+                  title ? t("seeAllCard", { title }) : t("seeAll")
+                }
               >
                 <Text key={fontScale} style={styles.seeAllText}>
                   {t("seeAll")}

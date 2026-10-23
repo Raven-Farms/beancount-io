@@ -25,6 +25,7 @@ from bea_engine.ledger.models import (
     Posting,
     PriceDirective,
     TransactionDirective,
+    Units,
 )
 
 
@@ -53,8 +54,8 @@ class TestWriteTransaction:
                 date=datetime.date(2026, 4, 30),
                 narration="Coffee",
                 postings=[
-                    Posting(account="Expenses:Food", units=Amount(number=Decimal("12.50"), currency="USD")),
-                    Posting(account="Assets:Cash", units=Amount(number=Decimal("-12.50"), currency="USD")),
+                    Posting(account="Expenses:Food", units=Units(number=Decimal("12.50"), currency="USD")),
+                    Posting(account="Assets:Cash", units=Units(number=Decimal("-12.50"), currency="USD")),
                 ],
             ),
         )
@@ -75,8 +76,8 @@ class TestWriteTransaction:
                 tags=["travel"],
                 links=["^ref-001"],
                 postings=[
-                    Posting(account="Expenses:Food", units=Amount(number=Decimal("10"), currency="USD")),
-                    Posting(account="Assets:Cash", units=Amount(number=Decimal("-10"), currency="USD")),
+                    Posting(account="Expenses:Food", units=Units(number=Decimal("10"), currency="USD")),
+                    Posting(account="Assets:Cash", units=Units(number=Decimal("-10"), currency="USD")),
                 ],
             ),
         )
@@ -93,8 +94,8 @@ class TestWriteTransaction:
                     date=datetime.date(2026, 1, i + 1),
                     narration=f"Entry {i}",
                     postings=[
-                        Posting(account="Expenses:Food", units=Amount(number=Decimal("1"), currency="USD")),
-                        Posting(account="Assets:Cash", units=Amount(number=Decimal("-1"), currency="USD")),
+                        Posting(account="Expenses:Food", units=Units(number=Decimal("1"), currency="USD")),
+                        Posting(account="Assets:Cash", units=Units(number=Decimal("-1"), currency="USD")),
                     ],
                 ),
             )
@@ -292,10 +293,10 @@ class TestCostLabelEscaping:
             postings=[
                 Posting(
                     account="Assets:Stock",
-                    units=Amount(number=Decimal("1"), currency="AAPL"),
+                    units=Units(number=Decimal("1"), currency="AAPL"),
                     cost=Cost(number=Decimal("100"), currency="USD", label=label),
                 ),
-                Posting(account="Assets:Cash", units=Amount(number=Decimal("-100"), currency="USD")),
+                Posting(account="Assets:Cash", units=Units(number=Decimal("-100"), currency="USD")),
             ],
         )
         writer.write_transaction(file, directive)
@@ -380,10 +381,10 @@ class TestScalarFixedPoint:
                 postings=[
                     Posting(
                         account="Expenses:Food",
-                        units=Amount(number=Decimal("1"), currency="USD"),
+                        units=Units(number=Decimal("1"), currency="USD"),
                         meta={"weight": {"kind": "number", "value": value}},
                     ),
-                    Posting(account="Assets:Cash", units=Amount(number=Decimal("-1"), currency="USD")),
+                    Posting(account="Assets:Cash", units=Units(number=Decimal("-1"), currency="USD")),
                 ],
             ),
         )

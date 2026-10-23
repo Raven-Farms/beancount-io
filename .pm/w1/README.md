@@ -8,9 +8,19 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 
 **Suggested order:** m30 → m31 → m34, with m32, m33, and note 170 in parallel. ADR 019 requires D3 and D4 (m30) before D6 (m31): enabling CIMD first breaks Claude Code's sign-in. m34 drives real hosts and needs m30, m31, and m33 on production. Every milestone's production checks wait on an operator deploy of backend-v2 (and dashboard for m30).
 
+m39–m40 were materialized on 2026-10-18 from [PRFAQ005](../../docs/prfaqs/PRFAQ005-plan-changes-and-yearly-billing.md) stages 1–2, at the user's request. They are the in-product half of the plan-change experience; the marketing pricing page's half is served and tracked outside this repository.
+
+- **The pricing page must not break.** `beancount.io/pricing` already checks out against this backend, so both milestones keep everything it relies on working until it changes: `createSubscriptionSession` and every price it sells (including the $99.99 Premium yearly price), `subscriptionStatus.hasActiveSubscription`, `/settings/general` as its "Manage subscription" destination, and the sign-up `next` round trip.
+- **Suggested order:** m39 → m40, after m38's top-priority directory work. m40/t003 and t004 can start alongside m39.
+- **Stripe operator work:** the worker has had live Stripe access through the CLI since 2026-10-18 and did m39/t004 itself. That included the 100%-off production coupons for the QA payment tests (m39/t015, m40/t014).
+- **Production payment tests:** by user decision on 2026-10-18, each milestone ends with a real payment test in production. It uses the QA account from `beancount-io/.env` and two 100%-off coupons, before closeout.
+- **Not on the board:** PRFAQ005's stage 3, its growth experiments, waits for four weeks of stage 1–2 metrics.
+
 ### Open
 
-- [ ] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./blocked/m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing) — **blocked:** shipped through `8d751b15b`; the directory rescan (t007) and closeout wait on the production deploy.
+- [x] **m38** — [One MCP tool per operation, so the ChatGPT app directory accepts every tool](./done/m38/README.md) (11 tasks) ← OpenAI Plugins dashboard scan 2026-10-18: seven grouped tools flagged for operations "not individually exposed"; reverses ADR 0008 D3 — **top priority** (directory listing)
+- [ ] **m39** — [Reach yearly billing from inside the product](./m39/README.md) (14 tasks) ← PRFAQ005 stage 1, user request 2026-10-17: server-side change preview, charging at the previewed amount, in-place bank authentication, a Billing tab with "Pay yearly", the Checkout confirmation and the $143.88 Premium yearly price, without breaking the pricing page's checkout
+- [ ] **m40** — [Downgrade, switch to monthly and survive a failed renewal without losing paid time](./m40/README.md) (14 tasks) ← PRFAQ005 stage 2, user request 2026-10-17: scheduled downgrades with undo, the cancel sheet, paid limits while past due, the ledger-count and collaborator-limit fixes; after m39
 - [ ] **m37** — [Retire the Stripe test tenant and resolve each paid plan from its own subscription](./blocked/m37/README.md) (11 tasks) ← user request 2026-10-17; remove the built-in test billing tenant, correct tier/customer binding and renewal-cache writes, backfill existing users, and verify dashboard/CLI quotas — **blocked:** code shipped/deployed; t011 needs a verified production execution entry for the actual cohort repair
 - [x] **m36** — [Trim the MCP surface to what the Claude and ChatGPT directories accept](./done/m36/README.md) (10 tasks) ← user decision 2026-10-09: a public listing in Claude's and ChatGPT's directories outranks every other goal; ADR 019 follow-up — **top priority**
 - [x] **m30** — [Every named MCP host can register and reach a consent page that says who is asking](./done/m30/README.md) (11 tasks) ← `/pm-brainstorm for w1` 2026-10-06 item 1; ADR 019 D3 + D4 + D8
@@ -25,6 +35,8 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 - [x] **m29** — [`bea` resolves managed price includes locally](./done/m29/README.md) (10 tasks) ← promoted [w2/027](../w2/done/027.md); ADR 015 + PRFAQ002
 
 ## Dropped
+
+- ~~**178**~~ — Give the server-side `purchase` its traffic source — dropped 2026-10-20: purchases are recorded in the browser, which carries the traffic source natively, and the server-side reporter is retired ([w2/m54](../w2/blocked/m54/README.md)).
 
 - ~~**m28**~~ — Read-after-delete consistency for hosted slice deletes — dropped 2026-09-16: proposed by `/pm-brainstorm for w1` as a promotion of `w1/033`, but never materialized as open work. Triage the same day established that every layer of the delete path in this monorepo already applies synchronously — backend-v2 awaits the ledger-service call, the ledger service awaits a Gitea CAS commit with bounded retry, reads resolve live HEAD per load, and backend-v2 caches no journal or context read — so there is no async-apply code here to fix and no in-monorepo change can be proven against the acceptance. The work is still wanted and waits with its full record and **Unblock:** condition at [blocked/033](./blocked/033.md), which needs hosted diagnosis naming the lagging layer. Promoting it into a milestone would have duplicated that note and put unbuildable work in the open tree.
 
@@ -59,6 +71,7 @@ Milestones m1–m23 are complete; no pending ADR014 follow-up milestones remain 
 ## Inbox
 
 
+
 The three MCP QA findings filed on 2026-09-21/22 were drained on 2026-09-23: [035](./done/035.md), [036](./done/036.md), and [037](./done/037.md) shipped with regression coverage.
 
 The four mobile QA findings filed on 2026-09-16 were drained the same day: [031](./done/031.md), [032](./done/032.md), and [034](./done/034.md) shipped with regression coverage, and [033](./blocked/033.md) is blocked.
@@ -67,7 +80,6 @@ The four mobile QA findings filed on 2026-09-16 were drained the same day: [031]
 
 Blocked notes live under [`blocked/`](./blocked/) with their reason and **Unblock:** condition; they keep their IDs and return to the open tree when work can resume.
 
-- [171](./blocked/171.md) — The website's MCP pages name tools that no longer exist — **blocked:** the pages live in the website's repository and must wait for the w1/m38 backend deploy. **Unblock:** the user routes the change there once the deploy is live.
 - [033](./blocked/033.md) — Slice-delete success precedes removal by minutes; a refetch resurrects the row — **blocked:** no async-apply code exists in this monorepo and the acceptance cannot be proven here. **Unblock:** hosted diagnosis naming the lagging layer, or a local full-stack repro. Cleared by the user (hosted access plus QA credentials).
 
 ## Absorbed CLI QA notes (m23–m27)

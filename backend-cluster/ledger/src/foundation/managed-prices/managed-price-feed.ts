@@ -199,7 +199,18 @@ export function validateManagedPriceText(text: string): ManagedPriceValidation {
   const headers = new Map<string, string>();
   const prices: ManagedPriceDirective[] = [];
   let current: ManagedPriceDirective | null = null;
-  const lines = text.split(/\r\n|\r|\n/u);
+  // A carriage return alone ends no line for rustledger or Beancount: the
+  // body validated here, then parsed as `unexpected input` with every price
+  // after the CR gone (w5/844). Line feeds, with an optional CR, end lines.
+  const bareCr = /\r(?!\n)/u.exec(text);
+  if (bareCr) {
+    return {
+      ok: false,
+      reason: "a carriage return without a line feed (lines must end in LF or CRLF)",
+      line: text.slice(0, bareCr.index).split("\n").length,
+    };
+  }
+  const lines = text.split(/\r?\n/u);
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];

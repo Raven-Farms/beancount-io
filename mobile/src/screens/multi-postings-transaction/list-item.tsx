@@ -3,7 +3,6 @@ import { fontSizes, fontWeights, useTheme } from "@/common/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
-import { LoadingTile } from "@/components/loading-tile";
 import {
   directionalIcon,
   LEADING_TEXT_ALIGN,
@@ -107,27 +106,5 @@ export const ListItem = ({
         color={theme.black60}
       />
     </TouchableOpacity>
-  );
-};
-
-export const ListItemSkeleton = ({
-  showDivider,
-}: {
-  showDivider?: boolean;
-}) => {
-  const theme = useTheme().colorTheme;
-  const styles = useThemeStyle(getStyles);
-  return (
-    <View style={[styles.container, showDivider && styles.divider]}>
-      <View style={styles.textWrap}>
-        <LoadingTile style={styles.titleTile} />
-        <LoadingTile style={styles.contentTile} />
-      </View>
-      <Ionicons
-        name={directionalIcon("chevron-forward")}
-        size={18}
-        color={theme.black40}
-      />
-    </View>
   );
 };

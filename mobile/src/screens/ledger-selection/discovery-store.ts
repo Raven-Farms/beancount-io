@@ -1,3 +1,5 @@
+import { ledgerMatchesQuery } from "../../common/ledger-search";
+
 export type DiscoveryTab = "yours" | "starred" | "explore";
 export type DiscoveryItem = {
   id: string;
@@ -18,12 +20,7 @@ type State = {
 };
 
 export function filterLedgers(items: DiscoveryItem[], query: string) {
-  const terms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  return items.filter((item) => {
-    const text =
-      `${item.fullName} ${item.description ?? ""}`.toLocaleLowerCase();
-    return terms.every((term) => text.includes(term));
-  });
+  return items.filter((item) => ledgerMatchesQuery(item, query));
 }
 
 /** Owns request ordering for one mounted account's discovery screen. */

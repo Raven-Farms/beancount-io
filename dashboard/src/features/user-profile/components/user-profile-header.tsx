@@ -4,9 +4,12 @@ import { Authenticated } from "@/common/components/authenticated";
 import { UserNav } from "@/common/components/user-nav";
 import { Button } from "@/common/components/ui/button";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 
 export function UserProfileHeader() {
   const { t } = useTranslations();
+  // Signing in or up returns to this profile, its tab and fragment (w4/237).
+  const next = useSafeReturnPath();
 
   return (
     <header className="h-18 shrink-0 border-b bg-background">
@@ -40,10 +43,14 @@ export function UserProfileHeader() {
           fallback={
             <nav className="flex items-center gap-2 sm:gap-3">
               <Button variant="ghost" asChild className="h-10">
-                <Link to="/auth/login">{t("auth.signIn")}</Link>
+                <Link to="/auth/login" search={{ next }}>
+                  {t("auth.signIn")}
+                </Link>
               </Button>
               <Button asChild className="h-10 hidden sm:inline-flex">
-                <Link to="/auth/sign-up">{t("auth.signUp")}</Link>
+                <Link to="/auth/sign-up" search={{ next }}>
+                  {t("auth.signUp")}
+                </Link>
               </Button>
             </nav>
           }

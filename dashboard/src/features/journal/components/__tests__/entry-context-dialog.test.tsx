@@ -1246,4 +1246,53 @@ describe("EntryContextDialog save after the entry changed elsewhere (w3/642)", (
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSuccess).toHaveBeenCalled();
   });
+
+  it("says when Copy my edit fails, keeping the draft for a retry (w4/307)", async () => {
+    vi.mocked(toast.success).mockClear();
+    const onOpenChange = vi.fn();
+    const onSuccess = vi.fn();
+    const writeText = vi
+      .fn()
+      .mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"))
+      .mockResolvedValueOnce(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    render(
+      <EntryContextDialog
+        open
+        onOpenChange={onOpenChange}
+        entry={entry}
+        ledgerId="open_ledger/example"
+        onSuccess={onSuccess}
+      />,
+    );
+    const source = screen.getByLabelText("entry-source");
+    const draft = `${(source as HTMLTextAreaElement).value}; my edit`;
+    fireEvent.change(source, { target: { value: draft } });
+    await userEvent.click(screen.getByRole("button", { name: "common.save" }));
+    await screen.findByText("journal.entryChangedElsewhere");
+    const saves = mocks.updateMutation.mock.calls.length;
+
+    const copy = screen.getByRole("button", { name: "journal.copyMyEdit" });
+    await userEvent.click(copy);
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("common.copyFailed"),
+    );
+    expect(toast.success).not.toHaveBeenCalledWith("common.copied");
+    expect(writeText).toHaveBeenLastCalledWith(draft);
+    expect(screen.getByLabelText("entry-source")).toHaveValue(draft);
+    expect(copy).toHaveFocus();
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    await userEvent.click(copy);
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("common.copied"),
+    );
+    expect(writeText).toHaveBeenCalledTimes(2);
+    expect(writeText).toHaveBeenLastCalledWith(draft);
+    expect(mocks.updateMutation.mock.calls.length).toBe(saves);
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
 });

@@ -20,7 +20,7 @@ export function buildOpenAccountSchema(
   existing: ReadonlyMap<string, ExistingAccount> = new Map(),
 ) {
   return z.object({
-    date: z.date(),
+    date: z.iso.date(),
     account: z
       .string()
       .min(1, messages.required)

@@ -1,17 +1,19 @@
 import { Bot, Crown, Sparkles, ArrowRight } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { Button } from "@/common/components/ui/button";
 import { Badge } from "@/common/components/ui/badge";
-import { track } from "@/common/analytics";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { useAiCfoUsage } from "@/common/hooks/use-ai-cfo-usage";
-import { TIER_RANK, TIERS } from "@/common/lib/subscription/tier-config";
+import { getUpgradeTiers } from "@/common/lib/subscription/tier-config";
+import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
 import { cn } from "@/common/lib/utils/utils";
 import { useAllTierQuotas } from "@/common/hooks/use-all-tier-quotas";
+import { cyclePrice } from "@/features/user-settings/pages/general/stripe-config";
+import { useMoneyFormat } from "@/features/user-settings/pages/general/use-money-format";
 
 export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
   const { t } = useTranslations();
+  const formatMoney = useMoneyFormat();
   const { tier, isLoading: limitsLoading } = useUserLimits();
   const {
     aiCfoTokensUsed,
@@ -27,8 +29,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
   // Hide for unlimited (enterprise) users
   if (isUnlimited) return null;
 
-  const currentRank = TIER_RANK[tier] ?? 0;
-  const availableTiers = TIERS.filter((t) => t.rank > currentRank);
+  const availableTiers = getUpgradeTiers(tier);
 
   const percentage = Math.min((aiCfoTokensUsed / aiCfoTokensMax) * 100, 100);
   if (percentage < 80) return null;
@@ -96,7 +97,8 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
         <div
           className={`grid grid-cols-1 ${availableTiers.length >= 3 ? "sm:grid-cols-3" : availableTiers.length === 2 ? "sm:grid-cols-2" : ""} gap-2.5 px-4 pb-4 pt-1`}
         >
-          {availableTiers.map(({ key, price, labelKey, userTier, popular }) => {
+          {availableTiers.map((plan) => {
+            const { key, labelKey, userTier, popular } = plan;
             const quota = tierQuotas?.find((q) => q.tier === userTier);
             const tokens = quota?.aiCfoTokensMax ?? 0;
             return (
@@ -121,7 +123,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
 
                 <div className="flex items-baseline gap-0.5 mb-1.5">
                   <span className="text-xl font-bold tracking-tight">
-                    {price}
+                    {formatMoney(cyclePrice(key, "monthly").amount)}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     {t("aiAgent.perMonth")}
@@ -140,14 +142,11 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
                   variant={popular ? "default" : "outline"}
                   className="w-full mt-auto"
                 >
-                  <Link
-                    to="/settings/general"
-                    onClick={() =>
-                      track("upgrade_prompt_clicked", {
-                        surface: "ai_cfo_panel",
-                        target_tier: userTier,
-                      })
-                    }
+                  <UpgradePromptLink
+                    surface="ai_cfo_panel"
+                    plan={plan}
+                    // The card quotes the monthly price, so the sheet opens on it.
+                    billing="monthly"
                   >
                     {popular ? (
                       <Crown className="h-3.5 w-3.5" />
@@ -155,7 +154,7 @@ export function AiCfoUpgradePanel({ className }: { className?: string } = {}) {
                       <ArrowRight className="h-3.5 w-3.5" />
                     )}
                     {t("aiAgent.upgradeCta")}
-                  </Link>
+                  </UpgradePromptLink>
                 </Button>
               </div>
             );

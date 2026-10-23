@@ -11,8 +11,10 @@ import subprocess
 import sys
 import unicodedata
 from pathlib import Path
+from typing import Any
 
 import typer
+from typer.core import TyperGroup
 
 from cli import output
 from cli.config import DEFAULT_ENTRY_FILE_FALLBACKS
@@ -22,18 +24,52 @@ from cli.errors import (
     AuthError,
     BeaError,
     ConflictError,
+    EngineError,
     LedgerError,
     UsageError,
+    placement_hint,
     refuse_json,
     refuse_misplaced_global,
 )
 from cli.native_command import ForwardingCommand
 from cli.native_help import native_help, native_options
-from cli.paths import expand_path
+from cli.paths import expand_path, held_descriptor, is_descriptor_path
 from cli.utils import decode_error_message, has_bom
+
+
+class _DoctorGroup(TyperGroup):
+    """Name where a bea option goes when it comes before the doctor operation.
+
+    `bea doctor -f main.bean lex` and `bea doctor --json lex` were read as an
+    operation named `-f` or `--json`: "No such command" (w5/839).
+    """
+
+    def resolve_command(self, ctx: Any, args: list[str]) -> Any:
+        first = args[0].split("=", 1)[0] if args else ""
+        if first.startswith("-") and first not in ("--help", "-h"):
+            _refuse_option_before_operation(first, args)
+        return super().resolve_command(ctx, args)
+
+
+def _refuse_option_before_operation(name: str, args: list[str]) -> None:
+    taken = 1 if "=" in args[0] else 2
+    value = args[0].split("=", 1)[1] if "=" in args[0] else (args[1] if len(args) > 1 else "FILE")
+    op = next((arg for arg in args[taken:] if arg in _OPS), None)
+    if name in ("-f", "--file"):
+        if op == "list-options":
+            raise UsageError(f"bea doctor list-options reads no ledger, so {name} does nothing here; drop it.")
+        example = shlex.join(["bea", "doctor", op or "lex", value])
+        raise UsageError(f"bea doctor operations take the ledger as an argument, not {name}: {example}")
+    if name == "--json":
+        raise UsageError("bea doctor has no JSON output; drop --json.")
+    hint = placement_hint(name)
+    if hint is not None:
+        raise UsageError(f"{name} is a bea option, not one of bea doctor's. {hint}")
+
 
 doctor_app = typer.Typer(
     name="doctor",
+    cls=_DoctorGroup,
     help=(
         "Beancount diagnostics (delegates to bean-doctor). Operations take the ledger file as a "
         "positional argument; --file, BEA_FILE, and ./main.bean do not apply."
@@ -113,6 +149,13 @@ def _refuse_directory_ledger(op: str, args: list[str]) -> None:
         raise UsageError(f"The ledger path for bea doctor {op} is empty; name the ledger file.")
     ledger = Path(positionals[0])
     if not ledger.is_dir():
+        if is_descriptor_path(ledger) and (held_descriptor(ledger) is None or ledger.is_file()):
+            # A held regular file behind `/dev/fd/N` reaches upstream, which
+            # cannot open our descriptor; a held pipe keeps the w5/436
+            # wording below (w5/792).
+            raise UsageError(
+                f"Ledger path {ledger} is a file descriptor, not a file. Save it to a file and pass that file."
+            )
         if os.path.lexists(ledger) and not ledger.is_file():
             # `<(…)` names a pipe this process holds; upstream, which cannot
             # open it, said the path "does not exist" (w5/436).
@@ -187,12 +230,16 @@ def _syntax_errors_of(filename: str) -> list[str]:
 
     A name that is not a readable file is upstream's to report, and a dead
     engine must not take the diagnostics tool down with it: both fail open to
-    the plain passthrough.
+    the plain passthrough. A missing or damaged managed engine propagates
+    instead: the passthrough needs the same install and would fail the same
+    way, after doubling the wait (w5/784, w5/785).
     """
     if not Path(filename).is_file():
         return []
     try:
         data = launch.helper_json(["syntax", filename])
+    except EngineError:
+        raise
     except BeaError:
         return []
     return [str(error) for error in data.get("files", {}).get(filename, [])]
@@ -227,37 +274,32 @@ def _refuse_undecodable(ledger: str) -> None:
                 raise LedgerError(decode_error_message(member, exc)) from exc
 
 
-_PLUGIN_DIRECTIVE = re.compile(rb"^plugin[ \t]", re.MULTILINE)
-#: How `bea check` words a plugin that cannot be imported or crashes.
-_PLUGIN_FAILURES = ('Cannot import plugin "', '" failed while running: ')
+#: How `bea check` words a plugin that cannot be imported or crashes, and a
+#: transaction booking cannot do the arithmetic for.
+_LOAD_FAILURES = ('Cannot import plugin "', '" failed while running: ', "Beancount cannot book this transaction: ")
 
 
-def _refuse_plugin_failures(op: str, ledger: str) -> None:
-    """Refuse a ledger whose plugin cannot be imported or crashes, in check's one-line form.
+def _refuse_load_failures(op: str, ledger: str) -> None:
+    """Refuse a ledger upstream's load cannot report on honestly, in check's one-line form.
 
-    Upstream logs the traceback and carries on without the plugin, so
+    Upstream logs a plugin's traceback and carries on without the plugin, so
     `roundtrip` printed it and then "Congratulations" with exit 0, and
     `missing-open` answered for entries the plugin never ran on (w5/439).
-    Only a closure that declares a plugin pays for the check load.
+    And its booking raises on arithmetic it cannot do — a zero-unit posting at
+    a total cost, an inferred amount wider than 28 digits — so every loading
+    operation died on a bare `DivisionByZero` traceback where `check` names
+    the transaction (w5/859). Either needs a load to see, so every loading
+    operation pays for the check load; a ledger with other errors still runs,
+    since diagnosing those is what doctor is for.
     """
-    root = Path(ledger)
-    if not root.is_file():
-        return
-    declared = False
-    for member in output.ledger_closure(root):
-        if output.is_encrypted(member):
-            # Its decrypted text may declare a plugin. The helper can inspect
-            # that content; scanning ciphertext cannot establish its absence.
-            declared = True
-            continue
-        with contextlib.suppress(OSError):
-            declared = declared or bool(_PLUGIN_DIRECTIVE.search(member.read_bytes()))
-    if not declared:
+    if not Path(ledger).is_file():
         return
     try:
         launch.helper_json(["check", "--file", ledger])
+    except EngineError:
+        raise
     except BeaError as exc:
-        failures = [line for line in exc.details if any(mark in line for mark in _PLUGIN_FAILURES)]
+        failures = [line for line in exc.details if any(mark in line for mark in _LOAD_FAILURES)]
         if failures:
             raise LedgerError(f"doctor {op} cannot load {ledger}: {failures[0]}", details=failures[1:]) from None
 
@@ -269,7 +311,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     include fails them just as surely as an unparseable root: the loader logs
     the error and carries on with whatever it recovered. `lex` and `parse`
     read only the named file upstream, and keep using `_syntax_errors_of`.
-    Fails open exactly like that helper does.
+    Fails open exactly like that helper does, and propagates a missing or
+    damaged managed engine the same way.
     """
     root = Path(filename)
     if not root.is_file():
@@ -278,6 +321,8 @@ def _closure_syntax_errors_of(filename: str) -> list[str]:
     members = [str(member) for member in output.ledger_closure(root) if not output.is_encrypted(member)]
     try:
         data = launch.helper_json(["syntax", *members])
+    except EngineError:
+        raise
     except BeaError:
         return []
     files = data.get("files", {})
@@ -399,10 +444,11 @@ def _forward(op: str, ctx: typer.Context) -> None:
 
 
 def _replay(completed: subprocess.CompletedProcess[str]) -> None:
-    """Print captured upstream output back to its own streams, verbatim."""
+    """Print captured upstream output back to its own streams, its usage lines naming `bea doctor`."""
     output.utf8_stdout()
     output.replay(completed.stdout, sys.stdout)
-    output.replay(completed.stderr, sys.stderr)
+    # A captured run named `bean-doctor` in its usage error (w5/846).
+    output.replay(launch.renamed_usage(completed.stderr, "bean-doctor"), sys.stderr)
     # A failure line follows on stderr; flush first so redirected streams keep
     # upstream's output ahead of the error that refers to it.
     for stream in (sys.stdout, sys.stderr):
@@ -532,16 +578,19 @@ def _private_roundtrip_artifacts(ledger: str) -> list[Path]:
         try:
             os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
         except OSError as exc:
+            # Upstream raised, then crashed in its own cleanup: a 34-line
+            # double traceback, exit 1 (w5/572). A permission failure is 3;
+            # any other (a too-long name, no space) names the scratch file (w5/770).
+            for made in created:
+                made.unlink(missing_ok=True)
             if exc.errno in (errno.EACCES, errno.EPERM, errno.EROFS):
-                # Upstream raised, then crashed in its own cleanup: a 34-line
-                # double traceback, exit 1 (w5/572). A permission failure is 3.
-                for made in created:
-                    made.unlink(missing_ok=True)
                 raise AuthError(
                     f"doctor roundtrip writes scratch copies beside the ledger, and {path.parent} is not "
                     "writable. Nothing was written."
                 ) from None
-            continue
+            raise UsageError(
+                f"doctor roundtrip cannot create its scratch file {path}: {exc.strerror or exc}. Nothing was written."
+            ) from None
         created.append(path)
     return created
 
@@ -570,6 +619,11 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
     if errors:
         _replay_without_congratulations(completed)
         raise LedgerError(f"doctor roundtrip cannot compare {positionals[0]}: {errors[0]}")
+    duplicate = _duplicate_entry_refusal(completed, positionals[0]) if positionals else None
+    if duplicate is not None:
+        # Upstream's set comparison throws a 30-line traceback on two
+        # identical entries; bea names them in one line instead (w5/770).
+        raise LedgerError(duplicate)
     # Captured rather than streamed so the verdict can be read: upstream logs
     # `Entries differ!` and returns 0 regardless, so a real failed comparison
     # exited 0 and nothing automated could tell it from a clean one.
@@ -579,6 +633,53 @@ def _forward_roundtrip(ctx: typer.Context) -> None:
             f"doctor roundtrip found that {positionals[0]} does not survive a print/parse cycle (see above).",
         )
     raise typer.Exit(0)
+
+
+_DUPLICATE_ENTRY = re.compile(r"Duplicate entry: (\w+)\(")
+
+
+def _duplicate_entry_refusal(completed: subprocess.CompletedProcess[str], ledger: str) -> str | None:
+    """One line naming identical entries roundtrip cannot compare, else None.
+
+    Upstream compares entry *sets*, so two identical entries — valid for
+    `check` — die in `compare_entries` with a 30-line traceback. The
+    `ValueError` line carries both entries' reprs on one line: the kind, the
+    two `(meta=` linenos, and a date with a narration or comment. Anything
+    unparseable falls through to the replay, never to a crash here.
+    """
+    for stream in (completed.stderr or "", completed.stdout or ""):
+        for line in stream.splitlines():
+            kinds = _DUPLICATE_ENTRY.search(line)
+            if kinds is None:
+                continue
+            try:
+                return _duplicate_entry_line(line, kinds.group(1), ledger)
+            except ValueError:
+                continue
+    return None
+
+
+def _duplicate_entry_line(line: str, kind: str, ledger: str) -> str:
+    """The refusal for one `Duplicate entry` line; ValueError unless it parses."""
+    linenos = sorted({int(found) for found in re.findall(r"\(meta=\{[^}]*?'lineno': (\d+)", line)})
+    if len(linenos) < 2:
+        raise ValueError("entry lines unreadable")
+    first, second = linenos[0], linenos[1]
+    dated = re.search(r"date=datetime\.date\((\d+), (\d+), (\d+)\)", line)
+    date = f"{dated.group(1)}-{dated.group(2):0>2}-{dated.group(3):0>2}" if dated else None
+    words = {"Transaction": "transactions", "Note": "notes"}.get(kind, f"{kind} entries")
+    if kind == "Transaction":
+        said = re.search(r"narration=(['\"])(.*?)\1", line)
+        detail = f' ("{said.group(2)}" on {date})' if said and date else ""
+        remedy = "add a link or tag to one to make the file roundtrip-clean"
+    else:
+        said = re.search(r"comment=(['\"])(.*?)\1", line)
+        detail = f' ("{said.group(2)}" on {date})' if said and date else ""
+        remedy = "change one so they differ"
+    return (
+        f"doctor roundtrip cannot compare {ledger}: lines {first} and {second} hold identical "
+        f"{words}{detail}. Roundtrip compares entry sets, so it cannot tell them apart; {remedy}."
+    )
 
 
 def _entries_differ(stderr: str) -> bool:
@@ -616,7 +717,7 @@ def _forward_directories(ctx: typer.Context) -> None:
 
 
 def _refuse_partial_load(op: str, ledger: str) -> None:
-    """Refuse an answer that would silently leave out what a syntax error hid.
+    """Refuse an answer that would silently leave out what a syntax error or a missing include hid.
 
     The loader skips an unparseable directive and carries on, so
     `missing-open` listed the opens of the entries it could parse with exit
@@ -626,6 +727,21 @@ def _refuse_partial_load(op: str, ledger: str) -> None:
     errors = _closure_syntax_errors_of(ledger)
     if errors:
         raise LedgerError(f"doctor {op} cannot load {ledger}: {errors[0]}", details=errors[1:])
+    # A missing include hides its directives just as surely: the opens it
+    # held were listed as missing, ready to append twice (w5/819).
+    root = Path(ledger)
+    missing = output.missing_includes(root) if root.is_file() else []
+    if missing:
+        problems = [
+            f'unreadable include "{item.include}" (included by {item.source}): {item.reason}'
+            if item.reason
+            else f'missing include "{item.include}" (included by {item.source})'
+            for item in missing
+        ]
+        raise LedgerError(
+            f"doctor {op} cannot load {ledger}: {problems[0]}; what it holds would be left out.",
+            details=problems[1:],
+        )
 
 
 def _forward_scoped(op: str, ctx: typer.Context) -> None:
@@ -679,7 +795,7 @@ def _forward_missing_open(ctx: typer.Context) -> None:
         raise LedgerError(
             f"doctor missing-open found {len(inactive)} reference(s) to {len(accounts) or len(inactive)} "
             "inactive account(s) (posted before the open date or after the close); "
-            "move the open earlier, reopen the account, or fix the postings.",
+            "move the open earlier, move the close later, or fix the postings.",  # no reopen in Beancount (w5/773)
             details=inactive,
         )
     raise typer.Exit(0)
@@ -712,7 +828,12 @@ def _register(op: str) -> None:
     def _cmd(ctx: typer.Context) -> None:
         assert forwarder is not None
         refuse_misplaced_global(
-            f"doctor {op}", list(ctx.args), native_options(f"doctor {op}"), reads="the ledger", json_output=False
+            f"doctor {op}",
+            list(ctx.args),
+            native_options(f"doctor {op}"),
+            # `list-options` reads no ledger: the form it was sent to was refused upstream (w5/839).
+            reads="" if op == "list-options" else "the ledger",
+            json_output=False,
         )
         _refuse_directory_ledger(op, list(ctx.args))
         # Every operation that loads its ledger starts upstream's loader, which
@@ -733,7 +854,7 @@ def _register(op: str) -> None:
                 # helper refuses with `Duplicate include` (w5/433, w5/569).
                 launch.helper_json(["check", "--file", positionals[0]])
             _refuse_undecodable(positionals[0])
-            _refuse_plugin_failures(op, positionals[0])
+            _refuse_load_failures(op, positionals[0])
         forwarder(ctx)
 
 

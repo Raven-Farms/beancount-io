@@ -1,4 +1,5 @@
 import { persistSession } from "../vars/session";
+import { clearAccountChoiceNeeded } from "./account-choice";
 import { createAuthorizationCompleter } from "./authorization-completer";
 import { finalizeOAuthSignIn } from "./oauth-sign-in-finalizer";
 import { createOAuthSessionFromCode } from "./code-exchange";
@@ -15,6 +16,10 @@ export const completeOAuthAuthorization = createAuthorizationCompleter({
   loadPending: loadPendingAuthorization,
   clearPending: clearPendingAuthorization,
   exchange: createOAuthSessionFromCode,
-  persist: persistSession,
+  // A completed sign-in is the account choice the sign-out asked for.
+  persist: async (session, isCurrent) => {
+    await persistSession(session, isCurrent);
+    if (isCurrent()) await clearAccountChoiceNeeded().catch(() => undefined);
+  },
   afterPersist: (_session, pending) => finalizeOAuthSignIn(pending.state),
 });

@@ -62,7 +62,11 @@ export default function LedgerQueryPage() {
   const [executeQuery] = useLazyQuery<
     QueryShellQuery,
     QueryShellQueryVariables
-  >(QueryShellDocument);
+  >(QueryShellDocument, {
+    // An explicit run reads the ledger now; another editor may have changed
+    // it since the last identical query (w4/234).
+    fetchPolicy: "network-only",
+  });
 
   // Track all in-flight queries to prevent double execution and show loading state
   const [executingQueries, setExecutingQueries] = useState<Set<string>>(
@@ -352,7 +356,10 @@ export default function LedgerQueryPage() {
 
               return (
                 <QueryResultCard
-                  key={`${query}-${index}`}
+                  // The query string is unique in history; keying by it keeps a card
+                  // (and its focus and open state) when running it reorders the list
+                  // (w4/253).
+                  key={query}
                   query={query}
                   result={cached?.data || null}
                   error={cached?.error}

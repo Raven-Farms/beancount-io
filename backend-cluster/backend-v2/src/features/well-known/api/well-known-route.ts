@@ -6,6 +6,7 @@ import {
   MCP_RESOURCES,
   resourceTemplateFor,
 } from "@/features/ai-agent/api/mcp-resources";
+import { MCP_PROMPTS } from "@/features/ai-agent/api/mcp-prompts";
 import { API_SCOPES } from "@/server/api/identity";
 
 /**
@@ -16,7 +17,7 @@ export const OPENAI_APPS_CHALLENGE_TOKEN =
   "0HlDMC8M4gFl6ZswOTS-La1Hr8vlT7wrf_W-e1v5wmY"; // gitleaks:allow
 const BEANCOUNT_IO_ORIGIN = "https://beancount.io";
 
-const SECURITY_TXT = `Contact: mailto:hello@beancount.io
+const SECURITY_TXT = `Contact: mailto:security@beancount.io
 Contact: https://beancount.io/security#report-a-vulnerability
 Expires: 2027-08-01T00:00:00.000Z
 Preferred-Languages: en
@@ -36,10 +37,11 @@ function mcpManifest(config: AppConfig) {
     endpoint: `${publicOrigin}/api-gateway/mcp`,
     transport: "streamable-http",
     transports: ["streamable-http"],
-    // Resources are declared alongside tools because the server serves both.
-    // A manifest listing only tools would tell a client the read surface does
-    // not exist — and the read surface is most of it (ADR 0008 D2).
-    capabilities: { tools: {}, resources: {}, streaming: true },
+    // Resources and prompts are declared alongside tools because the server
+    // serves all three. A manifest listing only tools would tell a client the
+    // read surface does not exist — and the read surface is most of it
+    // (ADR 0008 D2) — or that the ledger playbooks do not either.
+    capabilities: { tools: {}, resources: {}, prompts: {}, streaming: true },
     tools: MCP_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
@@ -51,6 +53,18 @@ function mcpManifest(config: AppConfig) {
       description: resource.description,
       uriTemplate: resourceTemplateFor(resource).uriTemplate.toString(),
       mimeType: resource.mimeType,
+    })),
+    // The same shape `prompts/list` returns: arguments carry name, description
+    // and requiredness, never a schema.
+    prompts: MCP_PROMPTS.map((prompt) => ({
+      name: prompt.name,
+      title: prompt.title,
+      description: prompt.description,
+      arguments: Object.entries(prompt.argsSchema).map(([name, schema]) => ({
+        name,
+        description: schema.description,
+        required: !schema.isOptional(),
+      })),
     })),
     auth: {
       type: "oauth2",

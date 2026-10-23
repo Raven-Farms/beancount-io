@@ -5,7 +5,13 @@ import { OAuthDiscoveryError } from "../../common/oauth/discovery";
 export type NativeSignInFlow = PendingOAuthAuthorization["flow"];
 
 /** Why a tap did not end in a session; each gets its own line on screen. */
-export type NativeSignInFailure = "unreachable" | "incompatible" | "rejected";
+export type NativeSignInFailure =
+  | "unreachable"
+  | "timeout"
+  | "incompatible"
+  | "not_configured"
+  | "mismatch"
+  | "rejected";
 
 /** What one welcome-screen tap ended in. */
 export type NativeSignInOutcome =
@@ -28,7 +34,9 @@ export async function runNativeSignIn(
     if (error instanceof OAuthAuthorizationError && error.cancelled) {
       return "cancelled";
     }
-    if (error instanceof OAuthDiscoveryError) return error.kind;
+    if (error instanceof OAuthDiscoveryError) {
+      return error.detail?.reason ?? error.kind;
+    }
     return "rejected";
   }
 }

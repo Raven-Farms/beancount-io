@@ -7,7 +7,7 @@ operational classes, existing bindings, and eligible surfaces independently of
 the mutable registry. There are 105 eligible GraphQL operations, 111 REST
 operations, and 107 MCP operations. Initial missing bindings are 0, 53, and 63.
 
-The [milestone coverage map](../../../.pm/w1/m10/COVERAGE.md) assigns the missing
+The [milestone coverage map](../../../.pm/w1/done/m10/COVERAGE.md) assigns the missing
 families. Backend tests do not import the board, which can move when archived.
 `parity-baseline.test.ts` rejects removed operations, changed authorization or
 operational classes, lost client bindings, and unapproved eligibility changes. The existing
@@ -89,6 +89,16 @@ none can dissolve into stale exemption prose:
 7. **Raw-byte and browser-ceremony exclusions.** Archive bytes have no GraphQL
    twin (bytes, not fields); login/OTP/billing/Plaid-Link ceremonies stay on
    their browser surfaces with written reasons in the op-class table.
+   Email sign-in recovery follows this existing ceremony policy:
+   `requestSignInRecovery` returns only a delivery acknowledgement, while
+   `signInWithEmailCode` consumes an email-only ownership challenge and code
+   plus the correct password, then issues the first-party session cookie.
+   Both are anonymous GraphQL mutations; REST and MCP do not mint these
+   browser-session credentials. Recovery retains source request quotas and
+   cannot use the public enqueue receipt as its secret challenge. An optional
+   validated local `returnTo` survives the emailed link as the dashboard's
+   `next` parameter, including its query and fragment; email, code and password
+   are never added to that link.
 8. **Token introspection is not an MCP tool.** `credentials.introspect`
    (ADR 0017, w3/m44) reaches GraphQL and REST; its `mcpExempt` records why it
    stops there. The caller is a token _validator_ — a gateway, a proxy, an
@@ -187,16 +197,16 @@ optional filters and pagination, output representations, domain effects, and
 failure behavior through HTTP REST, GraphQL execution, and an MCP client.
 Shared service mocks alone do not prove the adapter contract. In particular:
 
-| Family                             | Required comparisons                                                                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Reports and journals               | account/filter/time/interval/conversion, page boundaries, ordering, empty results, hierarchy, currencies and exact numeric values.    |
-| BQL                                | Typed columns/rows and text rendering, including nulls and non-table results.                                                         |
-| File and entry writes              | Safe paths, structured validation, source hashes, atomic batches, commit effects, source ranges, and equivalent supported previews.   |
-| API keys                           | Expiry, names, scopes, inherited restriction, public metadata, one-time plaintext and revocation.                                     |
-| Bank operations                    | Every per-operation tool, account filters, explicit ledger target, preview support, staging/submit effects and composite authority.   |
-| Downloads                          | Selection, expiry, authorization of the full download path, content type and actual bytes; a link alone is not proof.                 |
-| Administrative/assisted operations | Exact target, current authority, quotas, ownership, side effects and dependency failure handling.                                     |
-| All families                       | Wrong audience/scope/target, revocation, source outage, rate budget, audit operation/target and concurrent request isolation.         |
+| Family                             | Required comparisons                                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Reports and journals               | account/filter/time/interval/conversion, page boundaries, ordering, empty results, hierarchy, currencies and exact numeric values.  |
+| BQL                                | Typed columns/rows and text rendering, including nulls and non-table results.                                                       |
+| File and entry writes              | Safe paths, structured validation, source hashes, atomic batches, commit effects, source ranges, and equivalent supported previews. |
+| API keys                           | Expiry, names, scopes, inherited restriction, public metadata, one-time plaintext and revocation.                                   |
+| Bank operations                    | Every per-operation tool, account filters, explicit ledger target, preview support, staging/submit effects and composite authority. |
+| Downloads                          | Selection, expiry, authorization of the full download path, content type and actual bytes; a link alone is not proof.               |
+| Administrative/assisted operations | Exact target, current authority, quotas, ownership, side effects and dependency failure handling.                                   |
+| All families                       | Wrong audience/scope/target, revocation, source outage, rate budget, audit operation/target and concurrent request isolation.       |
 
 Each MCP write or admin tool performs one operation through that operation's
 exact protected service; no tool selects among operations by an argument
@@ -211,7 +221,7 @@ Verified against the `deploy/docker-mac` stack (real Gitea, PostgreSQL ×2,
 Redis, ledger service; disposable user and ledger; no production data, paid
 provider calls, or committed secrets):
 
-- Full signup ceremony over GraphQL (OTP from dev logs), session sign-in,
+- Full signup ceremony over GraphQL, session sign-in,
   paid-plan-gated API-key minting over REST — one unpinned admin key, one
   pinned read-only key.
 - Writes and readback across surfaces on one real repository: REST entry
@@ -228,6 +238,12 @@ provider calls, or committed secrets):
   schemas, refusal dialect, error masking, advertised path), plus a real
   Streamable HTTP SDK client discovering 66 resource templates and running
   the workflows above.
+
+That verification predates the current mail privacy policy. Development
+`ConsoleSendGrid` now suppresses delivery and never prints OTPs or mail contents;
+human signup/recovery verification needs a configured mail deployment.
+Automated contracts capture synthetic mail instead. See
+[Authentication and rate limits](authentication-rate-limits.md).
 
 Not covered live: S3-backed asset flows and Plaid bank flows (no external
 credentials in routine verification — their contracts are held by the
@@ -257,6 +273,19 @@ the milestone open even if all currently implemented tests pass.
   with controlled authorization and ledger-client dependencies. It checks typed
   cells, text results, and refusal before querying. These are adapter/service
   contract tests, not deployment or live-PDP evidence.
+- Deliberate protocol difference: both MCP BQL tools bound what they hand a
+  model. `runBqlQueryStructured` returns at most 1,000 rows with `truncated`;
+  `runBqlQuery` cuts its text at 1,002 lines (header, separator, 1,000 rows) or
+  100 KB, at a line boundary, ending with a `[truncated: …]` line. Its text
+  block's lead line still gives the whole result's row count and says the
+  output was truncated. REST and GraphQL `queryShell`/`queryShellText` return
+  the full result (w23/010).
+- Deliberate protocol difference: the `plaintext-journal` MCP resource pages
+  its export at 200 entries when no `limit` is given, because a whole ledger's
+  text can run to hundreds of kilobytes in an agent's context. REST and GraphQL
+  keep returning every entry by default, the export the dashboard downloads.
+  All three accept the same `limit` (1–1,000) and `offset` and return `total`
+  and `truncated` (w23/044).
 
 The live registry now has 0 REST and 0 MCP deferred operations. The frozen
 baseline remains unchanged; none of these changes closes the milestone or
@@ -325,7 +354,12 @@ upstream work. Repository key-format validation remains upstream; these tests
 do not establish live Gitea integration.
 
 Ledger creation, update, and deletion now have REST bindings and the MCP tools
-`createLedger`, `updateLedger`, and `deleteLedger` over `LedgerWorkflow`. Creation uses account authority;
+`createLedger`, `updateLedger`, and `deleteLedger` over `LedgerWorkflow`. Creation accepts a
+setup specification (`setup`, ADR021) and an idempotency `requestId` on all three surfaces, and
+`previewLedgerSetup` (REST `POST …/ledgers/preview`, GraphQL query, MCP tool) returns the files
+and accounts a specification would create, with bean-check's `validation` of those files, without
+creating anything (creation refuses a setup whose files would not load, w23/048), under the same
+`LEDGER_CREATE` authority. Creation uses account authority;
 update/delete resolve an existing ledger under its pin and administrative
 relationship. Nullable command types now accurately describe GraphQL's existing
 nullable inputs. The lifecycle adapter tests exercise actual workflows, the PDP,
@@ -334,6 +368,12 @@ controlled external dependencies. The existing failure ordering remains: remote
 bank revocation precedes repository deletion; repository failure rolls back
 local metadata but cannot undo that revocation. Failed repository-ID lookup
 continues to skip bank cleanup without blocking deletion, as in GraphQL.
+
+On every surface, creating a ledger without `private` (or with `null`) makes it
+private (w1/173, 2026-10-18). `LedgerWorkflow` used to forward an unset value,
+and the repository host then created the ledger public. Only `private: false`
+publishes a ledger. The dashboard and mobile app always send the value, so the
+change reaches only API and MCP callers that omit it.
 
 Pull-request inspection, file-change creation, merge approval, and close rejection
 now have REST/MCP bindings. `PullRequestWorkflow` shares the former GraphQL
@@ -363,8 +403,13 @@ asset URLs retain their configured lifetime after issue. MCP archive-byte operat
 alone do not close those coverage rows.
 
 Canonical and legacy archive downloads now use `LedgerArchiveService` across
-REST and MCP. REST streams the protected response; MCP returns the same bytes
-as a base64 blob with upstream MIME type and Content-Disposition metadata.
+REST and MCP, which reads Gitea's archive API directly (w0/m8). REST streams the
+protected response; MCP returns the same bytes as a base64 blob with upstream
+MIME type and Content-Disposition metadata, up to 8 MiB. That cap is a protocol
+constraint, recorded in the `ledger.downloadArchive` row's `mcpExempt` note: a
+resource read is one JSON-RPC message held whole in memory, so a larger archive
+is refused as `OPERATION_NOT_ALLOWED` with a hint to the `archive-download-url`
+resource, whose REST URL streams at any size (`archive-blob-cap.test.ts`).
 The canonical MCP resource joins the existing REST archive counter and 30/minute budget (the legacy alias left MCP in w2/m27; its REST twin keeps the counter).
 The archive adapter tests consume real HTTP fixture responses and MCP SDK
 resources, comparing ZIP bytes and extracted tar content, checking revocation,
@@ -468,6 +513,12 @@ ledger fixture to exercise successful changes, stale hashes including a stale
 second batch item, denied write access, and unsupported preview arguments.
 These tests verify adapter delegation and normalized effects; live ledger-service
 atomicity and concurrency behavior remain deployment/integration verification.
+All three surfaces accept optional `allowInvalid` on the three operations: the
+ledger service refuses an edit or delete that would add a bean-check error
+(w21/m1), and every surface reports it as `VALIDATION_FAILED` with the new
+errors in `newLedgerErrors`, the structured-add refusal's shape (w0/m2). The
+parity suite proves the refusal, the unchanged source, and the opt-out on each
+adapter.
 
 `addLedgerEntries` now exposes structured bulk insertion through MCP, and REST's
 existing entries endpoint accepts budget and document directives. All ten types

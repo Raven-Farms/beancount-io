@@ -11,7 +11,7 @@ import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { fonts, useTheme } from "@/common/theme";
 import { getFormatDate } from "@/common/format-util";
-import { buildKeyboardShortcutButtons } from "./utils";
+import { buildKeyboardShortcutButtons, buildPlainTextButtons } from "./utils";
 
 export const KEYBOARD_ACCESSORY_BAR_HEIGHT = 44;
 
@@ -72,18 +72,27 @@ type KeyboardAccessoryBarProps = {
    * bar, whose ✓ was the other way to dismiss it.
    */
   onDismiss?: () => void;
+  /**
+   * The Beancount insert buttons; off for a plain-text file, whose bar is
+   * then ⇥ and the dismiss control it would otherwise lack (w21/144, w21/339).
+   */
+  shortcuts?: boolean;
 };
 
 export function KeyboardAccessoryBar({
   onInsert,
   operatingCurrencies = [],
   onDismiss,
+  shortcuts = true,
 }: KeyboardAccessoryBarProps) {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
   const { t } = useTranslations();
   const today = getFormatDate(new Date());
-  const buttons = buildKeyboardShortcutButtons(today, operatingCurrencies);
+  // A plain-text file still gets ⇥, the one key a touch keyboard lacks.
+  const buttons = shortcuts
+    ? buildKeyboardShortcutButtons(today, operatingCurrencies)
+    : buildPlainTextButtons();
 
   return (
     <View testID="ledger-editor-quick-buttons" style={styles.bar}>
@@ -101,9 +110,11 @@ export function KeyboardAccessoryBar({
             onPress={() => onInsert(btn.insert, btn.cursorOffset)}
             activeOpacity={0.6}
             accessibilityRole="button"
-            accessibilityLabel={t("keyboardAccessoryInsert", {
-              symbol: btn.label,
-            })}
+            accessibilityLabel={
+              btn.spokenKey
+                ? t(btn.spokenKey)
+                : t("keyboardAccessoryInsert", { symbol: btn.label })
+            }
           >
             <Text style={btn.isDate ? styles.dateText : styles.btnText}>
               {btn.label}

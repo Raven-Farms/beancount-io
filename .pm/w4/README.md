@@ -2,7 +2,156 @@
 
 **Worker:** worker1 — general-purpose adoption worker; accepts the next highest-impact milestone across packages, topics, and A1/A2/A3 rather than owning a permanent specialty. Existing milestones retain their historical order and source.
 
+## Inbox
+
+- [1005 — Preserve amount order in Persian Account period tables](./1005.md) — minor residual of W3/479; genuine both-view/both-width tables show unit/number/minus under RTL;96exact API records and English/Journal controls pass, source exact, no writes.
+
+- [1004 — Execute the current BQL model from the toolbar](./1004.md) — minor residual of W3/m12; fresh both-width native Enter runs previous text despite current model and settled prior URL; six shortcut/six pointer controls pass, source exact, no writes.
+
+- [1003 — Keep tiny commodity price labels accurate](./1003.md) — minor residual of former W3/012; valid tiny quotes render zero ticks and exponent tooltips multiply two prices by1e9 at both widths; exact history/ordinary/zero controls pass, no writes.
+
+- [1002 — Validate amount currency symbols before import](./1002.md) — minor residual of M44; current local native UI misses later symbols and five established associations at both widths; matching/refusal controls pass, all preparations preblocked; production lag excluded.
+
+- [1001 — Keep exact report quantities in LineChart text values](./1001.md) — minor residual of W3/494; large source quantities round and24-decimal Account tooltips show zero at both widths; exact raw tables/18-decimal controls pass, no hosted writes.
+
+- [1000 — Keep Account Journal selections when Time changes](./1000.md) — minor follow-up to142; live QA, 2026-10-22; Balance-only becomes Transaction after Time edit, flags reset at both widths; expected November balance1 versus actual transactions10, backend/Journal controls pass.
+
+- [999 — Strengthen the read-retry regressions shipped with M50](./999.md) — minor test quality; from the M50 Simplify review (reported after close), re-checked on main; success content, classified-message-during-retry and redundant assertions; optional hook simplifications.
+
+- [998 — Keep the Income Statement bar mode when Time changes](./998.md) — minor residual of142/M16; live QA, 2026-10-22; Single Bars resets on successful shared-Time changes in both views/widths; interval retention and existing view bookmarks pass.
+
+- [997 — Select an available unit when stacked charts lack the operating unit](./997.md) — minor; live QA, 2026-10-22; Cash Flow/Expenses stacked views hide real104VACHR with all-false legend at both widths; native toggle, Single Bars and normal USD controls pass.
+
+- [996 — Give Cash Flow statement charts readable period data](./996.md) — minor; live QA, 2026-10-22; both chart views expose monthly values only on pointer hover at both widths; annual tables/CSV do not replace them, Income Statement keyboard control passes.
+
+- [995 — Retry a failed BQL history query without replacing the current editor](./995.md) — minor; live QA, 2026-10-22; older A has only Delete after a transport failure; toggling sends no read and global Execute runs B; real A workaround succeeds at both widths.
+
+- [994 — Keep collapsed BQL history cards closed when another card is deleted](./994.md) — minor residual of 253; live QA, 2026-10-22; deleting the top card reopens an untouched collapsed neighbor at both widths; same nodes/cache and zero extra reads.
+
+- [993 — Compare Net Worth changes within the same currency](./993.md) — minor; live QA,2026-10-22; valid USD1000→JPY100000 series displays +99000JPY at both widths; current-producer and matching-currency controls, zero hosted writes.
+
+- [992 — Keep keyboard focus on Refresh prices while it refreshes](./992.md) — minor; found in the 332 native check, 2026-10-22; the disabled button drops focus to BODY on every refresh outcome at both widths; Reload charts control keeps focus, no hosted writes.
+
+- [991 — Return focus to visible report filters after the header changes layout](./991.md) — minor residual of W3/m20; live QA,2026-10-22; Close/Escape target a hidden opener after resize or sidebar collapse; visible-opener controls pass, zero hosted writes.
+
+- [990 — Keep newer filter drafts when earlier changes finish](./990.md) — minor; live QA,2026-10-22; new Time text is replaced by the previous navigation at both widths; Account repeats at390; genuine reads held unchanged, zero hosted writes.
+
+- [989 — Keep a newer BQL draft when its earlier submission finishes URL navigation](./989.md) — minor residual of W3/m12; live QA,2026-10-22; genuine delayed navigation replaces a later unexecuted draft at both widths; no hosted writes.
+
+- [988 — Keep focus after deleting BQL history cards](./988.md) — minor; real public-query history at both widths,2026-10-22; deleting focused middle/last cards leaves BODY while exact storage/editor controls pass; next-Tab behavior recorded, no writes.
+
+- [987 — Explain failed file-download generation](./987.md) — minor; modeled browser API failure over a real public file,2026-10-22; both widths leave Download open without feedback or a file; restored retries match actual API bytes, no writes.
+
+- [986 — Default newly opened forms to the opening day](./986.md) — minor; Date-only browser fixtures with real reads,2026-10-22; Budget/Open Account first open keeps yesterday at both widths; same-day, explicit-date and close/reopen controls pass, no writes.
+
+- [984 — Keep cached Activity cards after a failed refresh](./984.md) — minor; real cached dashboard reads with injected offset0 failure,2026-10-22; ten cards become zero at both widths despite retained query data; initial-error/retry controls pass, no writes.
+
+- [983 — Offer Try Again on the remaining QueryView read failures](./983.md) — minor; w4/m50 simplify reviews plus live QA,2026-10-22; Accounts, Documents, Events and Errors lack retry at both widths, with real reload controls; Settings and older retry migrations remain source-derived.
+
+- [982 — Let Receipt Record accept exact decimals](./982.md) — minor residual of W1/028; both-width native12.345KWD corrections are blocked by fixed-cent step before transport; exact12.34 controls pass, no hosted writes.
+
+- [981 — Escape receipt text in the Beancount preview](./981.md) — minor; modeled parse/review at both widths,2026-10-22; actual Beancount parser rejects quoted merchant preview and changes raw backslashes; exact structured inputs preblocked, plain controls pass.
+
+- [980 — Calculate Budget’s rolling range on selection](./980.md) — minor; real public-ledger reads with an owned Date fixture,2026-10-22; a tab opened the previous day sends yesterday’s range and prorated target at both widths; fresh-day/reload controls pass, no writes.
+
+- [979 — Keep an Entry Context draft through a cache refresh](./979.md) — minor; w4/m49 simplify altitude review, 2026-10-22; a cache refetch swaps a dirty entry editor for its loading view, so a write landing after the reader left can drop a newer draft; code-read, not yet reproduced.
+
+- [978 — Keep Budget variance tolerance below visible differences](./978.md) — minor; modeled read fixtures against deployed dashboard,2026-10-22; exact ±1 USD deltas become On target/zero at a large target, both-width +1 and boundary controls confirmed; regression of130, no writes.
+
+- [977 — Let the shared Dialog hold dismissal while a write is pending](./977.md) — maintenance; w4/m47 simplify altitude review, 2026-10-22; six dialogs copy the pending close guard and treat the Close button inconsistently; one Dialog prop would own it.
+
+- [976 — Reopen Gallery results with Arrow Down after Escape](./976.md) — minor; authenticated read-only dashboard QA,2026-10-22; both widths keep available results closed until blur/refocus; debounce ownership, actual selection/Back and IME guard controls retained, no writes.
+
+
+- [974 — Preserve BQL result focus when the editor loads](./974.md) — minor; public dashboard QA with unchanged delayed stylesheet,2026-10-22; native-Tab result focus transfers to the late editor at both widths; untouched autofocus and settled navigation/CSV controls pass, no writes.
+
+
+- [972 — Preserve the remaining CSV row-shape guard after cell edits](./972.md) — minor; W3/m19 residual follow-up,2026-10-22; unrelated Payee/Description edits clear a five-field record's refusal and admit a truncated prepared import; date/source repair controls pass, one write preblocked, no new historical group.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- [265 — Keep financial text and private paths out of GA4 automatic events](./blocked/265.md) — major; dashboard QA, 2026-10-20; stream-editor completion dependency. — **blocked:** checklist shipped in `181e7a996`; needs a GA4 Editor to turn off Site search / history page views
+- [289 — Preserve long amount digits in portrait statement print output](./blocked/289.md) — minor; dashboard QA, 2026-10-20. — **blocked:** fix shipped in `68e973700`; awaiting portrait PDF check
+
 ## Milestones
+
+- [x] **m50** — [Retry failed statement, Account Journal and commodity reads](./done/m50/README.md) (6 tasks) ← dashboard QA,2026-10-21/22; minor, promoted from328 with a sixth equivalent observer; current variables and read-only recovery preserved.
+
+- [x] **m49** — [Keep entry-source saves within their pending draft session](./done/m49/README.md) (6 tasks) ← dashboard QA,2026-10-22; major client draft loss, pending source edits and a different newly opened entry draft disappear at an older modeled acknowledgement; failure/retry controls pass, no hosted writes.
+
+- [x] **m48** — [Preserve receipt review through recording and failure](./done/m48/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, pending corrections disappear at success and failed Record drops the corrected review; promoted from973, local responses only.
+
+- [x] **m47** — [Keep profile saves within their submitted dialog session](./done/m47/README.md) (6 tasks) ← dashboard QA,2026-10-22; minor, concurrent Enter requests and older completion closing a newer draft; promoted from975, all writes intercepted or locally modeled.
+
+- [x] **m46** — [Preserve editor drafts through ledger refresh](./done/m46/README.md) (6 tasks) ← continuous dashboard QA, 2026-10-21; major. Done 2026-10-22: Out of date → Refresh keeps an already shown ledger page, unsaved file draft (bound to its original SHA) and unexecuted BQL query; failed refreshes keep content and offer Try Again.
+
+- [x] **m45** — [Keep commodity quantities precise in Budget and statements](./done/m45/README.md) (6 tasks) ← promoted 331 and actual public statement QA, 2026-10-21; minor. Done 2026-10-22: statement cells and Budget readouts keep source commodity digits (4.00995 ETH, 0.0004 BTC) through one opt-in digit count on the shared formatter; ISO cash unchanged.
+
+- [x] **m44** — [Refuse CSV currency-symbol conflicts before importing](./done/m44/README.md) (6 tasks) ← dashboard QA, 2026-10-21; major, accepted euro/pound tokens prepare as USD/EUR without conflict guidance; five real-UI requests preblocked, no hosted import.
+
+- [x] **m43** — [Keep contrast selections visible and readable](./done/m43/README.md) (11 tasks) ← dashboard QA, 2026-10-21; minor, promoted 273 with filter/tab label backplates and independently reproduced Calendar/Billing/Net Worth/Budget/Accounts/creation-radio selected-state cues.
+
+- [x] **m42** — [Keep keyboard focus owned during and after modal submissions](./done/m42/README.md) (5 tasks) ← dashboard QA, 2026-10-20; minor, pending reverse-Tab escapes New Entry and failed submits lose the retry position.
+
+- [x] **m41** — [Preserve acknowledged actions through refresh failures](./done/m41/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 294 with independent Budget submission scope.
+
+- [x] **m40** — [Keep picker popups sized and scrollable inside modals](./done/m40/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, promoted 293 with independently reproduced Combobox wheel scope.
+
+- [x] **m39** — [Recover Journal and dashboard from malformed saved lists](./done/m39/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, preference decoding and cross-tab recovery.
+
+- [x] **m38** — [Accept supported early-year dates across directive writes](./done/m38/README.md) (6 tasks) ← dashboard QA API controls, 2026-10-20; minor, backend-v2 shared date validation and eligible adapter parity.
+
+- [x] **m37** — [Resolve README file and image references from their source path](./done/m37/README.md) (7 tasks) ← dashboard QA, 2026-10-20; minor, rendered file/image context and native hrefs. — deployed native links/images verified; owned fixture cleanup complete
+
+- [x] **m36** — [Preserve profile and commit timestamps through hydration](./done/m36/README.md) (10 tasks) ← dashboard QA, 2026-10-20; minor. Done 2026-10-22: one shared `useHydratedTime()` keeps commit, activity and repository-card timestamps through hydration; deployed boundary/title controls and real SSR regressions pass.
+
+- [ ] **m35** — [Keep form fields usable when suggestions fail](./blocked/m35/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, four form suggestion wrappers. — **blocked:** fields now survive; deployed keyboard retry still loses focus, follow-up recorded
+
+- [ ] **m34** — [Resolve multiline entry sources without splitting quoted strings](./blocked/m34/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, ledger source resolution. — **blocked:** fix shipped in `a0fa2e619`; awaiting deployed dashboard reopen check
+
+- [x] **m33** — [Keep New Entry drafts safe during submission](./done/m33/README.md) (6 tasks) ← dashboard QA, 2026-10-20; major, pending edits and late completion.
+
+- [x] **m32** — [Preserve valid ledger dates across browser timezones](./done/m32/README.md) (6 tasks) ← dashboard QA, 2026-10-20; minor, shared picker and seven form integrations. — deployed date/payload journeys and dashboard gates verified 2026-10-20
+
+- [x] **m31** — [Bound authentication abuse without losing account recovery](./done/m31/README.md) (11 tasks) ← user-approved rate-limit review and `$pm` / `$loopx w4`, 2026-10-19
 
 - [x] **m29** — [Explore public examples before signing in](./done/m29/README.md) (9 tasks) ← approved `/pm-brainstorm for w4` candidate 1, 2026-09-27; mobile, ~4–5h implementation plus standing closing tasks
 
@@ -54,6 +203,22 @@
 
 ## Dropped
 
+- ~~**985**~~ — Stop Create Ledger's Next from submitting the ledger before Review — dropped 2026-10-22: duplicate of [314](./done/314.md), the earlier and fuller report of the same Details → Next CreateLedger defect, filed without finding it.
+
+- ~~**328**~~ — Offer a retry after a statement or Account Journal read fails — dropped 2026-10-22: promoted to [m50](./done/m50/README.md), preserving all evidence and adding independently repeated Commodities primary-read failure; six observer integrations plus regressions exceed one hour, with no new historical group.
+
+- ~~**973**~~ — Freeze receipt review edits while recording — dropped 2026-10-22: promoted to [m48](./done/m48/README.md), preserving the original report and adding independently repeated failed-record review loss; separate pending/failure repairs and real regressions exceed one hour.
+
+- ~~**975**~~ — Guard pending Change Name submissions from Enter — dropped 2026-10-22: promoted to [m47](./done/m47/README.md), retaining the reproducer and adding independently repeated pending dialog/draft ownership; two implementation tasks plus real regressions exceed one hour.
+
+- ~~**331**~~ — Preserve fractional commodity values in Budget readouts — dropped2026-10-21: promoted to [m45](./done/m45/README.md), preserving all modeled Budget evidence and adding actual Trial Balance/Balance Sheet precision loss; two renderers and computed precision regressions exceed one hour.
+
+- ~~**273**~~ — Keep active picker options identifiable in forced colors — dropped 2026-10-21: promoted to [m43](./done/m43/README.md), preserving all evidence and adding independently reproduced JournalFilters/default Tabs label backplates; four styling targets and rendered acceptance exceed one hour.
+
+- ~~**294**~~ — Preserve an acknowledged star action when its metadata refresh fails — dropped 2026-10-20: promoted to [m41](./done/m41/README.md), preserving Star evidence and adding the independent Budget acknowledgement/read failure; two controllers and regressions exceed one hour.
+
+- ~~**293**~~ — Keep the DatePicker calendar reachable in short viewports — dropped 2026-10-20: promoted to [m40](./done/m40/README.md), preserving all evidence and adding the independent modal Combobox wheel failure; the shared repair and regression scope exceed one hour.
+
 - ~~**016**~~ — Commodity accounts are shown as an unlabelled USD cost basis — and a commodity with no cost renders as $0.00 — dropped 2026-09-26: promotion to [m11](./done/m11/README.md) completed; the milestone's verification record carries the outcome, and w4/m26 superseded its valuation basis.
 
 - ~~**188**~~ — Type-check `count` for dashboard plural keys — dropped 2026-09-26: folded into [m28](./done/m28/README.md) as t008, since m28's definition of done already requires it.
@@ -86,4 +251,4 @@ Blocked milestones live under `blocked/` with their reason and unblock condition
 
 ## Blocked inbox follow-up
 
-- [ ] [096 — Verify protected-route login history](./blocked/096.md) — blocked on a native-toolbar Back reproduction; automated traversal alone is insufficient.
+- [ ] [096 — Verify protected-route login history](./blocked/096.md) — blocked on a current protected-query trigger and native-toolbar Back reproduction; original Import/History triggers retired, automated traversal alone is insufficient.

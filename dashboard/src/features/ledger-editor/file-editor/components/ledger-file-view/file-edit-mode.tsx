@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useBlocker } from "@tanstack/react-router";
 import type * as monaco from "monaco-editor";
 import { Button } from "@/common/components/ui/button";
@@ -44,6 +44,8 @@ export interface EditModeToolbarProps {
   /** Reset the draft buffer before confirming Leave without saving. */
   onDiscard: () => void;
   isSaving: boolean;
+  /** Set once a save has written exactly this buffer; its exit is not a loss. */
+  savedExitRef?: RefObject<boolean>;
 }
 
 /**
@@ -60,6 +62,7 @@ export function EditModeToolbar({
   onCancel,
   onDiscard,
   isSaving,
+  savedExitRef,
 }: EditModeToolbarProps) {
   const { t } = useTranslations();
   const isMac = useIsMac();
@@ -68,10 +71,27 @@ export function EditModeToolbar({
 
   // Block all navigation (route changes, query params, browser back/refresh) with unsaved changes
   const blocker = useBlocker({
-    shouldBlockFn: () => hasUnsavedChanges,
+    shouldBlockFn: () => hasUnsavedChanges && !savedExitRef?.current,
     enableBeforeUnload: () => hasUnsavedChanges,
     withResolver: true,
   });
+
+  // Saving disables Save under the reader's focus, and a failed save
+  // re-enabled it with focus lost to the page. Hand focus back then, unless
+  // the reader moved it; a landed save unmounts this toolbar (w4/970).
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const savedFromButton = useRef(false);
+  useEffect(() => {
+    if (isSaving || !savedFromButton.current) return;
+    savedFromButton.current = false;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    saveButtonRef.current?.focus();
+  }, [isSaving]);
+
+  // Leave hands focus to wherever the departure lands; Stay, Escape and an
+  // outside dismissal resume editing the retained draft (w4/964).
+  const leaving = useRef(false);
 
   // Run an editor action against the shared editor instance, if mounted.
   const runEditorAction = (
@@ -135,9 +155,13 @@ export function EditModeToolbar({
 
         <div className="relative">
           <Button
+            ref={saveButtonRef}
             variant="outline"
             size="sm"
-            onClick={() => onSave(editedContent)}
+            onClick={() => {
+              savedFromButton.current = true;
+              onSave(editedContent);
+            }}
             disabled={isSaving}
             className="flex items-center gap-2 flex-1 md:flex-none"
             aria-label={isSaving ? t("common.saving") : t("common.save")}
@@ -176,7 +200,17 @@ export function EditModeToolbar({
         open={blocker.status === "blocked"}
         onOpenChange={(open) => !open && blocker.reset?.()}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          onOpenAutoFocus={() => {
+            leaving.current = false;
+          }}
+          onCloseAutoFocus={(event) => {
+            if (leaving.current || !editorRef.current) return;
+            event.preventDefault();
+            editorRef.current.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{t("ledgerEditor.unsavedChanges")}</DialogTitle>
             <DialogDescription>
@@ -194,6 +228,7 @@ export function EditModeToolbar({
             <Button
               variant="destructive"
               onClick={() => {
+                leaving.current = true;
                 onDiscard();
                 blocker.proceed?.();
               }}

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Upload, FileText, AlertCircle, Download } from "lucide-react";
+import { useHydrated } from "@tanstack/react-router";
 import { Button } from "@/common/components/ui/button";
 import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { cn } from "@/common/lib/utils/utils";
@@ -19,6 +20,7 @@ const CSV_FORMAT_EXAMPLE = `Date,Payee,Description,Amount
 
 export function FileUpload({ onParsed, onFileSelected }: FileUploadProps) {
   const { t } = useTranslations();
+  const hydrated = useHydrated();
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { parseFile, isLoading, error } = useCSVParser();
@@ -119,10 +121,16 @@ export function FileUpload({ onParsed, onFileSelected }: FileUploadProps) {
           className="hidden"
           accept=".csv,.pdf,.ofx,.qfx,text/csv,application/pdf,image/*"
           onChange={handleFileInput}
-          disabled={isLoading}
+          disabled={isLoading || !hydrated}
         />
 
-        <div className="cursor-pointer" onClick={handleButtonClick}>
+        {/* Server-rendered controls do nothing until their handlers attach;
+            say so rather than swallow the first click (w4/266). */}
+        <div
+          className={hydrated ? "cursor-pointer" : "pointer-events-none"}
+          aria-disabled={hydrated ? undefined : true}
+          onClick={hydrated ? handleButtonClick : undefined}
+        >
           {isLoading ? (
             <div className="space-y-4">
               <Upload className="w-12 h-12 mx-auto text-muted-foreground animate-pulse" />
@@ -143,6 +151,7 @@ export function FileUpload({ onParsed, onFileSelected }: FileUploadProps) {
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={!hydrated}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleButtonClick();
@@ -166,6 +175,7 @@ export function FileUpload({ onParsed, onFileSelected }: FileUploadProps) {
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={!hydrated}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleButtonClick();

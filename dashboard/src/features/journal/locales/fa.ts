@@ -448,10 +448,6 @@ const faJournal: Record<string, TranslationEntry> = {
     message: "در انتظار",
     description: "Pending transaction status",
   },
-  "journal.blankStatus": {
-    message: "(خالی)",
-    description: "Blank transaction status option",
-  },
   "journal.addPosting": {
     message: "افزودن ردیف سند",
     description: "Accessible name for adding a transaction posting row",

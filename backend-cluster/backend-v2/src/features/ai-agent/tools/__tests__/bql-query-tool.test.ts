@@ -1,7 +1,11 @@
 import {
+  capBqlText,
+  executeBqlQuery,
   executeStructuredBqlQuery,
+  MAX_BQL_TEXT_BYTES,
   MAX_STRUCTURED_BQL_ROWS,
 } from "../bql-query-tool";
+import { BQL_ROW_COUNT, BQL_TRUNCATED } from "../bql-result-metadata";
 import type { ToolContext } from "../types";
 
 /**
@@ -95,5 +99,63 @@ describe("runBqlQueryStructured", () => {
       { query: "x" },
     );
     expect(result).toMatchObject({ ok: false, error: "Fava is down" });
+  });
+});
+
+/**
+ * w23/010. `runBqlQuery` returned the shell's whole text: one `JOURNAL` over a
+ * 3,209-posting ledger was 5 MB in the model's context.
+ */
+describe("runBqlQuery text ceiling", () => {
+  const header = "account\n-------\n";
+
+  it("returns text under both ceilings unchanged", () => {
+    const text = `${header}${"Assets:Cash\n".repeat(MAX_STRUCTURED_BQL_ROWS)}`;
+    expect(capBqlText(text)).toEqual({ text, truncated: false });
+  });
+
+  it("keeps the header and the first 1000 rows of a longer table", () => {
+    const rows = Array.from({ length: 1500 }, (_, i) => `row-${i}`);
+    const { text, truncated } = capBqlText(`${header}${rows.join("\n")}\n`);
+    const lines = text.trimEnd().split("\n");
+    expect(truncated).toBe(true);
+    expect(lines.slice(0, 2)).toEqual(["account", "-------"]);
+    expect(lines[1001]).toBe("row-999");
+    expect(lines).toHaveLength(1003);
+    expect(lines[1002]).toMatch(
+      /^\[truncated: showing the first 1002 of 1502 lines/,
+    );
+  });
+
+  it("cuts wide rows at a line boundary under the byte ceiling", () => {
+    // Forty 4 KB lines, each with a multi-byte character: ~160 KB.
+    const wide = `${"é".repeat(2000)}`;
+    const source = Array.from({ length: 40 }, () => wide).join("\n");
+    const { text, truncated } = capBqlText(source);
+    expect(truncated).toBe(true);
+    expect(Buffer.byteLength(text)).toBeLessThan(MAX_BQL_TEXT_BYTES + 300);
+    const lines = text.trimEnd().split("\n");
+    // Every kept line is whole; only the marker follows them.
+    expect(lines.slice(0, -1).every((line) => line === wide)).toBe(true);
+    expect(lines.at(-1)).toContain(`of ${Buffer.byteLength(source)} bytes`);
+  });
+
+  it("marks the result it cut, keeping the canonical row count", async () => {
+    const queryShellText = jest.fn(async () => ({
+      text: `${header}${"Assets:Cash\n".repeat(3209)}`,
+      rowCount: 3209,
+    }));
+    const result = await executeBqlQuery(
+      {
+        services: { ledgerShell: { queryShellText } },
+        identity: { userId: "usr_1" },
+        ledgerId: "alice/main",
+      } as unknown as Pick<ToolContext, "services" | "identity" | "ledgerId">,
+      { query: "SELECT account" },
+    );
+    expect(result.ok).toBe(true);
+    expect(Reflect.get(result, BQL_ROW_COUNT)).toBe(3209);
+    expect(Reflect.get(result, BQL_TRUNCATED)).toBe(true);
+    if (result.ok) expect(result.result).toContain("[truncated:");
   });
 });

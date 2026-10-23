@@ -1,6 +1,11 @@
 import { requestPlatform } from "@/server/api/request-platform";
 import "reflect-metadata";
+import {
+  fakeRedisCounter as mockFakeRedisCounter,
+  fakeRedisCounterState,
+} from "@/foundation/redis/__tests__/fake-redis-counter";
 import { request } from "node:http";
+jest.mock("@/foundation/redis/redis-counter", () => mockFakeRedisCounter);
 jest.mock("@ai-sdk/harness/agent", () => ({ HarnessAgent: class {} }));
 jest.mock("@ai-sdk/harness-acp", () => ({ createACP: () => ({}) }));
 jest.mock("@/features/plaid/utils/encryption", () => ({
@@ -24,6 +29,8 @@ import {
   AUTHORIZATION_ACTIONS,
 } from "@/server/api/authorization";
 import { graphqlScopeMiddleware } from "@/server/graphql/scope-middleware";
+import { graphqlRateLimitMiddleware } from "@/server/graphql/rate-limit-middleware";
+import { clearRateLimitShadows } from "@/server/api/rate-limit";
 import { formatError } from "@/server/graphql/format-error";
 import { FavaApiError } from "@/foundation/fava";
 import { assembleMcpRegistry } from "@/server/api/composition-root";
@@ -81,7 +88,11 @@ let resolvers: Map<unknown, object>;
 let schemaPromise: ReturnType<typeof buildSchema> | undefined;
 type Surface = "rest" | "mcp" | "gql";
 const surfaces: Surface[] = ["rest", "mcp", "gql"];
-async function fixture(caller = identity, appId?: string) {
+beforeEach(() => {
+  clearRateLimitShadows();
+  fakeRedisCounterState.reset();
+});
+async function fixture(caller = identity, appId?: string, rateLimited = false) {
   const headers: Record<string, string> = appId ? { "x-app-id": appId } : {};
   const platform = requestPlatform(headers);
   const records = new Map<string, typeof seed>([["alice/main", { ...seed }]]);
@@ -196,6 +207,14 @@ async function fixture(caller = identity, appId?: string) {
   };
   const ledgers = {
     listLedgers: list,
+    // The owner's own list, which the ledger limit counts.
+    listUserLedgers: jest.fn(async (owner: string) =>
+      envelope(
+        [...records.values()].filter((ledger) =>
+          ledger.full_name.startsWith(`${owner}/`),
+        ),
+      ),
+    ),
     createLedger: create,
     updateLedger: update,
     getLedger: get,
@@ -251,6 +270,17 @@ async function fixture(caller = identity, appId?: string) {
       deleteByLedgerRepoId: deleteBankRows,
     },
   };
+  // The strict store creation idempotency records live in (ADR021).
+  const idempotencyRecords = new Map<string, unknown>();
+  const idempotencyStore = {
+    getStrict: async (key: string) => idempotencyRecords.get(key),
+    setStrict: async (key: string, value: unknown) => {
+      idempotencyRecords.set(key, value);
+    },
+    delStrict: async (key: string) => {
+      idempotencyRecords.delete(key);
+    },
+  };
   const workflow = new LedgerWorkflow(
     { getApiContext, getPublicApiClient } as never,
     {} as never,
@@ -261,6 +291,7 @@ async function fixture(caller = identity, appId?: string) {
     db as never,
     config,
     authorization,
+    idempotencyStore as never,
   );
   const services = {
     ledgerRepo: new LedgerRepoService(
@@ -275,7 +306,13 @@ async function fixture(caller = identity, appId?: string) {
   schemaPromise ??= buildSchema({
     resolvers: [LedgerMutationResolver, LedgerQueryResolver],
     container: { get: (ctor) => resolvers.get(ctor) },
-    globalMiddlewares: [graphqlScopeMiddleware("enforce")],
+    globalMiddlewares: [
+      (data, next) =>
+        data.context.rateLimited
+          ? graphqlRateLimitMiddleware()(data, next)
+          : next(),
+      graphqlScopeMiddleware("enforce"),
+    ],
     validate: true,
   });
   const schema = await schemaPromise;
@@ -283,6 +320,7 @@ async function fixture(caller = identity, appId?: string) {
     { workflows: { ledger: workflow }, services } as unknown as AppLayers,
     config,
     { apiKeys: false },
+    rateLimited,
   );
   rest.setIdentity(caller);
   const server = assembleMcpRegistry(
@@ -299,6 +337,7 @@ async function fixture(caller = identity, appId?: string) {
   await Promise.all([client.connect(a), server.connect(b)]);
   return {
     records,
+    idempotencyRecords,
     events,
     bankRows: () => bankRows,
     create,
@@ -373,6 +412,7 @@ async function fixture(caller = identity, appId?: string) {
           failed: boolean;
           data: unknown;
           status: number;
+          retryAfter?: string;
           error?: { code: string; message: string };
         }>((resolve, reject) => {
           const r = request(
@@ -401,6 +441,7 @@ async function fixture(caller = identity, appId?: string) {
                     failed: status >= 400,
                     data,
                     status,
+                    retryAfter: response.headers["retry-after"],
                     error: data.error,
                   });
                 } catch (error) {
@@ -454,6 +495,11 @@ async function fixture(caller = identity, appId?: string) {
               | { error?: { code: string; message: string } }
               | undefined
           )?.error,
+          retryAfter: (
+            r.structuredContent as
+              | { error?: { retryAfter?: number } }
+              | undefined
+          )?.error?.retryAfter,
         };
       }
       const args = { ...(operation !== "create" && { ledgerId }), ...input };
@@ -469,6 +515,7 @@ async function fixture(caller = identity, appId?: string) {
         source: `${operation === "read" ? "query" : "mutation"}{${field}(${formatted}){${operation === "delete" ? "ledgerId" : fields}}}`,
         contextValue: {
           identity: caller,
+          rateLimited,
           getCurrentIdentity: () => caller,
           platform,
         },
@@ -482,6 +529,7 @@ async function fixture(caller = identity, appId?: string) {
           code: formattedError.extensions?.code,
           message: formattedError.message,
         },
+        retryAfter: formattedError?.extensions?.retryAfter,
       };
     },
     close: async () => {
@@ -508,6 +556,42 @@ function expected(name: string, description: string, privateValue: boolean) {
   };
 }
 describe("ledger lifecycle through actual adapters and workflow", () => {
+  it("shares the user budget across real adapters and rotating credentials before mutation", async () => {
+    const caller = { ...identity };
+    const f = await fixture(caller, undefined, true);
+    try {
+      // Neither credential spends its own 30-call admin allowance. Together,
+      // all three canonical aliases must spend one user's 30-call allowance.
+      for (let index = 0; index < 30; index++) {
+        caller.tokenId = `tok_rotation_${index % 2}`;
+        const description = `accepted ${index}`;
+        const result = await f.call(surfaces[index % 3], "update", {
+          description,
+        });
+        expect(result.failed).toBe(false);
+        expect(f.records.get("alice/main")?.description).toBe(description);
+      }
+      expect(f.update).toHaveBeenCalledTimes(30);
+      caller.tokenId = "tok_fresh_after_limit";
+      for (const surface of surfaces) {
+        const result = await f.call(surface, "update", {
+          description: "refused",
+        });
+        expect(result.failed).toBe(true);
+        expect(result.error).toMatchObject({ code: "RATE_LIMITED" });
+        expect(Number(result.retryAfter)).toBeGreaterThan(0);
+        expect(Number(result.retryAfter)).toBeLessThanOrEqual(60);
+        if (surface === "rest") expect(result).toMatchObject({ status: 429 });
+      }
+      expect(f.update).toHaveBeenCalledTimes(30);
+      expect(f.records.get("alice/main")?.description).toBe("accepted 29");
+      // A spent write/admin operation must not consume an unrelated read.
+      for (const surface of surfaces)
+        expect((await f.call(surface, "read")).failed).toBe(false);
+    } finally {
+      await f.close();
+    }
+  });
   describe.each(surfaces)("ledger denial contract via %s", (surface) => {
     it.each(["missing", "inaccessible"] as const)(
       "conceals %s ledgers identically for reads and deletion",
@@ -794,9 +878,11 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
             })
           ).failed,
         ).toBe(false);
+        // A null `private` means "not specified", which creates a private
+        // ledger (w1/173).
         expect(f.create.mock.calls[0][0]).toMatchObject({
           description: null,
-          private: null,
+          private: true,
         });
         expect(
           (
@@ -812,6 +898,97 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
           description: null,
           private: null,
         });
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  it.each(surfaces)(
+    "creates a private ledger unless publishing is asked for, via %s",
+    async (surface) => {
+      // Ledgers are financial records. The repository host creates a
+      // repository public when `private` is unset, so the workflow decides
+      // instead: unset is private, and only an explicit false publishes
+      // (w1/173).
+      const f = await fixture();
+      try {
+        for (const [name, privacy, expected] of [
+          ["omitted", undefined, true],
+          ["null", null, true],
+          ["public", false, false],
+          ["private", true, true],
+        ] as const) {
+          const response = await f.call(surface, "create", {
+            name,
+            ...(privacy === undefined ? {} : { private: privacy }),
+          });
+          expect(response.failed).toBe(false);
+          expect(response.data).toMatchObject({ private: expected });
+          expect(f.create.mock.calls.at(-1)?.[0]).toMatchObject({
+            private: expected,
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  // w23/037: the repository host's limit came back as a bare
+  // "[Description]: MaxSize", and no schema declared it.
+  it.each(surfaces)(
+    "refuses a description over 2048 characters before the host via %s",
+    async (surface) => {
+      const f = await fixture();
+      const before = f.records.get("alice/main")!.description;
+      try {
+        for (const [operation, input] of [
+          ["create", { name: "long", description: "x".repeat(2049) }],
+          ["update", { description: "x".repeat(2049) }],
+        ] as const) {
+          const r = await f.call(surface, operation, input);
+          expect(r.failed).toBe(true);
+          expect(r.error?.message).toContain("at most 2048");
+        }
+        expect(f.records.has("alice/long")).toBe(false);
+        expect(f.records.get("alice/main")!.description).toBe(before);
+        const atLimit = await f.call(surface, "update", {
+          description: "x".repeat(2048),
+        });
+        expect(atLimit.failed).toBe(false);
+        expect(f.records.get("alice/main")!.description).toHaveLength(2048);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  // w23/064: the service slugified `x-` into `x` and `a--b` into `a-b`, so
+  // the next call by the name sent found nothing.
+  it.each(surfaces)(
+    "refuses a name the service would store differently via %s",
+    async (surface) => {
+      const f = await fixture();
+      try {
+        for (const [name, use] of [
+          ["qa-x-", "use 'qa-x'"],
+          ["-qa-x", "use 'qa-x'"],
+          ["qa--x", "use 'qa-x'"],
+          ["_", "at least one letter or number"],
+        ] as const) {
+          for (const operation of ["create", "update"] as const) {
+            const r = await f.call(surface, operation, { name });
+            expect(r.failed).toBe(true);
+            expect(r.error?.message).toContain("joined by single hyphens");
+            expect(r.error?.message).toContain(use);
+          }
+        }
+        expect(f.create).not.toHaveBeenCalled();
+        expect(f.update).not.toHaveBeenCalled();
+        expect(f.records.has("alice/main")).toBe(true);
+        for (const name of ["qa-x", "qa_x"]) {
+          const created = await f.call(surface, "create", { name });
+          expect(created.failed).toBe(false);
+          expect(f.records.has(`alice/${name}`)).toBe(true);
+        }
       } finally {
         await f.close();
       }
@@ -878,6 +1055,34 @@ describe("ledger lifecycle through actual adapters and workflow", () => {
         ).toBe(true);
         expect(f.create).not.toHaveBeenCalled();
         expect(f.records.size).toBe(1);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+  it.each(surfaces)(
+    "lets a refused creation retry with the same requestId via %s",
+    async (surface) => {
+      // w23/008: the refusal used to leave the requestId "in progress" for
+      // 24 hours, so the documented retry answered CONFLICT.
+      const f = await fixture();
+      const paid = await f.subscriptions();
+      f.subscriptions.mockResolvedValue([]);
+      const input = { name: "retried", requestId: "req-retry" };
+      try {
+        const refused = await f.call(surface, "create", input);
+        expect(refused.failed).toBe(true);
+        expect(refused.error?.code).toBe("RESOURCE_LIMIT_REACHED");
+        expect(f.idempotencyRecords.size).toBe(0);
+
+        f.subscriptions.mockResolvedValue(paid);
+        const created = await f.call(surface, "create", input);
+        expect(created.failed).toBe(false);
+        expect(created.data).toMatchObject({ fullName: "alice/retried" });
+        const replayed = await f.call(surface, "create", input);
+        expect(replayed.failed).toBe(false);
+        expect(replayed.data).toMatchObject({ fullName: "alice/retried" });
+        expect(f.create).toHaveBeenCalledTimes(1);
       } finally {
         await f.close();
       }
@@ -1036,7 +1241,8 @@ it.each(surfaces)(
         expect(result.failed).toBe(!mobile);
         expect(f.records.has("alice/second")).toBe(mobile);
         if (mobile) {
-          expect(result.data).toEqual(expected("second", "", false));
+          // No `private` given: created private (w1/173).
+          expect(result.data).toEqual(expected("second", "", true));
           expect(f.files.get("alice/second")).toEqual(defaultLedgerTemplate);
         }
         expect(f.create).toHaveBeenCalledTimes(mobile ? 1 : 0);

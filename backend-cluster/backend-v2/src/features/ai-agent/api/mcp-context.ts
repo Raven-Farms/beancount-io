@@ -13,7 +13,12 @@ import type { ILedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow
 import type { ToolContext } from "../tools/types";
 import type { Identity } from "@/server/api/identity";
 import { BadUserInputError, ForbiddenError } from "@/shared/errors";
-import { CLASS_BUDGETS } from "@/server/api/rate-limit";
+import {
+  CLASS_BUDGETS,
+  OP_BUDGETS,
+  MCP_TRANSPORT_OP_ID,
+  MCP_HANDSHAKE_OP_ID,
+} from "@/server/api/rate-limit";
 import { LEDGER_ID_PATTERN } from "./mcp-ledger-selection";
 import { parseLedgerId } from "@/shared/str";
 
@@ -72,13 +77,13 @@ export function buildInstructions(identity: Identity): string {
     "Files: beancount://{owner}/{name}/files/{path}; catalog: beancount://catalog/ledgers.",
     "Most reads are also resources, which cost less than a tool call.",
     "Multi-step jobs have playbooks: prompts/list offers close-month, reconcile-account, categorize-imports, spending-report.",
-    "`addLedgerEntries` and `appendLedgerText` refuse writes that add bean-check errors unless `allowInvalid: true`. Write results include `validation.newErrors`; `checkLedger` reports every bean-check error.",
+    "`addLedgerEntries`, `appendLedgerText` and the entry-source edits and deletes refuse writes that add bean-check errors unless `allowInvalid: true`. Write results include `validation.newErrors`; `checkLedger` reports every bean-check error.",
     "BQL returns result rows: one per posting for an unaggregated query (not per transaction), one per group with GROUP BY; LIMIT bounds result rows. `runBqlQueryStructured` returns typed numbers.",
     "Every tool returns {ok, result} or {ok:false, error:{code,message,hint}} with isError.",
     // Interpolated, not restated: the instruction string is the contract every
     // session reads, and a retuned budget must not leave it advertising a
     // number the limiter does not enforce.
-    `Budgets per minute: ${CLASS_BUDGETS.read.max} reads, ${CLASS_BUDGETS.write.max} writes, ${CLASS_BUDGETS.admin.max} admin; the handshake is free. Over budget returns code RATE_LIMITED with retryAfter.`,
+    `Per-operation defaults/min: ${CLASS_BUDGETS.read.max} read, ${CLASS_BUDGETS.write.max} write, ${CLASS_BUDGETS.admin.max} admin; overrides apply. User and credential quotas both apply, shared across protocols. Transport/min: ${OP_BUDGETS[MCP_TRANSPORT_OP_ID].max} requests; ${OP_BUDGETS[MCP_HANDSHAKE_OP_ID].max} handshakes separately. RATE_LIMITED includes retryAfter.`,
   ].join("\n");
 }
 

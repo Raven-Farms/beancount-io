@@ -10,8 +10,15 @@ describe("resolveCurrencyBalance", () => {
     expect(resolveCurrencyBalance({ USD: 100, EUR: 90 }, "EUR")).toBe(90);
   });
 
-  it("falls back to USD when the requested currency is missing", () => {
-    expect(resolveCurrencyBalance({ USD: 100, EUR: 90 }, "CNY")).toBe(100);
+  // w21/058: the USD entry used to stand in, then printed with the active
+  // currency's symbol.
+  it("reads 0, never the USD entry, when the currency is missing", () => {
+    expect(resolveCurrencyBalance({ USD: 100, EUR: 90 }, "CNY")).toBe(0);
+    expect(resolveCurrencyBalance({ USD: "50.00" }, "EUR")).toBe(0);
+    expect(resolveCurrencyBalance({ EUR: "200.00", USD: "50.00" }, "EUR")).toBe(
+      200,
+    );
+    expect(resolveCurrencyBalance({}, "EUR")).toBe(0);
   });
 
   it("returns 0 when neither the currency nor USD is present", () => {

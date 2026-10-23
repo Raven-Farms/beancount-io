@@ -1,5 +1,8 @@
+import { routeText } from "@/common/route-text";
+import { CardLoadFailure } from "@/components/card-load-failure";
 import { useCallback, useMemo, useState } from "react";
 import {
+  Platform,
   SectionList,
   StyleSheet,
   Text,
@@ -21,6 +24,7 @@ import {
 } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
+import { useToday } from "@/common/hooks/use-today";
 import { ColorTheme } from "@/types/theme-props";
 import { useQueryShellQuery } from "@/generated-graphql/graphql";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
@@ -137,6 +141,7 @@ const getStyles = (theme: ColorTheme) =>
   });
 
 function MerchantsDirectory() {
+  const today = useToday();
   const ledgerId = useLedgerGuard();
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -151,7 +156,11 @@ function MerchantsDirectory() {
   // keyboard up it lands behind it. Shortening the container by the overlap
   // re-centers the message in what the user can actually see.
   const keyboardHeight = useKeyboardHeight();
-  const keyboardOverlap = getKeyboardOverlap(keyboardHeight, insets.bottom);
+  const keyboardOverlap = getKeyboardOverlap(
+    keyboardHeight,
+    insets.bottom,
+    Platform.OS,
+  );
   const searchBoxHeight = searchFieldHeight(fontScale);
   const overrides = useReactiveVar(merchantRecurringOverridesVar);
 
@@ -172,7 +181,6 @@ function MerchantsDirectory() {
     detections,
     enoughHistory,
     loading: seriesLoading,
-    error: seriesError,
     refetch: refetchSeries,
   } = usePayeeRecurrence(ledgerId);
 
@@ -190,6 +198,7 @@ function MerchantsDirectory() {
         (payee) => overrideFor(overrides, ledgerId!, payee),
         searchQuery,
         sort,
+        today,
       ),
     [
       merchants,
@@ -199,11 +208,14 @@ function MerchantsDirectory() {
       ledgerId,
       searchQuery,
       sort,
+      today,
     ],
   );
 
   const loading = rollupLoading || seriesLoading;
-  const error = rollupError ?? seriesError;
+  // Only the directory's own read can empty it: a failed recurrence series
+  // leaves the list and its rows, without cadence (w21/118).
+  const error = rollupData === undefined ? rollupError : undefined;
   const isInitialLoading = loading && !rollupData && !error;
   const showBlankEmpty = !isInitialLoading && !error && merchants.length === 0;
   const showNoResults =
@@ -234,7 +246,15 @@ function MerchantsDirectory() {
         pathname: "/merchant-detail",
         // `ledger` binds the entry to this ledger, so a later ledger switch
         // cannot revive the merchant under a different one.
-        params: { payee: item.merchant.payee, ledger: ledgerId },
+        params: {
+          payee: routeText(item.merchant.payee),
+          ledger: ledgerId,
+          // The spellings this row merged, so the detail counts what the row
+          // did (w21/046).
+          otherSpellings: item.merchant.otherSpellings
+            ? routeText(JSON.stringify(item.merchant.otherSpellings))
+            : undefined,
+        },
       });
     },
     [router, ledgerId],
@@ -261,7 +281,9 @@ function MerchantsDirectory() {
       }
       return (
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>{t(section.titleKey)}</Text>
+          <Text style={styles.sectionHeaderText} accessibilityRole="header">
+            {t(section.titleKey)}
+          </Text>
         </View>
       );
     },
@@ -273,11 +295,12 @@ function MerchantsDirectory() {
       return <MerchantsListSkeleton />;
     }
     if (error) {
+      // A whole translated sentence and a Retry, never transport text.
       return (
-        <Text style={styles.errorText}>
-          {t("merchantsLoadError")}
-          {error.message}
-        </Text>
+        <View>
+          <Text style={styles.errorText}>{t("merchantsLoadError")}</Text>
+          <CardLoadFailure onRetry={() => void onRefresh()} />
+        </View>
       );
     }
     if (showBlankEmpty) {

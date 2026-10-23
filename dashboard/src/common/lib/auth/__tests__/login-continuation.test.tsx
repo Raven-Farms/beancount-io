@@ -19,7 +19,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { requireAuth } from "../auth";
-import { useLoginNextPath } from "@/common/hooks/use-login-next-path";
+import { useSafeReturnPath } from "@/common/hooks/use-safe-return-path";
 
 afterEach(cleanup);
 
@@ -37,7 +37,7 @@ function buildRouter(initialEntry: string, { signedIn = false } = {}) {
     validateSearch: (search: Record<string, unknown>) => search,
     component: function PublicRoute() {
       // What Star and Follow put in their login link.
-      return <output data-testid="next">{useLoginNextPath() ?? ""}</output>;
+      return <output data-testid="next">{useSafeReturnPath() ?? ""}</output>;
     },
   });
 

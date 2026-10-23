@@ -6,14 +6,17 @@ import type { Identity } from "@/server/api/identity";
 
 const numberQuery = z.coerce.number().optional();
 const listQuery = z.object({ page: numberQuery, limit: numberQuery });
-const searchQuery = listQuery.extend({
+// The same bounds as every other catalog list; the workflow holds GraphQL to
+// them too (w23/019).
+const idQuery = z.coerce.number().int().min(1).optional();
+const searchQuery = paginationSchema.extend({
   q: z.string().optional(),
   topic: booleanQuery,
   includeDesc: booleanQuery,
-  uid: numberQuery,
-  priorityOwnerId: numberQuery,
-  teamId: numberQuery,
-  starredBy: numberQuery,
+  uid: idQuery,
+  priorityOwnerId: idQuery,
+  teamId: idQuery,
+  starredBy: idQuery,
   private: booleanQuery,
   isPrivate: booleanQuery,
   template: booleanQuery,
@@ -21,7 +24,7 @@ const searchQuery = listQuery.extend({
   mode: z.string().optional(),
   exclusive: booleanQuery,
   sort: z.string().optional(),
-  order: z.string().optional(),
+  order: z.enum(["asc", "desc"]).optional(),
 });
 
 /** Account-catalog operations delegate authority and result mapping to the workflow. */

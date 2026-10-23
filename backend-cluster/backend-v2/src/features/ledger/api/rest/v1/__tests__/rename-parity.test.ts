@@ -41,7 +41,10 @@ beforeAll(async () => {
   });
 });
 
-type FixtureFiles = Map<string, { content: string; sha: string }>;
+type FixtureFiles = Map<
+  string,
+  { content: string; sha: string; encoding?: string }
+>;
 
 async function fixture(
   caller = identity,
@@ -73,7 +76,7 @@ async function fixture(
       sha: entry.sha,
       size: entry.content.length,
       content: entry.content,
-      encoding: null,
+      encoding: entry.encoding ?? null,
     };
   };
   const change = jest.fn(async (_owner, _name, options) => {
@@ -513,6 +516,290 @@ describe.each(["rest", "gql", "mcp"])("rename via %s", (surface) => {
       expect((await f.call(surface, "old.bean", "new.bean")).success).toBe(
         false,
       );
+      expect(f.change).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+/**
+ * w23/029. Includes resolve against the directory of the file that declares
+ * them, but the rename matched their text against repo-root paths: it missed
+ * `d/inc.bean`'s `include "x.bean"`, refused over `d/inc2.bean`'s unrelated
+ * `include "b.bean"`, and with `updateIncludes` rewrote that one to a file
+ * that does not exist while leaving `include "./b.bean"` dangling.
+ */
+describe.each(["rest", "gql", "mcp"])(
+  "rename with relative includes via %s",
+  (surface) => {
+    const tree = {
+      "d/x.bean": "; x\n",
+      "d/inc.bean": 'include "x.bean"\n',
+      "d/b.bean": "; d/b\n",
+      "d/inc2.bean": 'include "b.bean"\n',
+      "d/up.bean": 'include "../b.bean" ; parent\n',
+      "b.bean": "; b\n",
+      "inc3.bean": 'include "./b.bean"\n',
+    };
+    const message = (result: unknown) => JSON.stringify(result ?? "");
+    const updated = (result: unknown) =>
+      (result as { updatedIncludes?: string[] } | undefined)?.updatedIncludes;
+
+    it("refuses a rename an include in a subdirectory still names", async () => {
+      const f = await fixture(identity, tree);
+      try {
+        const outcome = await f.call(surface, "d/x.bean", "d/y.bean");
+        expect(outcome.success).toBe(false);
+        expect(f.change).not.toHaveBeenCalled();
+        const done = await f.call(surface, "d/x.bean", "d/y.bean", {
+          updateIncludes: true,
+        });
+        expect(updated(done.result)).toEqual(["d/inc.bean"]);
+        expect(f.files.get("d/inc.bean")?.content).toBe('include "y.bean"\n');
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("names only the includes that resolve to the file", async () => {
+      const f = await fixture(identity, tree);
+      try {
+        const outcome = await f.call(surface, "b.bean", "c.bean");
+        expect(outcome.success).toBe(false);
+        if (surface === "rest") {
+          const text = message(outcome.result);
+          expect(text).toContain("inc3.bean");
+          expect(text).toContain("d/up.bean");
+          expect(text).not.toContain("d/inc2.bean");
+        }
+        expect(f.change).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("rewrites each include relative to its own file and leaves others alone", async () => {
+      const f = await fixture(identity, tree);
+      try {
+        const done = await f.call(surface, "b.bean", "e/c.bean", {
+          updateIncludes: true,
+        });
+        expect(done.success).toBe(true);
+        expect(updated(done.result)).toEqual(
+          expect.arrayContaining(["inc3.bean", "d/up.bean"]),
+        );
+        expect(updated(done.result)).toHaveLength(2);
+        expect(f.files.get("inc3.bean")?.content).toBe(
+          'include "./e/c.bean"\n',
+        );
+        expect(f.files.get("d/up.bean")?.content).toBe(
+          'include "../e/c.bean" ; parent\n',
+        );
+        expect(f.files.get("d/inc2.bean")?.content).toBe('include "b.bean"\n');
+      } finally {
+        await f.close();
+      }
+    });
+
+    // A quote is no longer a name a new file can take (w23/054); a space is.
+    it.each(["my file.bean"])(
+      "writes a new name %p that reads back as the same path",
+      async (newPath) => {
+        const f = await fixture(identity, {
+          "main.bean": 'include "b.bean"\n',
+          "b.bean": "; b\n",
+        });
+        try {
+          const done = await f.call(surface, "b.bean", newPath, {
+            updateIncludes: true,
+          });
+          expect(done.success).toBe(true);
+          // Renaming it back finds the include it wrote, so that include names it.
+          const back = await f.call(surface, newPath, "b.bean", {
+            updateIncludes: true,
+          });
+          expect(updated(back.result)).toEqual(["main.bean"]);
+          expect(f.files.get("main.bean")?.content).toBe('include "b.bean"\n');
+        } finally {
+          await f.close();
+        }
+      },
+    );
+
+    it("refuses a new name a Windows checkout or an include cannot hold", async () => {
+      const f = await fixture(identity, {
+        "main.bean": 'include "b.bean"\n',
+        "b.bean": "; b\n",
+      });
+      try {
+        for (const newPath of ['c"x.bean', "aux.bean", "qa\nx.bean", "notes.\u202ebean"]) {
+          const outcome = await f.call(surface, "b.bean", newPath, {
+            updateIncludes: true,
+          });
+          expect(outcome.success).toBe(false);
+        }
+        expect(f.change).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("keeps a glob that still matches and refuses one the file would leave", async () => {
+      const f = await fixture(identity, {
+        "main.bean": 'include "d/*.bean"\n',
+        "d/x.bean": "; x\n",
+      });
+      try {
+        const kept = await f.call(surface, "d/x.bean", "d/y.bean");
+        expect(kept.success).toBe(true);
+        expect(updated(kept.result)).toEqual([]);
+        const left = await f.call(surface, "d/y.bean", "e/y.bean", {
+          updateIncludes: true,
+        });
+        expect(left.success).toBe(false);
+        if (surface === "rest")
+          expect(message(left.result)).toContain('include \\"d/*.bean\\"');
+        expect(f.files.has("d/y.bean")).toBe(true);
+        expect(f.files.get("main.bean")?.content).toBe('include "d/*.bean"\n');
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+/**
+ * w23/030. Rewriting an include re-encoded the whole including file from its
+ * lenient decode, so a Latin-1 includer lost every non-ASCII byte. Moving a
+ * Latin-1 file itself never decodes it and must keep its bytes.
+ */
+describe.each(["rest", "gql", "mcp"])("rename around a non-UTF-8 file via %s", (surface) => {
+  const latin1 = Buffer.concat([
+    Buffer.from('; Caf'),
+    Buffer.from([0xe9]),
+    Buffer.from('\ninclude "b.bean"\n'),
+  ]).toString("base64");
+
+  it("refuses to rewrite an include in a file that is not valid UTF-8", async () => {
+    const f = await fixture(identity, { "b.bean": "; b\n" });
+    f.files.set("main.bean", { content: latin1, sha: "sha-l", encoding: "base64" });
+    try {
+      const outcome = await f.call(surface, "b.bean", "c.bean", { updateIncludes: true });
+      expect(outcome.success).toBe(false);
+      if (surface === "rest")
+        expect(outcome.result).toMatchObject({
+          error: { code: "BAD_USER_INPUT", message: expect.stringContaining("main.bean is not valid UTF-8") },
+        });
+      expect(f.change).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("moves a file that is not valid UTF-8 byte for byte", async () => {
+    const f = await fixture(identity, {});
+    f.files.set("old.bean", { content: latin1, sha: "sha-l", encoding: "base64" });
+    try {
+      expect((await f.call(surface, "old.bean", "new.bean")).success).toBe(true);
+      const created = f.change.mock.calls[0][2].files.find(
+        (op: { operation: string }) => op.operation === "create",
+      );
+      expect(created.content).toBe(latin1);
+    } finally {
+      await f.close();
+    }
+  });
+});
+
+
+/** w23/031: renaming or deleting the entry point leaves a ledger that cannot load. */
+describe.each(["rest", "gql", "mcp"])("the entry point via %s", (surface) => {
+  it("cannot be renamed", async () => {
+    const f = await fixture(identity, { "main.bean": "; main\n" });
+    try {
+      const outcome = await f.call(surface, "main.bean", "ledger.bean", { updateIncludes: true });
+      expect(outcome.success).toBe(false);
+      if (surface === "rest")
+        expect(outcome.result).toMatchObject({
+          error: { code: "BAD_USER_INPUT", message: "main.bean is the ledger's entry point and can't be renamed" },
+        });
+      expect(f.change).not.toHaveBeenCalled();
+      expect(f.files.has("main.bean")).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+
+  if (surface === "gql")
+    it("cannot be deleted through deleteLedgerFile", async () => {
+      const f = await fixture(identity, { "main.bean": "; main\n" });
+      try {
+        const result = await graphql({
+          schema,
+          source: 'mutation { deleteLedgerFile(ledgerId: "alice/main", path: "main.bean", sha: "sha-0-main.bean") { path } }',
+          contextValue: { identity, getCurrentIdentity: () => identity },
+        });
+        expect(result.errors?.[0]?.originalError).toMatchObject({
+          category: "BAD_USER_INPUT",
+        });
+        expect(result.errors?.[0]?.message).toBe("main.bean is the ledger's entry point and can't be deleted");
+        expect(f.change).not.toHaveBeenCalled();
+      } finally {
+        await f.close();
+      }
+    });
+});
+
+/**
+ * w23/056. A moved file's bytes moved as they were, so its own relative
+ * includes resolved from the new folder: `include "x.bean"` in `d/inc.bean`
+ * pointed at `e/x.bean` after a move to `e/`.
+ */
+describe.each(["rest", "gql", "mcp"])("moving a file that includes others via %s", (surface) => {
+  const tree = {
+    "d/x.bean": "; x\n",
+    "d/inc.bean": '; mine\ninclude "x.bean" ; sibling\ninclude "/d/x.bean"\n',
+  };
+  const updated = (result: unknown) =>
+    (result as { updatedIncludes?: string[] } | undefined)?.updatedIncludes;
+
+  it("moves the bytes unchanged within its folder", async () => {
+    const f = await fixture(identity, tree);
+    try {
+      expect((await f.call(surface, "d/inc.bean", "d/inc2.bean")).success).toBe(true);
+      expect(f.files.get("d/inc2.bean")?.content).toBe(tree["d/inc.bean"]);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses a move to another folder that would break its include, then rewrites it", async () => {
+    const f = await fixture(identity, tree);
+    try {
+      const refused = await f.call(surface, "d/inc.bean", "e/inc.bean");
+      expect(refused.success).toBe(false);
+      if (surface === "rest")
+        expect(JSON.stringify(refused.result)).toContain('d/inc.bean includes \\"x.bean\\"');
+      expect(f.change).not.toHaveBeenCalled();
+
+      const moved = await f.call(surface, "d/inc.bean", "e/inc.bean", { updateIncludes: true });
+      expect(moved.success).toBe(true);
+      expect(updated(moved.result)).toEqual(["e/inc.bean"]);
+      // Relative to its new folder; the root-anchored include needs nothing.
+      expect(f.files.get("e/inc.bean")?.content).toBe(
+        '; mine\ninclude "../d/x.bean" ; sibling\ninclude "/d/x.bean"\n',
+      );
+    } finally {
+      await f.close();
+    }
+  });
+
+  it("refuses to move a glob include to another folder", async () => {
+    const f = await fixture(identity, { "d/x.bean": "; x\n", "d/all.bean": 'include "*.bean"\n' });
+    try {
+      const outcome = await f.call(surface, "d/all.bean", "e/all.bean", { updateIncludes: true });
+      expect(outcome.success).toBe(false);
       expect(f.change).not.toHaveBeenCalled();
     } finally {
       await f.close();

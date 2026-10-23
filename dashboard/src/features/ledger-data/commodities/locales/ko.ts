@@ -99,6 +99,16 @@ const koCommodities: Record<string, TranslationEntry> = {
     message: "가격을 새로 고칠 수 없습니다",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message: "가격은 새로 고쳤지만 차트를 다시 불러올 수 없습니다.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "차트 다시 불러오기",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default koCommodities;

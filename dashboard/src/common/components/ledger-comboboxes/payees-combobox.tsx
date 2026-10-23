@@ -6,14 +6,13 @@ import {
   type ComboboxOption,
 } from "@/common/components/ui/combobox";
 import { Skeleton } from "@/common/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import {
   GetLedgerPayeesDocument,
   type GetLedgerPayeesQuery,
   type GetLedgerPayeesQueryVariables,
 } from "@/graphql/definitions";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { getErrorMessageKey } from "@/common/lib/errors/error-message";
+import { useSuggestionsFallback } from "./use-suggestions-fallback";
 
 interface PayeesComboboxProps extends ComboboxFieldProps {
   ledgerId: string;
@@ -40,13 +39,15 @@ export function PayeesCombobox({
   const { t } = useTranslations();
   const defaultPlaceholder = placeholder || t("journal.selectPayee");
 
-  const { data, loading, error } = useQuery<
-    GetLedgerPayeesQuery,
-    GetLedgerPayeesQueryVariables
-  >(GetLedgerPayeesDocument, {
-    variables: { ledgerId },
-    skip: !ledgerId,
-  });
+  const query = useQuery<GetLedgerPayeesQuery, GetLedgerPayeesQueryVariables>(
+    GetLedgerPayeesDocument,
+    {
+      variables: { ledgerId },
+      skip: !ledgerId,
+      notifyOnNetworkStatusChange: true,
+    },
+  );
+  const { data } = query;
 
   // Convert payees to ComboboxOption format
   const options: ComboboxOption[] = useMemo(() => {
@@ -58,21 +59,19 @@ export function PayeesCombobox({
     }));
   }, [data]);
 
-  if (loading) {
-    return <Skeleton className="h-10 w-full" />;
-  }
+  const fallback = useSuggestionsFallback(
+    query,
+    Boolean(data?.getLedgerPayees),
+    fieldProps["aria-describedby"],
+  );
 
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertDescription>{t(getErrorMessageKey(error))}</AlertDescription>
-      </Alert>
-    );
+  if (fallback.initialLoading) {
+    return <Skeleton className="h-10 w-full" />;
   }
 
   return (
     <Combobox
-      options={options}
+      options={fallback.failed ? [] : options}
       value={value}
       onValueChange={onValueChange}
       placeholder={defaultPlaceholder}
@@ -81,6 +80,8 @@ export function PayeesCombobox({
       disabled={disabled}
       className={className}
       {...fieldProps}
+      aria-describedby={fallback.describedBy}
+      notice={fallback.notice}
     />
   );
 }

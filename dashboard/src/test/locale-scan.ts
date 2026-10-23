@@ -137,6 +137,8 @@ const ALLOWED_LATIN = [
   // Formats, protocols and units
   "CSV",
   "PDF",
+  // The text encoding's name, as in "UTF-8" (w4/276).
+  "UTF",
   "OFX",
   "PNG",
   "JPG",
@@ -147,6 +149,9 @@ const ALLOWED_LATIN = [
   "JSON",
   "URL",
   "SSH",
+  // Protocol acronyms kept in Latin script, like SSH and HTTP.
+  "OIDC",
+  "SSO",
   "HTTP",
   "HTTPS",
   "API",
@@ -528,3 +533,14 @@ export const IDENTICAL_BY_DESIGN: Record<string, string> = {
   "nl/seo.ledgerPullRequest.title":
     "These catalogs keep the Git term Pull Request throughout",
 };
+
+/**
+ * The numbers a message states, Western and Eastern Arabic digits alike, so a
+ * limit-copy test can compare them with the limit the code enforces.
+ */
+export function numbersIn(text: string): number[] {
+  const normalized = text.replace(/[٠-٩۰-۹]/g, (digit) =>
+    String(digit.charCodeAt(0) & 0xf),
+  );
+  return [...normalized.matchAll(/\d+/g)].map((m) => Number(m[0]));
+}

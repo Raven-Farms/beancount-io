@@ -1,3 +1,4 @@
+import { routeText } from "@/common/route-text";
 import {
   ScrollView,
   StyleSheet,
@@ -7,14 +8,26 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ColorTheme } from "@/types/theme-props";
 import { fonts, useTheme } from "@/common/theme";
-import { useThemeStyle } from "@/common/hooks";
+import { useThemeStyle, useToast } from "@/common/hooks";
+import * as Clipboard from "expo-clipboard";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useLedgerErrors } from "@/common/hooks/use-ledger-errors";
+import { errorHint } from "@/common/new-ledger-error";
 import { selectSectionsPending } from "./section-state";
+import {
+  appendCommitPage,
+  commitPageOverlaps,
+  COMMITS_PAGE_SIZE,
+  endRowsFor,
+  historyEnded,
+  type HistoryEnd,
+  isLastCommitPage,
+  shownCommitPages,
+} from "./commit-pages";
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
 import { useListCommitsQuery } from "@/generated-graphql/graphql";
@@ -23,8 +36,11 @@ import { LedgerGuard } from "@/components/ledger-guard";
 import { FadeInView } from "@/components/crossfade";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import {
+  errorCopyText,
+  errorSpokenText,
   formatErrorLocation,
   formatCommitAuthorLine,
+  commitRowAccessibilityLabel,
   formatShortSha,
   LedgerError,
   splitCommitMessage,
@@ -81,6 +97,13 @@ const getStyles = (theme: ColorTheme) =>
       lineHeight: 20,
       textAlign: LEADING_TEXT_ALIGN,
     },
+    errorHint: {
+      fontSize: 13,
+      color: theme.black80,
+      lineHeight: 18,
+      marginTop: 4,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
     errorLocation: {
       fontSize: 12,
       color: theme.black80,
@@ -99,6 +122,16 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 14,
       color: theme.black80,
       lineHeight: 20,
+    },
+    olderRow: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    olderText: {
+      fontSize: 15,
+      fontWeight: "500",
+      color: theme.primary,
     },
     changeRow: {
       paddingHorizontal: 16,
@@ -147,17 +180,32 @@ function SkeletonRows(): JSX.Element {
   );
 }
 
-function ErrorRow({ err }: { err: LedgerError }): JSX.Element {
+function ErrorRow({
+  err,
+  ledgerId,
+}: {
+  err: LedgerError;
+  ledgerId: string;
+}): JSX.Element {
   const theme = useTheme().colorTheme;
   const styles = useThemeStyle(getStyles);
   const canFix = !!err.filename;
+  const { t } = useTranslations();
+  const toast = useToast();
+  // A long press, or VoiceOver's actions rotor, copies the message with its
+  // place (w21/432).
+  const copyError = async () => {
+    await Clipboard.setStringAsync(errorCopyText(err));
+    toast.showToast({ message: t("copied"), type: "text" });
+  };
 
   const handlePress = () => {
     if (!canFix) return;
     router.push({
       pathname: "/(app)/ledger-file-editor",
       params: {
-        path: err.filename!,
+        path: routeText(err.filename!),
+        ledger: ledgerId,
         ...(err.lineno != null ? { initialLine: String(err.lineno) } : {}),
       },
     });
@@ -166,7 +214,12 @@ function ErrorRow({ err }: { err: LedgerError }): JSX.Element {
   const inner = (
     <View style={styles.errorRow}>
       <View style={styles.errorContent}>
-        <Text style={styles.errorMessage}>{err.message}</Text>
+        <Text style={styles.errorMessage} selectable={!canFix}>
+          {err.message}
+        </Text>
+        {errorHint(err) && (
+          <Text style={styles.errorHint}>{errorHint(err)}</Text>
+        )}
         {err.filename && (
           <Text style={styles.errorLocation}>{formatErrorLocation(err)}</Text>
         )}
@@ -182,12 +235,13 @@ function ErrorRow({ err }: { err: LedgerError }): JSX.Element {
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handlePress}
+        onLongPress={() => void copyError()}
         accessibilityRole="button"
-        accessibilityLabel={
-          err.filename
-            ? `${err.message}. ${formatErrorLocation(err)}`
-            : err.message
-        }
+        accessibilityLabel={errorSpokenText(err)}
+        accessibilityActions={[{ name: "copy", label: t("copy") }]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === "copy") void copyError();
+        }}
       >
         {inner}
       </TouchableOpacity>
@@ -206,9 +260,16 @@ function NotificationsScreenImpl(): JSX.Element {
   const {
     errors,
     loaded: errorsLoaded,
+    loading: errorsLoading,
+    error: errorsError,
     count: errorCount,
     refetch: refetchErrors,
   } = useLedgerErrors();
+  const errorsLoadState = selectCardLoadState({
+    loading: errorsLoading,
+    hasData: errorsLoaded,
+    error: errorsError,
+  });
 
   const [refreshing, setRefreshing] = useState(false);
   const {
@@ -216,11 +277,62 @@ function NotificationsScreenImpl(): JSX.Element {
     loading: commitsLoading,
     error: commitsError,
     refetch: refetchCommits,
+    fetchMore: fetchMoreCommits,
   } = useListCommitsQuery({
-    variables: { ledgerId, branch: "main", page: 1, limit: 30 },
+    variables: { ledgerId, branch: "main", page: 1, limit: COMMITS_PAGE_SIZE },
     skip: !ledgerId,
     fetchPolicy: "cache-and-network",
   });
+
+  // "Show older" pages back through the history (w21/313): the next page, until
+  // one comes back short. The page to ask for follows from the rows shown, and
+  // the end is remembered as the row count the short page left, so a refetch
+  // that drops the list to its first page brings the button back (w21/431), and
+  // an empty page after a whole number of pages ends the list (w21/498).
+  const shownRows = commitsData?.listCommits.length ?? 0;
+  const shownPages = shownCommitPages(shownRows);
+  const headSha = commitsData?.listCommits[0]?.sha;
+  const [historyEnd, setHistoryEnd] = useState<HistoryEnd | null>(null);
+  const noOlder = historyEnded(shownRows, endRowsFor(historyEnd, headSha));
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  useEffect(() => {
+    setHistoryEnd(null);
+  }, [ledgerId]);
+  const showOlder = async () => {
+    if (loadingOlder) return;
+    setLoadingOlder(true);
+    const page = shownPages + 1;
+    let mergedRows = 0;
+    let moved = false;
+    try {
+      const result = await fetchMoreCommits({
+        variables: { page },
+        updateQuery: (previous, { fetchMoreResult }) => {
+          moved = commitPageOverlaps(
+            previous.listCommits,
+            fetchMoreResult.listCommits,
+          );
+          if (moved) return previous;
+          const listCommits = appendCommitPage(
+            previous.listCommits,
+            fetchMoreResult.listCommits,
+          );
+          mergedRows = listCommits.length;
+          return { listCommits };
+        },
+      });
+      if (moved) {
+        // Commits landed since the list was read: start again from the first
+        // page, where they now sit (w21/626).
+        await refetchCommits();
+      } else if (isLastCommitPage(result.data.listCommits))
+        setHistoryEnd({ rows: mergedRows, head: headSha });
+    } catch {
+      // The rows already shown stay; the button is there to try again.
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   // Rows show the subject line only: git messages end in a newline, which
   // filled the two-line slot with a blank line (w0/032).
@@ -230,6 +342,7 @@ function NotificationsScreenImpl(): JSX.Element {
   }));
   const { errorsPending, commitsPending } = selectSectionsPending({
     errorsLoaded,
+    errorsFailed: errorsLoadState === "failed",
     commitsLoading,
     commitsLoaded: commitsData !== undefined,
   });
@@ -238,6 +351,7 @@ function NotificationsScreenImpl(): JSX.Element {
     setRefreshing(true);
     try {
       // Both halves: an error fixed outside the app clears on a pull too.
+      setHistoryEnd(null);
       await Promise.all([refetchCommits(), refetchErrors()]);
     } finally {
       setRefreshing(false);
@@ -260,7 +374,7 @@ function NotificationsScreenImpl(): JSX.Element {
             />
           }
         >
-          <Text style={styles.sectionHeader}>
+          <Text style={styles.sectionHeader} accessibilityRole="header">
             {t("notificationsErrorsSection")}
           </Text>
           <View style={styles.divider} />
@@ -269,7 +383,9 @@ function NotificationsScreenImpl(): JSX.Element {
             <SkeletonRows />
           ) : (
             <FadeInView>
-              {errorCount === 0 ? (
+              {errorsLoadState === "failed" ? (
+                <CardLoadFailure onRetry={() => void refetchErrors()} />
+              ) : errorCount === 0 ? (
                 <View style={styles.emptyRow}>
                   <Ionicons
                     name="checkmark-circle-outline"
@@ -283,7 +399,7 @@ function NotificationsScreenImpl(): JSX.Element {
               ) : (
                 errors.map((err, i) => (
                   <View key={i}>
-                    <ErrorRow err={err} />
+                    <ErrorRow err={err} ledgerId={ledgerId} />
                     <View style={styles.divider} />
                   </View>
                 ))
@@ -291,7 +407,7 @@ function NotificationsScreenImpl(): JSX.Element {
             </FadeInView>
           )}
 
-          <Text style={styles.sectionHeader}>
+          <Text style={styles.sectionHeader} accessibilityRole="header">
             {t("notificationsChangesSection")}
           </Text>
           <View style={styles.divider} />
@@ -319,7 +435,11 @@ function NotificationsScreenImpl(): JSX.Element {
                       style={styles.changeRow}
                       activeOpacity={0.7}
                       accessibilityRole="button"
-                      accessibilityLabel={commit.subject}
+                      accessibilityLabel={commitRowAccessibilityLabel(
+                        commit,
+                        t("commitNoMessage"),
+                        locale,
+                      )}
                       onPress={() =>
                         router.push({
                           pathname: "/(app)/commit-detail",
@@ -331,7 +451,7 @@ function NotificationsScreenImpl(): JSX.Element {
                     >
                       <View style={styles.changeContent}>
                         <Text style={styles.changeMessage} numberOfLines={2}>
-                          {commit.subject}
+                          {commit.subject || t("commitNoMessage")}
                         </Text>
                         <Text style={styles.changeMeta}>
                           {formatCommitAuthorLine(
@@ -356,6 +476,27 @@ function NotificationsScreenImpl(): JSX.Element {
               )}
             </FadeInView>
           )}
+
+          {!commitsPending &&
+          commits.length >= COMMITS_PAGE_SIZE &&
+          !noOlder ? (
+            <TouchableOpacity
+              testID="notifications-show-older"
+              style={styles.olderRow}
+              activeOpacity={0.7}
+              onPress={() => void showOlder()}
+              disabled={loadingOlder}
+              accessibilityRole="button"
+              accessibilityState={{
+                busy: loadingOlder,
+                disabled: loadingOlder,
+              }}
+            >
+              <Text style={styles.olderText}>
+                {t("notificationsShowOlder")}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </>

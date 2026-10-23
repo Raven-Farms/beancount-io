@@ -106,3 +106,16 @@ describe("toBeanCheckErrors", () => {
     ]);
   });
 });
+
+// w21/188: the engine's warnings are not what bean-check fails on.
+describe("toBeanCheckErrors and warnings", () => {
+  it("leaves warnings out", () => {
+    expect(
+      toBeanCheckErrors([
+        { message: "Transaction has only one posting", severity: "warning" },
+        { message: "Transaction does not balance", severity: "error" },
+        { message: "no severity means error" },
+      ]).map((error) => error.message),
+    ).toEqual(["Transaction does not balance", "no severity means error"]);
+  });
+});

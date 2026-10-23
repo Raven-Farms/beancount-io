@@ -84,6 +84,12 @@ jest.mock("../service-context", () => ({
         const main = overlays.find((overlay) => overlay.path === "main.bean");
         return errorsOf(main ? fromB64(main.content) : MAIN);
       },
+      // Every file the write touches is already included.
+      projectedSourceFiles: async ({
+        overlays,
+      }: {
+        overlays: { path: string }[];
+      }) => overlays.map((overlay) => overlay.path),
     },
   }),
 }));

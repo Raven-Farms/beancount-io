@@ -1,5 +1,5 @@
 import { i18n } from "@/translations";
-import { useLocalSearchParams } from "expo-router";
+
 import { useReactiveVar } from "@apollo/client";
 import { SelectedPayee } from "@/common/globalFnFactory";
 import { ledgerVar } from "@/common/vars";
@@ -12,9 +12,10 @@ import {
   twoPostingPayees,
   type JournalEntryLike,
 } from "@/common/suggestion-utils";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 export function PayeeInputScreen(): JSX.Element {
-  const { payee, simpleOnly } = useLocalSearchParams<{
+  const { payee, simpleOnly } = useRouteParams<{
     payee: string;
     simpleOnly?: string;
   }>();

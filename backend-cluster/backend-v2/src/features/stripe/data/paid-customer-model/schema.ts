@@ -31,6 +31,9 @@ export const paidCustomers = pgTable(
     // Subscription period end
     currentPeriodEnd: timestamp("current_period_end"),
     periodVerificationVersion: integer("period_verification_version"),
+    // The tier the verified period paid for, kept so a Stripe outage can
+    // fall back to it instead of Free.
+    periodTier: text("period_tier"),
 
     // Timestamps
     createdAt: timestamp("created_at").notNull().defaultNow(),

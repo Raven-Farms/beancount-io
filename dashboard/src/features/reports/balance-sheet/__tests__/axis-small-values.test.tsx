@@ -26,11 +26,11 @@ vi.mock("@/common/hooks/use-translations", () => ({
   }),
 }));
 
-vi.mock("@/common/hooks/use-format-quantity", () => ({
-  useFormatQuantity: () => (value: number) => String(value),
-}));
-
 vi.mock("@/common/hooks/use-theme", () => ({ useIsDarkTheme: () => false }));
+// The real number formatter runs; it only reads the ledger's render_commas.
+vi.mock("@/common/hooks/use-ledger", () => ({
+  useLedger: () => ({ ledgerData: { options: { renderCommas: true } } }),
+}));
 
 beforeEach(() => {
   captured.length = 0;
@@ -77,5 +77,32 @@ describe("balance line chart axis labels", () => {
 
     const format = axisFormatter();
     expect([0, 1000, 4500].map(format)).toEqual(["0.0", "1.0k", "4.5k"]);
+  });
+
+  it("writes cash at its minor units and other commodities at their source digits in the tooltip (w4/966)", () => {
+    render(
+      <LineChart
+        data={[
+          { date: "2025-12-31", balance: { USD: "4559.8", ETH: "4.00995" } },
+        ]}
+        interval="monthly"
+        primarySeries="USD"
+      />,
+    );
+    const option = captured.at(-1)!;
+    const tooltip = option.tooltip as {
+      formatter: (params: unknown[]) => string;
+    };
+    const html = tooltip.formatter(
+      ["USD", "ETH"].map((seriesName, index) => ({
+        name: "2025-12-31",
+        seriesName,
+        color: "#000",
+        value: ["2025-12-31", index === 0 ? 4559.8 : 4.00995],
+      })),
+    );
+
+    expect(html).toContain("USD: 4,559.80");
+    expect(html).toContain("ETH: 4.00995");
   });
 });

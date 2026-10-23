@@ -1,13 +1,14 @@
 import { i18n } from "@/translations";
 import { SelectedNarration } from "@/common/globalFnFactory";
-import { useLocalSearchParams } from "expo-router";
+
 import { useReactiveVar } from "@apollo/client";
 import { ledgerVar } from "@/common/vars";
 import { useGetLedgerNarrationsQuery } from "@/generated-graphql/graphql";
 import { TextInputScreen } from "@/components";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 export function NarrationInputScreen(): JSX.Element {
-  const { narration } = useLocalSearchParams<{
+  const { narration } = useRouteParams<{
     narration: string;
   }>();
   const onSaved = SelectedNarration.getFn();

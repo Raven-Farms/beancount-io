@@ -1,4 +1,5 @@
 import { makeVar } from "@apollo/client";
+import type { TransactionFilters } from "../../screens/transactions-screen/filters/types";
 
 export const EXAMPLE_IDS = [
   "open_ledger/example",
@@ -15,6 +16,8 @@ export type GuestVisit = {
   ledgerId: ExampleId | null;
   view: GuestView;
   resumeFailure?: GuestReadFailure;
+  /** Transactions filters a journal link named (w21/489). */
+  filters?: TransactionFilters;
 };
 
 // Public selections only. Neither this state nor the guest cache is persisted;
@@ -32,7 +35,9 @@ export function startGuestVisit(serverUrl: string): void {
 }
 
 export function updateGuestVisit(
-  update: Partial<Pick<GuestVisit, "ledgerId" | "view" | "resumeFailure">>,
+  update: Partial<
+    Pick<GuestVisit, "ledgerId" | "view" | "resumeFailure" | "filters">
+  >,
 ): void {
   const visit = guestVisitVar();
   if (visit) {

@@ -38,6 +38,16 @@ ZERO = Decimal()
 _CLAMP_SOURCES = frozenset({"<summarize>", "<transfer_balances>", "<conversions>"})
 
 
+def _under_roots(account: str, roots: str | tuple[str, ...]) -> bool:
+    """Whether `account` sits under one of the account roots, by its root component.
+
+    A text prefix put `EarningsCapital` under the income root `Earnings`, and
+    `CapitalEquity` under the asset root `Capital`: valid renamed roots that
+    share a prefix were classified as each other's accounts (w5/921).
+    """
+    return account.partition(":")[0] in ((roots,) if isinstance(roots, str) else roots)
+
+
 def _flow_ranges(
     filtered: FilteredLedger,
     interval: Interval,
@@ -79,7 +89,7 @@ def _flow_ranges(
         return (
             isinstance(entry, Transaction)
             and entry.meta.get("filename") not in _CLAMP_SOURCES
-            and any(posting.account.startswith(flows) and in_scope(posting.account) for posting in entry.postings)
+            and any(_under_roots(posting.account, flows) and in_scope(posting.account) for posting in entry.postings)
         )
 
     def quiet_fragment(period: DateRange) -> bool:
@@ -219,7 +229,7 @@ class ChartModule:
             )
             for entry in entries:
                 for posting in getattr(entry, "postings", []):
-                    if posting.account.startswith(accounts) and in_scope(posting.account):
+                    if _under_roots(posting.account, accounts) and in_scope(posting.account):
                         account_inventories[posting.account].add_position(
                             posting,
                         )
@@ -388,7 +398,7 @@ class ChartModule:
         for date_range in filtered.interval_ranges(interval):
             while txn and txn.date < date_range.end:
                 for posting in txn.postings:
-                    if posting.account.startswith(types) and in_scope(posting.account):
+                    if _under_roots(posting.account, types) and in_scope(posting.account):
                         inventory.add_position(posting)
                 txn = next(transactions, None)
             yield DateAndBalance(

@@ -7,7 +7,10 @@ import {
   entryBalances,
   findEntrySlice,
   findEntrySliceBySourceSha,
+  normalizeSliceReplacement,
   replaceSliceInFile,
+  replacementLineEnding,
+  servedSliceText,
   sliceSha256,
   sourceDetailsFromProbe,
   splitIntoBlocks,
@@ -117,7 +120,144 @@ describe("splitIntoBlocks", () => {
   });
 });
 
+/** Lines inside a quoted string are content, not block layout (w4/m34). */
+describe("splitIntoBlocks — multiline strings", () => {
+  const texts = (source: string) =>
+    splitIntoBlocks(source).map((block) => block.text);
+
+  it.each([
+    ["an unindented line", '2024-03-01 note Assets:Cash "one\ntwo\nthree"'],
+    ["a blank line", '2024-03-01 note Assets:Cash "one\n\ntwo"'],
+    [
+      "a date-like line",
+      '2024-03-01 note Assets:Cash "one\n2024-03-02 open Assets:Phantom"',
+    ],
+    ["an indented line", '2024-03-01 note Assets:Cash "one\n  two"'],
+  ])("keeps %s inside the literal in its block", (_case, note) => {
+    const source = `${note}\n\n2024-03-05 note Assets:Cash "after"\n`;
+    expect(texts(source)).toEqual([
+      note,
+      '2024-03-05 note Assets:Cash "after"',
+    ]);
+  });
+
+  it("ends the header after a multiline narration and keeps its postings", () => {
+    const txn = [
+      '2024-03-09 * "Payee" "two-line',
+      'narration"',
+      "  Expenses:Food   1.25 USD",
+      "  Assets:Cash",
+    ].join("\n");
+    const [block] = splitIntoBlocks(`${txn}\n`);
+    expect(block.text).toBe(txn);
+    expect(block.headerEndLine).toBe(1);
+    expect(block.endLine).toBe(4);
+  });
+
+  it("honors escaped quotes and backslashes", () => {
+    const note = '2024-03-01 note Assets:Cash "say \\"hi\\"\nC:\\\\dir\\\\"';
+    expect(texts(`${note}\n2024-03-02 note Assets:Cash "next"`)).toEqual([
+      note,
+      '2024-03-02 note Assets:Cash "next"',
+    ]);
+  });
+
+  it("ignores a quote inside a comment", () => {
+    const source =
+      '2024-03-01 open Assets:Cash ; an "unclosed comment\n2024-03-02 note Assets:Cash "x"';
+    expect(texts(source)).toHaveLength(2);
+  });
+
+  it("keeps CRLF line endings inside the block text", () => {
+    const note = '2024-03-01 note Assets:Cash "one\r\ntwo"\r';
+    expect(texts(`${note}\n\r\n2024-03-02 note Assets:Cash "x"`)[0]).toBe(note);
+  });
+
+  it("falls back to the line rule when a quote never closes", () => {
+    const source = [
+      '2024-03-01 note Assets:Cash "never closed',
+      "",
+      '2024-03-02 note Assets:Cash "fine"',
+    ].join("\n");
+    expect(texts(source)).toEqual([
+      '2024-03-01 note Assets:Cash "never closed',
+      '2024-03-02 note Assets:Cash "fine"',
+    ]);
+  });
+
+  it("deletes and replaces the whole multiline block, keeping neighbors", () => {
+    const source = [
+      '2024-03-01 note Assets:Cash "keep before"',
+      "",
+      '2024-03-02 note Assets:Cash "one',
+      "",
+      'two"',
+      "",
+      '2024-03-03 note Assets:Cash "keep after"',
+      "",
+    ].join("\n");
+    const block = splitIntoBlocks(source)[1];
+    // One separator goes with the entry (w23/055).
+    expect(deleteSliceFromFile(source, block.startLine, block.endLine)).toBe(
+      [
+        '2024-03-01 note Assets:Cash "keep before"',
+        "",
+        '2024-03-03 note Assets:Cash "keep after"',
+        "",
+      ].join("\n"),
+    );
+    expect(
+      replaceSliceInFile(
+        source,
+        block.startLine,
+        block.endLine,
+        '2024-03-02 note Assets:Cash "edited"',
+      ),
+    ).toBe(
+      [
+        '2024-03-01 note Assets:Cash "keep before"',
+        "",
+        '2024-03-02 note Assets:Cash "edited"',
+        "",
+        '2024-03-03 note Assets:Cash "keep after"',
+        "",
+      ].join("\n"),
+    );
+  });
+});
+
 describe("single-parse source details probe", () => {
+  it("places the marker after a multiline header, outside the literal", () => {
+    const source = [
+      '2024-03-01 note Assets:Cash "one',
+      "",
+      'two"',
+      '2024-03-02 * "Payee" "multi',
+      'line"',
+      "  Assets:Cash  1 USD",
+      "  Expenses:Food",
+      "",
+    ].join("\n");
+    const probe = buildSourceDetailsProbe({ "main.bean": source });
+    const marker = (n: number) => `  ${probe.markerKey}: "${n}"`;
+    expect(probe.files["main.bean"].split("\n")).toEqual([
+      '2024-03-01 note Assets:Cash "one',
+      "",
+      'two"',
+      marker(0),
+      '2024-03-02 * "Payee" "multi',
+      'line"',
+      marker(1),
+      "  Assets:Cash  1 USD",
+      "  Expenses:Food",
+      "",
+    ]);
+    expect(probe.detailsByMarker.get("1")).toEqual({
+      filename: "main.bean",
+      lineno: 4,
+    });
+  });
+
   it("preserves line provenance and duplicate occurrence ids", () => {
     const files = {
       "main.bean": [
@@ -148,6 +288,42 @@ describe("single-parse source details probe", () => {
       filename: "main.bean",
       lineno: 3,
     });
+  });
+});
+
+// w21/655: Beancount gives a note its inline tags and links and gives a note or
+// document the tags `pushtag` holds; rustledger's JSON carries none of them.
+describe("source probe syntax for notes and pushed tags", () => {
+  it("recovers a note's tags and links, and pushed tags until poptag", () => {
+    const source = [
+      "2024-01-01 open Assets:Cash",
+      "pushtag #trip",
+      '2024-02-01 note Assets:Cash "dispute filed" #dispute ^case-42 ; #not-a-tag',
+      '2024-02-02 document Assets:Cash "r.pdf"',
+      '2024-02-03 * "coffee"',
+      "  Assets:Cash -1 USD",
+      "  Expenses:Food",
+      "poptag #trip",
+      '2024-02-04 note Assets:Cash "after"',
+      "",
+    ].join("\n");
+    const probe = buildSourceDetailsProbe({ "main.bean": source });
+    const byLine = new Map(
+      [...probe.detailsByMarker.values()].map((detail) => [
+        detail.lineno,
+        detail,
+      ]),
+    );
+
+    expect(byLine.get(3)).toMatchObject({
+      syntaxTags: ["dispute", "trip"],
+      syntaxLinks: ["case-42"],
+    });
+    expect(byLine.get(4)).toMatchObject({ syntaxTags: ["trip"] });
+    expect(byLine.get(4)?.syntaxLinks).toBeUndefined();
+    // A transaction's pushed tags are the engine's; the probe adds none.
+    expect(byLine.get(5)?.syntaxTags).toBeUndefined();
+    expect(byLine.get(9)?.syntaxTags).toBeUndefined();
   });
 });
 
@@ -259,8 +435,8 @@ describe("buildEntrySourceLocationMap", () => {
     expect(details.get(hashEntry(document))).toEqual({
       filename: "main.bean",
       lineno: 1,
-      documentTags: ["receipt", "tax"],
-      documentLinks: ["paper", "scan"],
+      syntaxTags: ["receipt", "tax"],
+      syntaxLinks: ["paper", "scan"],
     });
   });
 
@@ -283,7 +459,7 @@ describe("buildEntrySourceLocationMap", () => {
         parsedBlocks.push(block);
         return block === documentBlock ? [document] : [];
       },
-      { documentsOnly: true },
+      { syntaxOnly: true },
     );
 
     expect(parsedBlocks).toEqual([documentBlock]);
@@ -291,7 +467,7 @@ describe("buildEntrySourceLocationMap", () => {
       {
         filename: "main.bean",
         lineno: 2,
-        documentTags: ["receipt"],
+        syntaxTags: ["receipt"],
       },
     ]);
   });
@@ -546,8 +722,10 @@ describe("findEntrySliceBySourceSha — inventory-independent CAS relocation", (
   });
 });
 
-describe("deleteSliceFromFile — Fava parity", () => {
-  it("removes exactly the block, preserving surrounding blank lines", () => {
+describe("deleteSliceFromFile — Fava parity, minus one separator", () => {
+  // Fava kept the blank lines on both sides of the deleted block; one of
+  // them now goes with it, so its two adjacent blanks become one (w23/055).
+  it("removes the block and the separator it leaves doubled", () => {
     const found = findEntrySlice(
       data.files,
       data.entryPoint,
@@ -559,7 +737,12 @@ describe("deleteSliceFromFile — Fava parity", () => {
       found.startLine,
       found.endLine,
     );
-    expect(newContent).toBe(data.delete_groceries.new_main_content);
+    expect(newContent).toBe(
+      data.delete_groceries.new_main_content.replace(
+        "USD\n\n\n2024-02-01 balance",
+        "USD\n\n2024-02-01 balance",
+      ),
+    );
   });
 });
 
@@ -629,5 +812,168 @@ describe("entryBalances — Fava parity", () => {
       "deadbeefdeadbeefdeadbeefdeadbeef",
     );
     expect(balances).toBeNull();
+  });
+});
+
+// w21/252: an edit in a CRLF file rewrote the entry with LF and left a blank
+// line, and the checksum returned for it matched nothing a re-read served.
+describe("replacing a slice keeps the file's line endings", () => {
+  const crlf = [
+    '2026-08-30 * "Veg" "Produce"',
+    "  Expenses:Food  12.00 USD",
+    "  Assets:Cash",
+    "",
+    '2026-08-31 * "Next"',
+    "  Expenses:Food  1.00 USD",
+    "  Assets:Cash",
+    "",
+  ].join("\r\n");
+
+  const edited = [
+    '2026-08-30 * "Veg" "Fresh produce"',
+    "  Expenses:Food  12.00 USD",
+    "  Assets:Cash",
+  ];
+
+  it("writes CRLF with no extra blank line when the editor sent LF and a trailing newline", () => {
+    const [block] = splitIntoBlocks(crlf);
+    const next = replaceSliceInFile(
+      crlf,
+      block.startLine,
+      block.endLine,
+      `${edited.join("\n")}\n`,
+    );
+    expect(next).toBe(
+      [
+        ...edited,
+        "",
+        '2026-08-31 * "Next"',
+        "  Expenses:Food  1.00 USD",
+        "  Assets:Cash",
+        "",
+      ].join("\r\n"),
+    );
+    // Every line ending is CRLF.
+    expect(/(^|[^\r])\n/u.test(next)).toBe(false);
+  });
+
+  it("serves a checksum the next edit can present", () => {
+    const [block] = splitIntoBlocks(crlf);
+    const incoming = edited.join("\n");
+    const next = replaceSliceInFile(
+      crlf,
+      block.startLine,
+      block.endLine,
+      incoming,
+    );
+    const [reread] = splitIntoBlocks(next);
+    const stored = normalizeSliceReplacement(
+      incoming,
+      replacementLineEnding(crlf, block.startLine, block.endLine),
+    );
+    expect(sliceSha256(servedSliceText(stored))).toBe(sliceSha256(reread.text));
+  });
+
+  it("does the same for an LF file: a trailing newline adds no blank line", () => {
+    const lf = [
+      '2026-08-30 * "A"',
+      "  Assets:Cash",
+      "",
+      '2026-08-31 * "B"',
+      "  Assets:Cash",
+      "",
+    ].join("\n");
+    const [block] = splitIntoBlocks(lf);
+    const next = replaceSliceInFile(
+      lf,
+      block.startLine,
+      block.endLine,
+      '2026-08-30 * "A2"\n  Assets:Cash\n\n',
+    );
+    expect(next).toBe(
+      [
+        '2026-08-30 * "A2"',
+        "  Assets:Cash",
+        "",
+        '2026-08-31 * "B"',
+        "  Assets:Cash",
+        "",
+      ].join("\n"),
+    );
+    const [reread] = splitIntoBlocks(next);
+    expect(
+      sliceSha256(
+        servedSliceText(
+          normalizeSliceReplacement(
+            '2026-08-30 * "A2"\n  Assets:Cash\n\n',
+            "\n",
+          ),
+        ),
+      ),
+    ).toBe(sliceSha256(reread.text));
+  });
+
+  it("uses the replaced block's own ending in a mixed file", () => {
+    const mixed = [
+      '2026-08-30 * "A"\r',
+      "  Assets:Cash\r",
+      "",
+      '2026-08-31 * "B"',
+      "  Assets:Cash",
+      "",
+    ].join("\n");
+    const blocks = splitIntoBlocks(mixed);
+    expect(
+      replacementLineEnding(mixed, blocks[0].startLine, blocks[0].endLine),
+    ).toBe("\r\n");
+    expect(
+      replacementLineEnding(mixed, blocks[1].startLine, blocks[1].endLine),
+    ).toBe("\n");
+  });
+});
+
+// w23/055: deleting what an append wrote left its blank separators, so every
+// add → delete cycle grew the file. These rebuild what the append writes.
+describe("deleteSliceFromFile — add then delete restores the file", () => {
+  const ORIGINAL =
+    "2026-01-01 open Assets:Cash\n\n2026-01-02 open Expenses:Food\n";
+  const TX1 = '2026-03-01 * "One"\n  Assets:Cash  -1 USD\n  Expenses:Food\n';
+  const TX2 = '2026-03-02 * "Two"\n  Assets:Cash  -2 USD\n  Expenses:Food\n';
+  const deleteBlocks = (text: string, blocks: string[]) => {
+    // Bottom-to-top, as the delete transform applies them.
+    const ranges = blocks
+      .map((block) => {
+        const before =
+          text.slice(0, text.indexOf(block)).split("\n").length - 1;
+        return [before, before + block.split("\n").length - 1] as const;
+      })
+      .sort((a, b) => b[0] - a[0]);
+    return ranges.reduce(
+      (content, [start, end]) => deleteSliceFromFile(content, start, end),
+      text,
+    );
+  };
+
+  it.each([
+    ["one entry at the end", `${ORIGINAL}\n${TX1}\n`, [TX1]],
+    ["two entries at the end", `${ORIGINAL}\n${TX1}\n${TX2}\n`, [TX1, TX2]],
+    [
+      "one entry between two",
+      `2026-01-01 open Assets:Cash\n\n${TX1}\n2026-01-02 open Expenses:Food\n`,
+      [TX1],
+    ],
+  ])("for %s", (_case, added, blocks) => {
+    expect(deleteBlocks(added, blocks)).toBe(ORIGINAL);
+  });
+
+  it("keeps a comment directly above the entry", () => {
+    const text = `2026-01-01 open Assets:Cash\n\n; why\n${TX1}\n2026-01-02 open Expenses:Food\n`;
+    expect(deleteBlocks(text, [TX1])).toBe(
+      "2026-01-01 open Assets:Cash\n\n; why\n\n2026-01-02 open Expenses:Food\n",
+    );
+  });
+
+  it("drops a leading separator when the first entry goes", () => {
+    expect(deleteBlocks(`${TX1}\n${ORIGINAL}`, [TX1])).toBe(ORIGINAL);
   });
 });

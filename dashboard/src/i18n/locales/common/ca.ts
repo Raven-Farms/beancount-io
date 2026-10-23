@@ -401,6 +401,11 @@ const caCommon: Record<string, TranslationEntry> = {
     message: "Descarregar",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "No s'ha pogut baixar el fitxer. Torneu-ho a provar.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Més accions",
     description: "Label for dropdown menu with additional actions",
@@ -742,6 +747,12 @@ const caCommon: Record<string, TranslationEntry> = {
     message: "No s'han trobat comptes",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "No s'han pogut carregar els suggeriments. Encara podeu escriure un valor.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Cerca fitxers...",
     description: "Placeholder for ledger file search",
@@ -1072,6 +1083,25 @@ const caCommon: Record<string, TranslationEntry> = {
     message: "Estàs al dia",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "No hem pogut cobrar {plan} a {card}. Actualitza-la abans del {date} per conservar {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Actualitza el mètode de pagament",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "la teva targeta",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Amaga de moment",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

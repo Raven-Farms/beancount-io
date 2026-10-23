@@ -116,6 +116,27 @@ describe("RustledgerWorkerPool", () => {
     await pool.close();
   });
 
+  it("counts directives in a bounded worker task", async () => {
+    const { pool, workers } = makePool();
+    const files = {
+      "main.bean": 'include "2024.bean"\n',
+      "2024.bean": "2024-01-01 open Assets:Cash\n",
+    };
+    const promise = pool.countDirectives(files, "main.bean");
+    const task = workers[0].posted[0];
+    expect(task).toEqual(
+      expect.objectContaining({
+        kind: "directive-count",
+        files,
+        entryPoint: "main.bean",
+      }),
+    );
+
+    workers[0].respond({ id: task.id, ok: true, value: 1 });
+    await expect(promise).resolves.toBe(1);
+    await pool.close();
+  });
+
   it("warms the worker with a real parse task before startup readiness", async () => {
     const { pool, workers } = makePool();
     const promise = pool.warmup();

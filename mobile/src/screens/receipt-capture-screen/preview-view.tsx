@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Image,
   Pressable,
@@ -63,7 +65,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
-  errorActions: { flexDirection: "row", gap: 12, marginTop: 6 },
+  errorActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 6,
+  },
 });
 
 export const PreviewView = ({
@@ -73,7 +81,10 @@ export const PreviewView = ({
   reveal,
   onRetake,
   onUpload,
+  onRetry,
   onCancel,
+  onCancelBusy,
+  uploadPercent,
 }: {
   shot: CapturedShot;
   status: "preview" | "uploading" | "parsing" | "revealed" | "error";
@@ -82,17 +93,47 @@ export const PreviewView = ({
   reveal?: ReceiptReveal;
   onRetake: () => void;
   onUpload: () => void;
+  /** Run the upload again with the same photo; omitted when retrying is futile. */
+  onRetry?: () => void;
   onCancel: () => void;
+  /** Abandon the upload or parse in flight and return to the preview. */
+  onCancelBusy: () => void;
+  /** Whole-percent upload progress, `null` while unknown. */
+  uploadPercent?: number | null;
 }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslations();
 
   const busyLabel =
     status === "uploading"
-      ? t("receiptUploading")
+      ? uploadPercent == null
+        ? t("receiptUploading")
+        : t("receiptUploadingProgress", { percent: uploadPercent })
       : status === "parsing"
         ? t("receiptParsing")
         : null;
+
+  // The focused button disappears when Upload is tapped, so each state that
+  // replaces the controls is said aloud: uploading, parsing, the error and what
+  // was read (w21/284). The percent is left out so a progress tick does not
+  // repeat it.
+  const announcement =
+    status === "uploading"
+      ? t("receiptUploading")
+      : status === "parsing"
+        ? t("receiptParsing")
+        : status === "error"
+          ? (errorMessage ?? null)
+          : status === "revealed" && reveal
+            ? t("receiptRevealSpoken", {
+                summary: [reveal.payee, reveal.amount, reveal.date]
+                  .filter(Boolean)
+                  .join(", "),
+              })
+            : null;
+  useEffect(() => {
+    if (announcement) AccessibilityInfo.announceForAccessibility(announcement);
+  }, [announcement]);
 
   return (
     <View style={styles.container}>
@@ -106,6 +147,7 @@ export const PreviewView = ({
         <View style={[styles.actions, { bottom: insets.bottom + 28 }]}>
           <Pressable
             testID="receipt-retake"
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.pill,
               pressed && styles.pillPressed,
@@ -116,6 +158,7 @@ export const PreviewView = ({
           </Pressable>
           <Pressable
             testID="receipt-upload"
+            accessibilityRole="button"
             style={({ pressed }) => [
               styles.pill,
               pressed && styles.pillPressed,
@@ -131,6 +174,17 @@ export const PreviewView = ({
         <View style={styles.scrim}>
           <ActivityIndicator size="large" color={CHROME.icon} />
           <Text style={styles.scrimText}>{busyLabel}</Text>
+          <Pressable
+            testID="receipt-busy-cancel"
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.pill,
+              pressed && styles.pillPressed,
+            ]}
+            onPress={onCancelBusy}
+          >
+            <Text style={styles.pillText}>{t("receiptCancel")}</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -138,10 +192,13 @@ export const PreviewView = ({
 
       {status === "error" ? (
         <View style={styles.scrim}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
+          <Text style={styles.errorText} accessibilityRole="alert">
+            {errorMessage}
+          </Text>
           <View style={styles.errorActions}>
             <Pressable
               testID="receipt-error-cancel"
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.pill,
                 pressed && styles.pillPressed,
@@ -150,8 +207,22 @@ export const PreviewView = ({
             >
               <Text style={styles.pillText}>{t("receiptCancel")}</Text>
             </Pressable>
+            {onRetry ? (
+              <Pressable
+                testID="receipt-error-retry"
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.pill,
+                  pressed && styles.pillPressed,
+                ]}
+                onPress={onRetry}
+              >
+                <Text style={styles.pillText}>{t("receiptTryAgain")}</Text>
+              </Pressable>
+            ) : null}
             <Pressable
               testID="receipt-error-retake"
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.pill,
                 pressed && styles.pillPressed,

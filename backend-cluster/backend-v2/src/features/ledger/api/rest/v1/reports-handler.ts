@@ -48,8 +48,9 @@ export const statementQuerySchema = z.object({
     description: "Reporting period as a Fava time expression",
     example: "2026-01-01 - 2026-12-31",
   }),
-  conversion: z.string().default("USD").openapi({
-    description: "Convert amounts to this currency",
+  conversion: z.string().optional().openapi({
+    description:
+      "Convert amounts to this currency (default: the ledger's operating currency)",
     example: "USD",
   }),
   interval: z.string().default("monthly").openapi({
@@ -85,7 +86,9 @@ export async function fetchStatement(
   };
   if (params.statement === "balance-sheet") {
     const data = await services.ledgerFinance.getBalanceSheet(args);
-    return shape === "fava" ? data : summarizeBalanceSheet(data, rest.conversion);
+    return shape === "fava"
+      ? data
+      : summarizeBalanceSheet(data, rest.conversion);
   }
   const data = await services.ledgerFinance.getIncomeStatement(args);
   return shape === "fava"

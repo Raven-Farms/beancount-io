@@ -48,6 +48,7 @@ from bea_engine.ledger.models import (
     PriceDirective,
     SourceLocation,
     TransactionHeader,
+    Units,
 )
 from bea_engine.ledger.text import fold_account
 
@@ -283,6 +284,10 @@ def _to_amount(bc_amount: Any) -> Amount:
     return Amount(number=Decimal(str(bc_amount.number)), currency=bc_amount.currency)
 
 
+def _to_units(bc_amount: Any) -> Units:
+    return Units(number=Decimal(str(bc_amount.number)), currency=bc_amount.currency)
+
+
 def metadata_to_json(meta: dict[str, Any] | None) -> dict[str, Any]:
     from beancount.core.amount import Amount as BcAmount
 
@@ -317,7 +322,7 @@ def _to_transaction(entry: Any, shared: frozenset[tuple[str, int]] = frozenset()
         postings.append(
             Posting(
                 account=p.account,
-                units=_to_amount(p.units),
+                units=_to_units(p.units) if p.units is not None else None,
                 cost=cost,
                 price=price,
                 flag=p.flag,
@@ -395,11 +400,14 @@ def _search_key(text: str) -> str:
     The table shows a narration's line breaks as spaces, and import's
     duplicate matching reads them so, but the search compared the raw text:
     `Rent for January`, as the table prints it, matched nothing (w5/631).
+    Every run of blanks is one space, in the term as in the text: the table
+    keeps the blanks around a break (`Rent   for February`), and that search
+    found nothing while `rent for february` matched (w5/852).
     """
-    return fold_account(_LINE_BREAKS.sub(" ", text))
+    return fold_account(_BLANKS.sub(" ", text))
 
 
-_LINE_BREAKS = re.compile(r"[ \t]*[\r\n]+[ \t]*")
+_BLANKS = re.compile(r"[ \t\r\n]+")
 
 
 def list_notes(
@@ -645,12 +653,23 @@ def list_documents(
                 tags=tags,
                 links=links,
                 meta=metadata_to_json(entry.meta),
+                # Two includes' `receipt.pdf` listed alike, the path being
+                # relative to a file the row never named (w5/833).
+                source=_source_of(entry),
                 generated=entry_generated(entry, "document", shared),
             )
         )
         if len(results) >= limit:
             break
     return results
+
+
+def _source_of(entry: Any) -> SourceLocation | None:
+    meta = entry.meta or {}
+    filename, lineno = meta.get("filename"), meta.get("lineno")
+    if isinstance(filename, str) and isinstance(lineno, int) and not isinstance(lineno, bool):
+        return SourceLocation(filename=filename, lineno=lineno)
+    return None
 
 
 def _document_filename_for_json(entry: Any, root: Path | None = None) -> str:

@@ -3,6 +3,7 @@ import type {
   DirectiveJson,
   PostingCostJson,
   PostingJson,
+  TypedValueJson,
 } from "@rustledger/wasm";
 
 /**
@@ -89,6 +90,15 @@ class RunningHash {
   public hexdigest(): string {
     return this.hash.digest("hex");
   }
+}
+
+/** One custom directive value as typed text: its wire type, then its content. */
+function customValueText(value: TypedValueJson): string {
+  const content =
+    value.type === "amount"
+      ? amountStr(value.value.number, value.value.currency)
+      : String(value.value);
+  return `${value.type}:${content}`;
 }
 
 /** Python `str(Amount)` → `"{number} {currency}"` (number is the source string). */
@@ -291,15 +301,20 @@ export function hashEntry(directive: DirectiveJson): string {
       return running.hexdigest();
     }
     case "custom": {
-      // Fields: date, type, values. Each value is a Python `ValueType(value,
-      // dtype)` NamedTuple; hashing recurses over `str(value)` and `str(dtype)`.
-      // `dtype` is a parser-internal type marker not carried on the wire, so
-      // Custom hashing cannot be reproduced exactly from a DirectiveJson (see
-      // parity gaps in the module test). Best-effort: hash date + type only,
-      // which is stable but NOT byte-equal to beancount when values are present.
+      // Fields: date, type, values. Beancount hashes each value as
+      // `str(value)` and `str(dtype)`, and `dtype` is a parser-internal marker
+      // not carried on the wire, so Custom hashing cannot be reproduced exactly
+      // from a DirectiveJson (see parity gaps in the module test). The values
+      // are hashed by their wire type and text, which is stable but NOT
+      // byte-equal to beancount. Hashing only the date and type, as this once
+      // did, gave every same-day budget of any account and any amount the same
+      // identity, so a stale delete removed a different or changed budget
+      // without a word (w21/476).
       running.updateStr(dateStr(directive.date));
       running.updateStr(directive.custom_type);
-      running.updateCollection([]);
+      running.updateCollection(
+        (directive.values ?? []).map((value) => md5Hex(customValueText(value))),
+      );
       return running.hexdigest();
     }
     default:

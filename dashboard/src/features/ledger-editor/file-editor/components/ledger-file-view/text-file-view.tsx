@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type * as monaco from "monaco-editor";
 import type { GetLedgerFileQuery, BeancountError } from "@/graphql/definitions";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
@@ -11,12 +11,15 @@ import { TextEditor } from "./text-editor";
 import { ViewModeActions } from "./file-view-mode";
 import { EditModeToolbar } from "./file-edit-mode";
 
+type FileRevision = NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
+
 export interface TextFileViewProps {
   filePath: string;
-  fileContent: NonNullable<GetLedgerFileQuery["getLedgerFile"]>;
-  onSave: (content: string) => Promise<void>;
+  fileContent: FileRevision;
+  /** Saves `content` against `base`, the revision it was edited from. */
+  onSave: (content: string, base: FileRevision) => Promise<void>;
   /** Absent when the file cannot be deleted (the ledger's root main.bean). */
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   isSaving: boolean;
   isEditMode?: boolean;
   readOnly?: boolean;
@@ -54,10 +57,11 @@ export const TextFileView = ({
   const requestedEditMode = Boolean(isEditMode);
   const effectiveEditMode = requestedEditMode && canEdit;
 
-  // Decode base64 content once
-  const plainContent = fileContent.content
-    ? base64Decode(fileContent.content)
-    : "";
+  // Decode base64 content once per revision, not on every keystroke.
+  const plainContent = useMemo(
+    () => (fileContent.content ? base64Decode(fileContent.content) : ""),
+    [fileContent.content],
+  );
 
   // Extract filename once
   const filename = getFilename(filePath);
@@ -78,16 +82,24 @@ export const TextFileView = ({
     plainContent,
   );
 
-  // Pull external file changes into the buffer while viewing (e.g. a save that
-  // reformats the file, or an AI edit). We compare against the previously-seen
-  // content and adjust state during render - React's recommended alternative to
-  // an effect - so an in-flight edit is never clobbered and scroll isn't reset.
-  // Use the URL request (not effective permission) so a draft survives when
-  // write access is lost mid-edit until the URL is cleared.
-  const [lastSyncedContent, setLastSyncedContent] = useState(plainContent);
-  if (plainContent !== lastSyncedContent) {
-    setLastSyncedContent(plainContent);
-    if (readOnly || !requestedEditMode) {
+  // The revision the buffer was edited against. Pull external file changes
+  // into the buffer (a save that reformats the file, an AI edit, Out of date →
+  // Refresh) unless it holds an unsaved draft: then the draft keeps its base,
+  // so Save sends that revision's SHA and the server refuses a stale write
+  // rather than overwriting the newer file (w4/m46). Adjusting state during
+  // render - React's recommended alternative to an effect - never clobbers an
+  // in-flight edit or resets scroll. The URL request (not effective
+  // permission) decides, so a draft survives when write access is lost
+  // mid-edit until the URL is cleared.
+  const [base, setBase] = useState(fileContent);
+  const basePlain = useMemo(
+    () => (base.content ? base64Decode(base.content) : ""),
+    [base.content],
+  );
+  if (base.sha !== fileContent.sha || base.content !== fileContent.content) {
+    const hasDraft = editedContent !== basePlain;
+    if (readOnly || !requestedEditMode || !hasDraft) {
+      setBase(fileContent);
       setEditedContent(plainContent);
     }
   }
@@ -110,6 +122,7 @@ export const TextFileView = ({
   // scroll position and content, so there is nothing to reset here.
   const handleEditClick = useCallback(() => {
     if (!canEdit) return;
+    savedExitRef.current = false;
     onEnterEditMode();
   }, [canEdit, onEnterEditMode]);
 
@@ -136,26 +149,37 @@ export const TextFileView = ({
   // Keyboard ⌘S and the toolbar share this callback; a sync ref blocks a
   // second activation before React can flip isSaving (which only disables
   // the button, not the editor shortcut).
+  //
+  // While the write is pending the editor is read-only: an edit accepted then
+  // would be lost when the saved file reloads (w4/241). Once the write lands,
+  // the buffer is exactly what was saved, so its own exit is let past the
+  // unsaved-changes guard, which still compares against the pre-save file.
   const saveInFlightRef = useRef(false);
+  const [savePending, setSavePending] = useState(false);
+  const savedExitRef = useRef(false);
   const handleSaveClick = useCallback(
     async (contentOverride?: string) => {
       if (!canEdit) return;
       if (saveInFlightRef.current) return;
       saveInFlightRef.current = true;
+      savedExitRef.current = false;
+      setSavePending(true);
       try {
         const contentToSave = contentOverride ?? editedContent;
-        if (contentToSave !== plainContent) {
-          await onSave(contentToSave);
+        if (contentToSave !== basePlain) {
+          await onSave(contentToSave, base);
         }
+        savedExitRef.current = true;
         onExitEditMode();
       } catch {
         // Keep the draft and release the guard so the user can retry.
         // Parent save handlers already surface the failure (toast).
       } finally {
         saveInFlightRef.current = false;
+        setSavePending(false);
       }
     },
-    [canEdit, editedContent, plainContent, onSave, onExitEditMode],
+    [canEdit, editedContent, basePlain, base, onSave, onExitEditMode],
   );
 
   // Cancel editing — exit edit mode without wiping the buffer first. The
@@ -164,13 +188,15 @@ export const TextFileView = ({
     onExitEditMode();
   }, [onExitEditMode]);
 
+  // Discarding is the explicit decision to take the current file instead.
   const handleDiscardEdit = useCallback(() => {
+    setBase(fileContent);
     setEditedContent(plainContent);
-  }, [plainContent]);
+  }, [fileContent, plainContent]);
 
   const handleEditorContentChange = useCallback(
     (value: string) => {
-      if (!canEdit) return;
+      if (!canEdit || saveInFlightRef.current) return;
       setEditedContent(value);
     },
     [canEdit],
@@ -187,11 +213,12 @@ export const TextFileView = ({
             <EditModeToolbar
               editorRef={editorRef}
               editedContent={editedContent}
-              plainContent={plainContent}
+              plainContent={basePlain}
               onSave={handleSaveClick}
               onCancel={handleCancelEdit}
               onDiscard={handleDiscardEdit}
-              isSaving={isSaving}
+              isSaving={isSaving || savePending}
+              savedExitRef={savedExitRef}
             />
           ) : (
             <ViewModeActions
@@ -217,7 +244,7 @@ export const TextFileView = ({
               filename={filename}
               setEditedContent={handleEditorContentChange}
               lineNumber={normalizedLineNumber}
-              readOnly={!effectiveEditMode}
+              readOnly={!effectiveEditMode || savePending}
               onSave={handleSaveClick}
               onCancel={handleCancelEdit}
               onEditorMount={handleEditorMount}

@@ -2,6 +2,7 @@ import { Arg, Args, Ctx, Mutation, Resolver } from "type-graphql";
 import { Authenticated } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import { ILedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow";
+import type { CreateLedgerCommand } from "@/features/ledger/workflow/ledger-workflow.types";
 import {
   Ledger,
   LedgerFileContent,
@@ -32,7 +33,9 @@ export class LedgerMutationResolver {
   ): Promise<Ledger> {
     return this.workflow.createLedger({
       identity: ctx.getCurrentIdentity(),
-      input,
+      // The builder validates capability/opening values at runtime, so the
+      // GraphQL string records cross into the strict setup type here.
+      input: input as CreateLedgerCommand,
       platform: ctx.platform,
     });
   }

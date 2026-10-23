@@ -19,6 +19,13 @@ class DeleteSourceSliceInput {
 
   @Field(() => String)
   sha256sum: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "Delete the entry even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing",
+  })
+  allowInvalid?: boolean;
 }
 
 @ObjectType()
@@ -43,6 +50,13 @@ class DeleteMultiSourceSliceItemInput {
 class DeleteMultiSourceSlicesInput {
   @Field(() => [DeleteMultiSourceSliceItemInput])
   entries: DeleteMultiSourceSliceItemInput[];
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "Delete the entries even when that would add bean-check errors (VALIDATION_FAILED), instead of refusing",
+  })
+  allowInvalid?: boolean;
 }
 
 @ObjectType()
@@ -64,6 +78,13 @@ class UpdateSourceSliceInput {
 
   @Field(() => String)
   newContent: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "Commit the edit even when it would add bean-check errors (VALIDATION_FAILED), instead of refusing",
+  })
+  allowInvalid?: boolean;
 }
 
 @ObjectType()
@@ -102,6 +123,7 @@ export class LedgerJournalMutationResolver {
       identity: ctx.getCurrentIdentity(),
       entryHash: input.entryHash,
       sha256sum: input.sha256sum,
+      allowInvalid: input.allowInvalid ?? false,
     });
   }
 
@@ -123,6 +145,7 @@ export class LedgerJournalMutationResolver {
         entryHash: e.entryHash,
         sha256sum: e.sha256sum,
       })),
+      allowInvalid: input.allowInvalid ?? false,
     });
   }
 
@@ -141,6 +164,8 @@ export class LedgerJournalMutationResolver {
       entryHash: input.entryHash,
       sha256sum: input.sha256sum,
       newContent: input.newContent,
+      platform: ctx.platform,
+      allowInvalid: input.allowInvalid ?? false,
     });
   }
 }

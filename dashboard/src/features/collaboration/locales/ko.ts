@@ -33,6 +33,12 @@ const koCollaboration: Record<string, TranslationEntry> = {
     message: "협력자 로딩 오류",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "이 원장 소유자의 플랜에서는 더 이상 협력자를 추가할 수 없습니다. 소유자만 업그레이드하여 더 추가할 수 있습니다.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "협력자 추가에 실패했습니다",
     description: "Error message when adding collaborator fails",

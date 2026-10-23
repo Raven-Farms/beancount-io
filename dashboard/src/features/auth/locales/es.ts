@@ -44,6 +44,11 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Confirme su contraseña",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Elija una contraseña (mínimo 8 caracteres)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Crear cuenta",
     description: "Button to submit registration",
@@ -180,6 +185,12 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Falló el inicio de sesión",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Demasiados intentos de inicio de sesión. Espere unos minutos e inténtelo de nuevo, o restablezca su contraseña.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Cerrar sesión",
     description: "Button label to log out",
@@ -198,11 +209,12 @@ const esAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "La contraseña debe tener al menos 6 caracteres",
+    message: "La contraseña debe tener al menos 8 caracteres",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "La contraseña debe tener como máximo 128 caracteres",
+    message:
+      "La contraseña es demasiado larga. Use como máximo 72 caracteres; las letras acentuadas, los alfabetos no latinos y los emojis cuentan como 2 a 4 cada uno.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -247,9 +259,21 @@ const esAuth: Record<string, TranslationEntry> = {
     message: "Se requiere la contraseña",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Esta contraseña ha aparecido en una filtración de datos. Elija una que no use en ningún otro sitio.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "La contraseña se parece demasiado a su correo electrónico o nombre de usuario.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
     message:
-      "Su contraseña ha sido restablecida. Redirigiendo al inicio de sesión...",
+      "Su contraseña ha sido restablecida y se ha cerrado la sesión en todos los dispositivos y aplicaciones conectadas. Redirigiendo al inicio de sesión...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -759,6 +783,78 @@ const esAuth: Record<string, TranslationEntry> = {
       "El inicio de sesión con contraseña está desactivado en este servidor. Continúa con Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Verifica tu correo para iniciar sesión",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Abre el enlace del correo de recuperación e introduce su código y tu contraseña actual.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Enviar correo de recuperación",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Enviando correo de recuperación...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Si existe una cuenta con esta dirección, recibirás un correo de recuperación en breve. Abre su enlace para continuar. Un correo de recuperación reciente sigue siendo válido.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Enviar otro correo de recuperación",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Vuelve a intentarlo a las {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Código de verificación de seis dígitos",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Introduce el código de seis dígitos del correo de recuperación.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "El correo, el código o la contraseña son incorrectos, o el código ha caducado. Puedes solicitar otro correo de recuperación.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "No se ha podido solicitar el correo de recuperación. Vuelve a intentarlo.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message:
+      "El inicio de sesión no está disponible temporalmente. Vuelve a intentarlo.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message:
+      "El código caduca en 10 minutos y sirve para un solo intento de contraseña.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Verificar e iniciar sesión",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Verificando...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

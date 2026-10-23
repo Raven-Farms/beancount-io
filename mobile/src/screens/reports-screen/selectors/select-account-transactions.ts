@@ -3,7 +3,11 @@ import {
   JournalDirectiveType,
   JournalTransaction,
 } from "../../transactions-screen/types";
-import { rangeStartMonth, TimeRange } from "../../../common/series-util";
+import {
+  flowAnchorMonth,
+  rangeStartMonth,
+  TimeRange,
+} from "../../../common/series-util";
 
 /** Max number of account transactions to surface in a report list. */
 const ACCOUNT_TRANSACTIONS_LIMIT = 10;
@@ -27,6 +31,23 @@ function involvesAccount(
   return (entry.postings ?? []).some((posting) =>
     prefixes.some((prefix) => posting.account.startsWith(prefix)),
   );
+}
+
+/**
+ * The ledger's `account` filter for the subtree(s) a report lists, as a pattern
+ * the journal query understands: an entry is returned when one of its accounts
+ * starts with a prefix, which is what `involvesAccount` then checks per posting.
+ * Without it the card read the newest 200 transactions of every account, and a
+ * busy month hid the salary and said "No transactions yet" (w21/563).
+ */
+export function accountPrefixFilter(accountPrefix: string | string[]): string {
+  const prefixes = Array.isArray(accountPrefix)
+    ? accountPrefix
+    : [accountPrefix];
+  const escaped = prefixes.map((prefix) =>
+    prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  );
+  return `^(?:${escaped.join("|")})`;
 }
 
 /**
@@ -69,7 +90,56 @@ export function selectAccountTransactions(
   }
 
   const cutoffKey = rangeStartMonth(timeRange, anchorMonth, currentYear);
+  // Bounded above too: the anchor stops at the current month, and an entry
+  // dated after it belongs to no range but "ALL" (w21/166).
   return matching
-    .filter((entry) => entry.date.slice(0, 7) >= cutoffKey)
+    .filter((entry) => {
+      const month = entry.date.slice(0, 7);
+      return month >= cutoffKey && month <= anchorMonth;
+    })
     .slice(0, limit);
+}
+
+/**
+ * The month the list windows on. The statement's anchor when it has one; else,
+ * once the statement is no longer loading (it failed, or holds no series), the
+ * newest matching entry's month capped at the current month, so a failed
+ * statement shows rows rather than a "No transactions yet" the ledger does not
+ * back (w21/266). Null only while the statement is still loading.
+ */
+export function resolveListAnchor(
+  anchorMonth: string | null,
+  statementLoading: boolean,
+  entries: JournalDirectiveType[],
+  accountPrefix: string | string[],
+  currentMonth: string,
+): string | null {
+  if (anchorMonth) {
+    return anchorMonth;
+  }
+  if (statementLoading) {
+    return null;
+  }
+  const newest = selectAccountTransactions(
+    entries,
+    accountPrefix,
+    "ALL",
+    null,
+    1,
+  )[0];
+  return newest ? flowAnchorMonth(newest.date.slice(0, 7), currentMonth) : null;
+}
+
+/**
+ * Whether the account has any transaction at all, whatever the range: the
+ * difference between "No transactions yet" and "No transactions in this range"
+ * (w21/266).
+ */
+export function hasAnyAccountTransaction(
+  entries: JournalDirectiveType[],
+  accountPrefix: string | string[],
+): boolean {
+  return (
+    selectAccountTransactions(entries, accountPrefix, "ALL", null, 1).length > 0
+  );
 }

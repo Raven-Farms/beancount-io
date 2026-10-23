@@ -1,9 +1,10 @@
 import { PageHeader } from "@/common/components/page-header";
 import { RelatedLinks } from "@/common/components/related-links";
 import { getLedgerFilesRootPath } from "@/common/hooks/use-file-navigate";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@apollo/client/react";
+import { useRefreshDirectory } from "@/features/ledger-editor/shared/hooks/use-refresh-directory";
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { Input } from "@/common/components/ui/input";
@@ -59,7 +60,19 @@ const CreateFilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   // Allow the post-create navigate without prompting; cleared after each leave.
   const allowNavigationRef = useRef(false);
+  const savingRef = useRef(false);
+  // Leaving this page or its folder ends the creation journey, so an older
+  // save's late success cannot take the reader away from where they went
+  // (w4/304). The write itself still lands.
+  const journeyRef = useRef(0);
+  useEffect(
+    () => () => {
+      journeyRef.current += 1;
+    },
+    [ledgerId, dirPath],
+  );
 
+  const refreshDirectory = useRefreshDirectory(ledgerId, dirPath);
   const [createFileMutation] = useMutation(CreateLedgerFileDocument);
   const { data: dirData } = useQuery(GetLedgerDirContentDocument, {
     variables: {
@@ -144,7 +157,12 @@ const CreateFilePage = () => {
     // mid-draft must stop the write here too, without discarding the draft.
     if (!canWrite || isSaveDisabled) return;
 
+    // From here until the write and directory refetch settle, the draft is
+    // read-only: the success path leaves with exactly this snapshot, so it
+    // must not accept a newer name or text it would discard (w4/247).
+    savingRef.current = true;
     setIsSaving(true);
+    const journey = journeyRef.current;
     try {
       await createFileMutation({
         variables: {
@@ -153,18 +171,12 @@ const CreateFilePage = () => {
           content: base64Encode(content), // Encode content to base64 with UTF-8 support
           message: t("ledgerEditor.createFileCommit", { path: fullPath }),
         },
-        refetchQueries: [
-          {
-            query: GetLedgerDirContentDocument,
-            variables: {
-              ledgerId,
-              dirPath: dirPath || null,
-            },
-          },
-        ],
-        awaitRefetchQueries: true,
       });
 
+      // The file is written; refreshing its folder is a separate read that
+      // cannot turn this into a failed create (w4/248).
+      await refreshDirectory();
+      if (journey !== journeyRef.current) return;
       // Navigate back to files view after successful creation
       allowNavigationRef.current = true;
       navigateToTree();
@@ -172,6 +184,7 @@ const CreateFilePage = () => {
       console.error("Failed to create file:", error);
       toast.error(formatError(error));
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -224,7 +237,10 @@ const CreateFilePage = () => {
                 type="text"
                 placeholder={t("ledgerEditor.nameYourFile")}
                 value={filename}
-                onChange={(e) => setFilename(e.target.value)}
+                onChange={(e) => {
+                  if (!savingRef.current) setFilename(e.target.value);
+                }}
+                readOnly={isSaving}
                 className="flex-1 min-w-0"
                 autoFocus
                 aria-invalid={Boolean(filenameError)}
@@ -278,7 +294,9 @@ const CreateFilePage = () => {
               height="100%"
               language={getFileLanguage(normalizedFilename)}
               value={content}
-              onChange={(value) => setContent(value || "")}
+              onChange={(value) => {
+                if (!savingRef.current) setContent(value || "");
+              }}
               theme={isDarkTheme ? "vs-dark" : "light"}
               beforeMount={(monaco) => {
                 // Register Beancount language before mounting
@@ -293,6 +311,8 @@ const CreateFilePage = () => {
                 fontSize: 14,
                 tabSize: 2,
                 insertSpaces: true,
+                readOnly: isSaving,
+                domReadOnly: isSaving,
               }}
             />
           </div>

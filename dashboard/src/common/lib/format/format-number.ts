@@ -9,6 +9,9 @@
  *                      the server renders "80,149.807" and a French browser
  *                      hydrates "80 149,807", which React resolves by throwing
  *                      away and regenerating the server-rendered report tree.
+ * @param fractionDigits - Digits a non-ISO commodity's source decimal carried
+ *                      (`fractionDigitsOf`); they only extend the fallback's
+ *                      three grouped / two ungrouped digits (w4/m45).
  * @returns Formatted number string
  */
 export const formatNumber = (
@@ -16,6 +19,7 @@ export const formatNumber = (
   renderCommas: boolean,
   locale: string,
   currency?: string,
+  fractionDigits = 0,
 ): string => {
   // An ISO 4217 currency is written at its minor-unit precision in both
   // render_commas modes — `4,559.80` and `109,529.34 USD`, never `4,559.8` or
@@ -24,24 +28,40 @@ export const formatNumber = (
   if (digits !== undefined) {
     // A residue that rounds to zero is zero, not "-0.00".
     const shown = Math.abs(value) < 0.5 * 10 ** -digits ? 0 : value;
-    return shown.toLocaleString(locale, {
+    return numberFormat(locale, {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
       useGrouping: renderCommas,
-    });
+    }).format(shown);
   }
-  if (renderCommas) {
-    return value.toLocaleString(locale);
-  }
-  if (Number.isInteger(value)) {
-    return String(value);
-  }
-  // Preserve up to 2 decimal places, strip trailing zeros
-  return value.toFixed(2).replace(/\.?0+$/, "");
+  return formatQuantity(
+    value,
+    Math.max(fractionDigits, renderCommas ? 3 : 2),
+    renderCommas,
+    locale,
+  );
 };
 
 let isoCurrencies: Set<string> | null = null;
 const minorDigitsCache = new Map<string, number | undefined>();
+const numberFormats = new Map<string, Intl.NumberFormat>();
+
+/**
+ * A shared `Intl.NumberFormat`: `toLocaleString` with options builds a new
+ * formatter per call, which a long daily Budget table pays thousands of times.
+ */
+function numberFormat(
+  locale: string,
+  options: Intl.NumberFormatOptions,
+): Intl.NumberFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let format = numberFormats.get(key);
+  if (!format) {
+    format = new Intl.NumberFormat(locale, options);
+    numberFormats.set(key, format);
+  }
+  return format;
+}
 
 /**
  * The fraction digits an ISO 4217 currency is written with (USD 2, JPY 0,
@@ -87,15 +107,12 @@ export const fractionDigitsOf = (
 };
 
 /**
- * Format a quantity for a detailed tooltip, keeping the digits the ledger sent.
+ * Format a quantity, keeping the digits the ledger sent.
  *
- * `formatNumber` is built for cash: it caps at the locale default of three
- * fraction digits, or `toFixed(2)` without separators. That rounds real
- * commodity units — 4.00995 ETH read as 4.01 beside a journal showing the full
- * quantity. Here the digit budget comes from the source decimal instead, so
- * nothing is invented and nothing is dropped. Grouping, locale separators and
- * the no-trailing-zeros shape are unchanged, and a value whose source has two
- * decimals still formats exactly as before.
+ * The digit budget comes from the source decimal, so nothing is invented and
+ * nothing is dropped: 4.00995 ETH never reads as 4.01 beside a journal showing
+ * the full quantity. Grouping, locale separators and the no-trailing-zeros
+ * shape follow `formatNumber`, which delegates its non-ISO commodities here.
  */
 export const formatQuantity = (
   value: number,
@@ -105,7 +122,9 @@ export const formatQuantity = (
 ): string => {
   const digits = Math.min(Math.max(Math.trunc(fractionDigits) || 0, 0), 20);
   if (renderCommas) {
-    return value.toLocaleString(locale, { maximumFractionDigits: digits });
+    return numberFormat(locale, { maximumFractionDigits: digits }).format(
+      value,
+    );
   }
   if (Number.isInteger(value)) {
     return String(value);

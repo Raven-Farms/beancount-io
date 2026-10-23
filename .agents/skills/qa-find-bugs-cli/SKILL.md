@@ -6,6 +6,7 @@ description: >-
   tracing root causes, and deduplicating findings. Use for CLI QA or a terminal
   bug hunt. Skip ordinary code review, bug implementation, ledger bookkeeping,
   and browser or native-mobile QA.
+metadata: {"internal": true}
 ---
 
 # CLI QA bug hunt

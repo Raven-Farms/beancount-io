@@ -31,13 +31,13 @@ export const LEDGER_ROUTES = [
     operationId: "getLedger",
     summary: "Get one ledger",
     description:
-      "Metadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions when available.",
+      "Metadata for a single ledger: description, visibility, clone URLs, timestamps, and the caller's permissions and `isStarred` when available.",
     params: ledgerPathSchema,
     responses: {
       200: json("The ledger", ledgerResultSchema),
     },
     handler: async ({ layers }, { identity, params }) =>
-      layers.workflows.ledger.getLedger({
+      layers.workflows.ledger.getLedgerMetadata({
         ledgerId: ledgerIdOf(params),
         identity,
       }),

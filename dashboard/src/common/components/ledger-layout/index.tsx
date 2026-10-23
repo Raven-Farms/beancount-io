@@ -1,7 +1,9 @@
+import { FailedRenewalBanner } from "@/common/components/billing/failed-renewal-banner";
 import {
   useParams,
   useNavigate,
   useLocation,
+  useRouter,
   useRouterState,
   trimPathRight,
   Outlet,
@@ -26,6 +28,10 @@ import { cn } from "@/common/lib/utils/utils.ts";
 import { useIsMobile } from "@/common/hooks/use-mobile.ts";
 import { LayoutHeader } from "./layout-header";
 import { isReactNative } from "@/common/providers/react-native-bridge-provider/react-native-bridge";
+import { useRefreshFailedToast } from "@/common/hooks/use-refresh-failed-toast";
+import { useState } from "react";
+
+const COMMIT_DETAIL_PATH = /\/commit\/[^/]+\/?$/;
 
 /**
  * Ledger layout component
@@ -38,6 +44,7 @@ export function LedgerLayout() {
   const ledgerId = createLedgerId(ledgerOwner, ledgerName);
   const navigate = useNavigate();
   const location = useLocation();
+  const router = useRouter();
   // Only hide an outlet whose data scope is changing. Local list/query URL
   // edits must preserve its input focus and in-flight work. Comparing matches
   // uses the same pathname encoding and also covers the first SSR navigation.
@@ -47,6 +54,15 @@ export function LedgerLayout() {
       const current = state.matches.at(-1);
       const next = state.pendingMatches?.at(-1);
       if (!current || !next) return true;
+      // Choosing another commit in Version History keeps the workspace and
+      // its loaded history pages; it shows its own pending detail (w4/246).
+      if (
+        current.routeId === next.routeId &&
+        COMMIT_DETAIL_PATH.test(current.pathname) &&
+        COMMIT_DETAIL_PATH.test(next.pathname)
+      ) {
+        return false;
+      }
       if (
         current.routeId !== next.routeId ||
         trimPathRight(current.pathname) !== trimPathRight(next.pathname)
@@ -63,14 +79,33 @@ export function LedgerLayout() {
     },
   });
 
-  const { data, error, refetch, loading } = useQuery(GetLedgerDocument, {
-    variables: {
-      ledgerId: ledgerId,
+  const { data, previousData, error, refetch, loading } = useQuery(
+    GetLedgerDocument,
+    {
+      variables: {
+        ledgerId: ledgerId,
+      },
+      fetchPolicy: "cache-first",
     },
-    fetchPolicy: "cache-first",
-  });
+  );
 
-  const currentLedger = data?.getLedger;
+  // A cache clear (a write, or Out of date → Refresh) refetches this query
+  // with the old ledger still in `data`, and keeps it there if the refetch
+  // fails. A page this layout already showed for the same ledger stays
+  // mounted through both, so an unsaved file or BQL draft and the reader's
+  // focus survive (w4/238, w4/m46); a failure is reported with Try again. A
+  // first mount still waits for the access read (Smart Import / Upload
+  // Receipt access), and a failed one still shows the error page. Apollo's
+  // previousData is only reused for this same ledger.
+  const ledgerKey = ledgerId.toLowerCase();
+  const previousLedger = previousData?.getLedger;
+  const currentLedger =
+    data?.getLedger ??
+    (previousLedger?.fullName.toLowerCase() === ledgerKey
+      ? previousLedger
+      : undefined);
+  const [shownLedger, setShownLedger] = useState<string | null>(null);
+  const keepShown = shownLedger === ledgerKey && currentLedger !== undefined;
 
   const handleBackToDashboard = () => {
     void navigate({ to: "/ledger" });
@@ -79,13 +114,14 @@ export function LedgerLayout() {
   const handleRetry = () => {
     void refetch();
   };
+  useRefreshFailedToast(keepShown ? error : undefined, handleRetry);
 
   const isMobile = useIsMobile();
   const isCommitWorkspace = /\/(?:commits|commit\/[^/]+)\/?$/.test(
     location.pathname,
   );
 
-  if (error) {
+  if (error && !keepShown) {
     return (
       <LedgerLayoutError
         onBackToDashboard={handleBackToDashboard}
@@ -97,13 +133,14 @@ export function LedgerLayout() {
 
   // If no data yet, show loading skeleton
   // This ensures server and client render the same thing during initial load
-  if (loading || !currentLedger) {
+  if (!currentLedger || (loading && data?.getLedger && !keepShown)) {
     return <LedgerLayoutLoading />;
   }
+  if (shownLedger !== ledgerKey) setShownLedger(ledgerKey);
 
   return (
     <LedgerProvider
-      ledgerData={data.getLedger}
+      ledgerData={currentLedger}
       ledgerName={ledgerName}
       ledgerOwner={ledgerOwner}
     >
@@ -130,6 +167,7 @@ export function LedgerLayout() {
               {!isReactNative() && (
                 <LayoutHeader ledgerId={ledgerId} isCompact={isMobile} />
               )}
+              <FailedRenewalBanner />
               <div
                 data-scroll-restoration-id="ledger-content"
                 className={cn(
@@ -144,7 +182,13 @@ export function LedgerLayout() {
                   ) : (
                     // Key by ledger so a switch never keeps the previous
                     // ledger's mounted page body under the new URL.
-                    <ErrorBoundary key={ledgerId}>
+                    // Try Again reruns the failed child loader (a commit or
+                    // file read), not only this boundary (w4/264).
+                    <ErrorBoundary
+                      key={ledgerId}
+                      resetKey={location.pathname}
+                      onRetry={() => router.invalidate()}
+                    >
                       <Outlet />
                     </ErrorBoundary>
                   )}

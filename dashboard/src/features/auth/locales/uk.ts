@@ -44,6 +44,11 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Підтвердіть ваш пароль",
     description: "Placeholder for password confirmation",
   },
+  "auth.chooseYourPassword": {
+    message: "Придумайте пароль (мінімум 8 символів)",
+    description:
+      "Placeholder for the password a new account chooses, with the minimum length",
+  },
   "auth.createAccount": {
     message: "Створити обліковий запис",
     description: "Button to submit registration",
@@ -179,6 +184,12 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Не вдалося увійти",
     description: "Error title when login fails",
   },
+  "auth.loginRateLimited": {
+    message:
+      "Забагато спроб входу. Зачекайте кілька хвилин і спробуйте ще раз або скиньте пароль.",
+    description:
+      "Shown on any password sign-in form when sign-in is rate limited, by address or by too many wrong passwords for the account",
+  },
   "auth.logout": {
     message: "Вихід",
     description: "Button label to log out",
@@ -197,11 +208,12 @@ const ukAuth: Record<string, TranslationEntry> = {
     description: "Label for new password field",
   },
   "auth.newPasswordMinLength": {
-    message: "Пароль має містити щонайменше 6 символів",
+    message: "Пароль має містити щонайменше 8 символів",
     description: "Validation error for password length",
   },
   "auth.newPasswordMaxLength": {
-    message: "Пароль має містити не більше 128 символів",
+    message:
+      "Пароль задовгий: не більше 72 символів, причому літери з діакритикою, нелатинські літери (зокрема кирилиця) та емодзі рахуються за 2–4 символи.",
     description:
       "Validation error when new password exceeds the maximum length",
   },
@@ -245,8 +257,21 @@ const ukAuth: Record<string, TranslationEntry> = {
     message: "Пароль обов'язковий",
     description: "Validation error when password is not provided",
   },
+  "auth.passwordBreached": {
+    message:
+      "Цей пароль виявлено у витоку даних. Виберіть пароль, який ви ніде більше не використовуєте.",
+    description:
+      "Error when the server finds the new password in a known data breach (Have I Been Pwned)",
+  },
+  "auth.passwordTooSimilar": {
+    message:
+      "Пароль занадто схожий на вашу електронну пошту або ім'я користувача.",
+    description:
+      "Error when the new password is too close to the account's email or username",
+  },
   "auth.passwordResetSuccessMessage": {
-    message: "Ваш пароль скинуто. Перенаправлення на сторінку входу...",
+    message:
+      "Ваш пароль скинуто, і ви вийшли з облікового запису на всіх пристроях і в підключених застосунках. Перенаправлення на сторінку входу...",
     description: "Success message description",
   },
   "auth.passwordResetSuccessful": {
@@ -752,6 +777,76 @@ const ukAuth: Record<string, TranslationEntry> = {
       "Вхід за паролем на цьому сервері вимкнено. Продовжте через Google.",
     description:
       "Shown instead of a password form when password sign-in is turned off on the server",
+  },
+  "auth.recoveryTitle": {
+    message: "Підтвердьте пошту для входу",
+    description:
+      "Title of the email ownership verification step for sign-in recovery",
+  },
+  "auth.recoveryDescription": {
+    message:
+      "Відкрийте посилання в листі для відновлення входу, а потім введіть код із листа та поточний пароль.",
+    description: "Instructions for continuing from the sign-in recovery email",
+  },
+  "auth.recoverySendEmail": {
+    message: "Надіслати лист для відновлення входу",
+    description: "Button requesting a sign-in recovery email",
+  },
+  "auth.recoverySending": {
+    message: "Надсилання листа для відновлення входу...",
+    description: "Pending state while requesting a sign-in recovery email",
+  },
+  "auth.recoverySent": {
+    message:
+      "Якщо з цією адресою пов’язаний обліковий запис, незабаром надійде лист для відновлення входу. Відкрийте посилання в ньому, щоб продовжити. Нещодавно отриманий лист усе ще дійсний.",
+    description:
+      "Uniform confirmation after requesting recovery; previous valid recovery emails remain usable",
+  },
+  "auth.recoveryResend": {
+    message: "Надіслати ще один лист для відновлення входу",
+    description: "Button requesting another sign-in recovery email",
+  },
+  "auth.recoveryRetryAt": {
+    message: "Спробуйте знову о {time}.",
+    description:
+      "Absolute local retry time after throttling; {time} is formatted using the active locale",
+  },
+  "auth.recoveryCode": {
+    message: "Шестизначний код підтвердження",
+    description: "Accessible label for the sign-in recovery email code",
+  },
+  "auth.recoveryCodeInvalid": {
+    message: "Введіть шестизначний код із листа для відновлення входу.",
+    description:
+      "Validation error when the recovery code is not exactly six digits",
+  },
+  "auth.recoveryFailed": {
+    message:
+      "Неправильна адреса пошти, код або пароль, або термін дії коду минув. Ви можете запросити новий лист для відновлення входу.",
+    description:
+      "Uniform invalid-credentials or expired-code error during sign-in recovery",
+  },
+  "auth.recoveryRequestFailed": {
+    message:
+      "Не вдалося запросити лист для відновлення входу. Спробуйте ще раз.",
+    description: "Error when requesting a sign-in recovery email fails",
+  },
+  "auth.recoveryUnavailable": {
+    message: "Вхід тимчасово недоступний. Спробуйте ще раз.",
+    description: "Temporary service outage during sign-in recovery",
+  },
+  "auth.recoveryExpiry": {
+    message: "Код діє 10 хвилин і дозволяє одну спробу введення пароля.",
+    description:
+      "Explains the expiry and single password-attempt limit of a recovery code",
+  },
+  "auth.recoverySubmit": {
+    message: "Підтвердити й увійти",
+    description: "Button submitting the recovery code and current password",
+  },
+  "auth.recoveryVerifying": {
+    message: "Перевірка...",
+    description: "Pending state while verifying the recovery code and password",
   },
 };
 

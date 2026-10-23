@@ -1,4 +1,5 @@
 import { unwrapFavaResponse } from "@/foundation/fava";
+import { assertHostPage } from "@/shared/host-page";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
 import type { Identity } from "@/server/api/identity";
 import {
@@ -51,6 +52,7 @@ export class LedgerPublicKeyService implements ILedgerPublicKeyService {
     identity: Identity,
     opts?: { page?: number; limit?: number },
   ): Promise<PublicKeyData[]> {
+    assertHostPage(opts?.page, opts?.limit);
     await this.authorization.authorizeOrThrow({
       principal: identity,
       action: AUTHORIZATION_ACTIONS.USER_PUBLIC_KEYS_LIST,

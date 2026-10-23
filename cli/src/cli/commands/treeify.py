@@ -23,21 +23,69 @@ _FORCE = "--force"
 # Upstream's default pattern with Beancount's own account grammar: the lexer
 # takes any non-ASCII character in a component, upstream's default only ASCII,
 # so `Assets:Bank:Épargne` or `Assets:银行` stayed flat in the middle of the
-# tree. Written with escapes so the argument itself is plain ASCII.
-_LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F\s])*"
-_COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F\s])" + _LETTERS
+# tree — whitespace included: `My\u00a0Savings` is one valid component (w5/883).
+# Written with escapes so the argument itself is plain ASCII.
+_LETTERS = r"(?:[A-Za-z0-9-_']|[^\x00-\x7F])*"
+_COMPONENT = r"(?:[A-Z0-9]|[^\x00-\x7F])" + _LETTERS
 _ENGLISH_ROOT = r"(?:Assets|Liabilities|Equity|Income|Expenses)"
 # Any root the grammar allows, not only the five English names: a ledger with
 # `option "name_assets" "Aktiva"` found "no hierarchical column" (w5/414). A
 # root needs a component after it, so a capitalized word or a currency is not
-# taken for an account. Upstream takes the leftmost column that matches, so
-# that wider match is a fallback: it is not tried where an English-root
-# account follows on the line, and a narration such as `NYSE:IBM dividend`
-# beside `Assets:Broker:Cash` no longer wins the column (w5/570).
+# taken for an account. Upstream takes the leftmost column that matches, so a
+# narration such as `NYSE:IBM dividend` beside the accounts would win it;
+# bea decides the column once per input instead (see `_decide_pattern`).
+_ACCOUNT_ANY = rf"(?:{_ENGLISH_ROOT}(?::{_COMPONENT})*|(?:[A-Z]|[^\x00-\x7F]){_LETTERS}(?::{_COMPONENT})+)"
+# The w5/570 per-position form, kept for input bea cannot pre-scan (a held
+# descriptor upstream reads itself): its lookahead rescans to the end of the
+# line at every start position, which is quadratic in line length (w5/769).
 _ACCOUNT_PATTERN = (
-    rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F\s]){_LETTERS}(?::{_COMPONENT})+"
+    rf"(?:(?!.*(?<!\S){_ENGLISH_ROOT}:)(?:[A-Z]|[^\x00-\x7F]){_LETTERS}(?::{_COMPONENT})+"
     rf"|{_ENGLISH_ROOT}(?::{_COMPONENT})*)"
 )
+_DEFAULT_DELIMITER = r"[ \t]+"
+
+
+def _decide_pattern(text: str, delimiter: str | None) -> str:
+    """Upstream's pattern with the account column decided once for this input.
+
+    Upstream groups pattern matches by start position and treeifies the
+    leftmost valid column, so the narration beside the accounts won it; the
+    w5/570 lookahead suppressed the narration only when an English-root
+    account followed, and rescanned every line from every position. bea
+    runs upstream's own grouping and validity rule here, in linear time,
+    then anchors the match to the winning column: an English-root column
+    first, else the one with the most components, else the leftmost (w5/769).
+    """
+    try:
+        joined = delimiter if delimiter is not None else _DEFAULT_DELIMITER
+        spliced = re.compile(rf"({_ACCOUNT_ANY})(?P<ws>{joined}.|$)")
+    except re.error:
+        # Upstream splices the same expression and reports it in its own
+        # words; bea only stays out of the way.
+        return _ACCOUNT_ANY
+    beginnings: dict[int, list[re.Match[str]]] = {}
+    for line in text.splitlines(keepends=True):
+        for match in spliced.finditer(line):
+            beginnings.setdefault(match.start(), []).append(match)
+    best: tuple[bool, int, int] | None = None
+    winner = -1
+    for left in sorted(beginnings):
+        column = beginnings[left]
+        rightmost = max(match.end(1) for match in column)
+        following = min(match.end() if match.group("ws") else 10000 for match in column)
+        if not rightmost < following:
+            continue
+        names = [match.group(1) for match in column]
+        english = any(re.match(rf"{_ENGLISH_ROOT}:", name) for name in names)
+        components = max(name.count(":") + 1 for name in names)
+        key = (not english, -components, left)
+        if best is None or key < best:
+            best, winner = key, left
+    if winner <= 0:
+        # Leftmost or nothing: upstream agrees without an anchor, and a miss
+        # reaches its no-column report.
+        return _ACCOUNT_ANY
+    return rf"(?<=^.{{{winner}}}){_ACCOUNT_ANY}"
 
 
 class _Unparsed(Exception):
@@ -114,44 +162,72 @@ def _check_regexes(parsed: argparse.Namespace) -> None:
             raise UsageError(f"Invalid regular expression for {flag} {value!r}: {otherwise}.")
         try:
             re.compile(value)
-        except re.error as exc:
+        except (re.error, OverflowError, RecursionError, MemoryError) as exc:
+            # A repetition too large or nesting too deep to compile is an
+            # invalid expression like any other (w5/806); MemoryError carries
+            # no message.
             raise UsageError(
-                f"Invalid regular expression for {flag} {value!r}: {exc}. "
+                f"Invalid regular expression for {flag} {value!r}: {str(exc) or 'cannot be compiled'}. "
                 "Fix the expression; see 'bea treeify --help' for the defaults."
             ) from None
 
 
-def _check_input(name: str | None) -> None:
-    """Refuse an input path upstream can only fail on, the way `format` does.
+def _check_input(name: str | None) -> str | None:
+    """Refuse an input path upstream can only fail on, the way `format` does; return a file's text.
 
     A missing path or a directory exited 1 (`validation`) and an unreadable
     file was not exit 3, each behind upstream's exception class (w5/352).
-    stdin and a held `/dev/fd/N` pass through untouched.
+    A regular file is read here, so its text reaches upstream decoded: a BOM
+    split the tree, and Latin-1 failed with a bare `UnicodeDecodeError`
+    (w5/723). stdin, a FIFO and a held `/dev/fd/N` read at dispatch.
     """
     if name is None or name == "-" or _held_descriptor(name):
-        return
+        return None
     path = expand_path(Path(name), "treeify input")
     if not os.path.lexists(path):
         raise UsageError(f"treeify input '{path}' does not exist. Pass a text file, or omit it to read stdin.")
     if path.is_dir():
         raise UsageError(f"treeify input '{path}' is a directory. Pass a text file, or omit it to read stdin.")
-    if path.is_file() and not os.access(path, os.R_OK):
+    if not path.is_file():
+        return None
+    if not os.access(path, os.R_OK):
         raise AuthError(f"Cannot read treeify input '{path}': permission denied.")
-    if path.is_file():
-        _require_utf8(path.read_bytes(), path)
+    return _require_utf8(path.read_bytes(), path)
 
 
 def _require_utf8(data: bytes, name: object) -> str:
-    """The input as text, or the shared refusal for bytes that are not UTF-8.
+    """The input as text, a BOM skipped, or the shared refusal for bytes that are not UTF-8.
 
     Upstream decodes strictly since w5/404 and crashed on Latin-1 text with
     a bare `UnicodeDecodeError`, where `format -` names the input and the
-    byte (w5/535).
+    byte (w5/535); it also rendered a BOM file's invisible second root, as
+    `format -` never does (w5/723).
     """
     try:
-        return data.decode("utf-8")
+        return data.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
-        raise UsageError(decode_error_message(name, exc)) from None
+        raise UsageError(decode_error_message(name, exc, data)) from None
+
+
+def _read_redirected_input(parsed: argparse.Namespace) -> str | None:
+    """Stdin, a FIFO or a held descriptor as text, or None when upstream reads the path itself.
+
+    Upstream reads a named pipe raw, so Latin-1 through `/dev/stdin`,
+    `<(…)` or a FIFO failed with a bare `UnicodeDecodeError`; bea reads
+    those here instead and passes the text on stdin (w5/723).
+    """
+    if parsed.input in (None, "-"):
+        if sys.stdin is None:
+            return None
+        return _require_utf8(sys.stdin.buffer.read(), "stdin")
+    descriptors = _held_descriptor(parsed.input)
+    if descriptors:
+        with os.fdopen(os.dup(descriptors[0]), "rb") as stream:
+            return _require_utf8(stream.read(), parsed.input)
+    path = expand_path(Path(parsed.input), "treeify input")
+    if path.is_fifo():
+        return _require_utf8(path.read_bytes(), path)
+    return None
 
 
 def _held_descriptor(name: str | None) -> tuple[int, ...]:
@@ -190,18 +266,36 @@ def treeify(ctx: typer.Context) -> None:
         output.guard_forwarded_output(
             forwarded, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop], flags="FA"
         )
+    checked_text: str | None = None
     if parsed is not None and not parsed.help:
+        if parsed.input == "-" or parsed.output in output.STDOUT_PATHS:
+            # Upstream treats '-' as a literal file, unlike bea's stream
+            # convention. Translate both sentinels before forwarding or
+            # checking aliases; './-' still names a literal file (w5/705).
+            # The `/dev/stdout` spellings mean stdout too, whatever stdout
+            # currently is: stat-ing them reads a file redirect as a regular
+            # file and a closed stdout as missing (w5/795).
+            if parsed.input == "-":
+                parsed.input = None
+            if parsed.output in output.STDOUT_PATHS:
+                parsed.output = None
+            forwarded = _without_output(parsed)
         if parsed.filler is not None and not parsed.filler:
             # Upstream pads with `filler * (width // len(filler) + 1)`, so an
             # empty one was a ZeroDivisionError (w5/388).
             raise UsageError("--filler '' is empty; it needs at least one character, such as --filler '.'.")
         _check_regexes(parsed)
-        _check_input(parsed.input)
+        checked_text = _check_input(parsed.input)
     if parsed is not None and parsed.output is not None and not parsed.help:
+        if not parsed.output.strip():
+            # `Path('')` is the working directory, which then refused as `(.)` (w5/854).
+            raise UsageError(f"--output {parsed.output!r} is empty; name a path, or omit --output.")
         # Upstream opens `-o` for writing before it reads the input, so a run
         # that then fails — or reads the same file — has already truncated
         # it. bea keeps the destination itself and writes it only on success.
         destination = expand_path(Path(parsed.output), "--output")
+        if destination == Path("-"):
+            destination = destination.absolute()  # A literal './-', not the stdout sentinel.
         output.guard_output_destination(
             destination, _ledgers(), refuse_existing_ledger_file=True, force=_FORCE in args[:stop]
         )
@@ -210,22 +304,31 @@ def treeify(ctx: typer.Context) -> None:
         output.check_output_destination(destination)
         output.require_writable_destination(destination)
         forwarded = _without_output(parsed)
-    if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
-        forwarded = [f"--pattern={_ACCOUNT_PATTERN}", *forwarded]
     if parsed is not None and not parsed.help and not parsed.input:
         # Upstream reads stdin when no file is named, a terminal included.
         context.refuse_terminal_stdin(
             "Input is required with --no-input. Name the file to treeify or pipe the text on stdin."
         )
-    descriptors = _held_descriptor(parsed.input if parsed is not None else None)
-    if descriptors:
-        completed = launch.capture_native("treeify", forwarded, pass_fds=descriptors)
-    elif parsed is not None and not parsed.help and parsed.input in (None, "-") and sys.stdin is not None:
-        # Read here so a non-UTF-8 pipe is refused in bea's words, as a file is.
-        text = _require_utf8(sys.stdin.buffer.read(), "stdin")
-        completed = launch.capture_native("treeify", forwarded, input_text=text)
-    else:
+    text = checked_text
+    if text is None and parsed is not None and not parsed.help:
+        text = _read_redirected_input(parsed)
+    if parsed is not None and not (parsed.help or parsed.pattern or parsed.filenames or parsed.loose_accounts):
+        # On `parsed` too: dropping the input at dispatch rebuilds the
+        # arguments from it, which would otherwise lose this pattern and
+        # render non-ASCII components flat (w5/723). The text is in hand by
+        # now, so the column is decided from it; the unscannable corner
+        # keeps the per-position form (w5/769).
+        parsed.pattern = _decide_pattern(text, parsed.delimiter) if text is not None else _ACCOUNT_PATTERN
+        forwarded = [f"--pattern={parsed.pattern}", *forwarded]
+    if text is None:
         completed = launch.capture_native("treeify", forwarded)
+    else:
+        if parsed is not None and parsed.input is not None:
+            # Upstream reads only the text now; the path stays out so it
+            # cannot re-read the raw bytes behind bea's back (w5/723).
+            parsed.input = None
+            forwarded = _without_output(parsed)
+        completed = launch.capture_native("treeify", forwarded, input_text=text)
     if completed.returncode == 0 and _NO_COLUMN in (completed.stderr or ""):
         # Upstream echoes the input unchanged and calls that success; the
         # echo is not a tree, so it is not printed.

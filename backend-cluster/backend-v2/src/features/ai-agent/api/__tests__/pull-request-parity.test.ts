@@ -27,7 +27,7 @@ import type { McpRequestContext } from "../mcp-context";
  */
 const MCP_TOOL_FOR: Readonly<Record<string, string>> = {
   create: "createPullRequest",
-  approve: "approvePullRequest",
+  approve: "mergePullRequest",
   reject: "rejectPullRequest",
 };
 function perOperation(args: Record<string, unknown>) {
@@ -190,6 +190,7 @@ async function fixture(caller = identity, appConfig = config) {
   const service = new PullRequestService(
     { getUserApiClient } as never,
     authorization,
+    NO_DIRECTIVE_LIMIT,
   );
   const workflow = new PullRequestWorkflow(
     service,
@@ -325,6 +326,16 @@ const validCreate = {
   description: "Patch description",
   clearCommitMessage: "Patch commit",
 };
+// The merge's directive-limit check has its own tests
+// (pull-request-merge-directive-limit.test.ts); here the ledger is unlimited.
+jest.mock("@/features/gitea/policy/directive-limit-gate", () => ({
+  ...jest.requireActual("@/features/gitea/policy/directive-limit-gate"),
+  evaluateMergeDirectiveLimit: async () => ({ decision: "unlimited" }),
+}));
+const NO_DIRECTIVE_LIMIT = {
+  favaClientFactory: { getPublicApiClient: async () => ({}) },
+} as never;
+
 describe("PR creation, inspection, and review through real adapters/workflow/service", () => {
   it.each(surfaces)(
     "creates patches, reads details, and merges via %s",

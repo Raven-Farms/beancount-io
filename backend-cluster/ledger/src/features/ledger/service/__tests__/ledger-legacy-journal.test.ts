@@ -125,13 +125,68 @@ describe("runLegacyJournal", () => {
     expect(out[0].meta).toEqual({ note: "keep" });
   });
 
-  it("falls back to substring matching on an invalid account regex", () => {
+  it("matches an invalid account regex as a literal, and does not crash", () => {
     const out = runLegacyJournal(
       ds,
       { accountFilter: "[expenses" },
       idsOf(ds),
       noLocations,
     );
-    expect(out).toHaveLength(0); // substring "[expenses" matches nothing — and no crash
+    expect(out).toHaveLength(0); // the literal "[expenses" matches no account
+  });
+
+  // w21/328: w21/113 fixed the main journal's account filter only; this endpoint
+  // still matched substrings, so a picker naming Assets:Cash also got CashApp.
+  describe("account filter", () => {
+    const entry = (account: string, narration: string): DirectiveJson =>
+      ({
+        type: "transaction",
+        date: "2024-01-01",
+        flag: "*",
+        payee: "P",
+        narration,
+        tags: [],
+        links: [],
+        meta: {},
+        postings: [
+          { account, units: { number: "5", currency: "USD" } },
+          {
+            account: "Equity:Opening",
+            units: { number: "-5", currency: "USD" },
+          },
+        ],
+      }) as unknown as DirectiveJson;
+    const accounts = [
+      entry("Assets:Cash", "cash"),
+      entry("Assets:CashApp", "cashapp"),
+      entry("Assets:Cash:Wallet", "wallet"),
+    ];
+    const narrationsFor = (accountFilter: string) =>
+      runLegacyJournal(
+        accounts,
+        { accountFilter, sortOrder: "asc" },
+        idsOf(accounts),
+        noLocations,
+      )
+        .map((e) => e.narration)
+        .sort();
+
+    it("matches the account and its children, not a longer name", () => {
+      expect(narrationsFor("Assets:Cash")).toEqual(["cash", "wallet"]);
+    });
+
+    it("matches no partial component", () => {
+      expect(narrationsFor("Assets:Cas")).toEqual([]);
+    });
+
+    it("matches a run of components anywhere, case-insensitively", () => {
+      expect(narrationsFor("cash:wallet")).toEqual(["wallet"]);
+      // "Cash" is a whole component of two accounts, and part of CashApp.
+      expect(narrationsFor("Cash")).toEqual(["cash", "wallet"]);
+    });
+
+    it("keeps regex syntax working", () => {
+      expect(narrationsFor("^Assets:Cash(App)?$")).toEqual(["cash", "cashapp"]);
+    });
   });
 });

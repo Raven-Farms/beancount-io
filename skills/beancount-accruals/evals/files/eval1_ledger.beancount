@@ -1,0 +1,5 @@
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Checking USD
+2025-01-01 open Liabilities:AccruedRent USD
+2025-01-01 open Expenses:Rent USD

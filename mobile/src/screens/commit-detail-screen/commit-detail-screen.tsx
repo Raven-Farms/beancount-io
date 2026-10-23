@@ -1,6 +1,14 @@
-import { FlatList, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Redirect, Stack } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
 import { fonts } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
@@ -11,7 +19,14 @@ import { FadeInView } from "@/components/crossfade";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { RouteLedgerUnavailable } from "@/components/route-ledger-unavailable";
 import { bindRouteLedger, firstRouteParam } from "@/common/route-ledger";
-import { parseDiff, DiffLine } from "./diff-utils";
+import {
+  commitFileRows,
+  DIFF_PAGE_LINES,
+  nextDiffChunk,
+  parseDiff,
+  type CommitFileRow,
+  DiffLine,
+} from "./diff-utils";
 import { LEADING_TEXT_ALIGN, letterSpacing, LTR_SOURCE } from "@/common/rtl";
 import {
   formatCommitAuthorLine,
@@ -19,6 +34,25 @@ import {
 } from "@/screens/notifications-screen/formatting";
 import { CardLoadFailure } from "@/components/card-load-failure";
 import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { graphQLErrorCodes } from "@/common/graphql-error-codes";
+import { useRouteParams } from "@/common/hooks/use-route-params";
+
+/** "Added", "Deleted" or "Renamed from …"; nothing for an edited file. */
+function fileStatusText(
+  file: CommitFileRow,
+  t: ReturnType<typeof useTranslations>["t"],
+): string | null {
+  switch (file.status) {
+    case "added":
+      return t("commitFileAdded");
+    case "removed":
+      return t("commitFileDeleted");
+    case "renamed":
+      return t("commitFileRenamedFrom", { name: file.previousFilename ?? "" });
+    default:
+      return null;
+  }
+}
 
 const SKELETON_WIDTHS = [200, 160, 240, 180, 120, 220, 150, 190];
 
@@ -102,6 +136,14 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 12,
       color: theme.black80,
     },
+    fileStatus: {
+      fontSize: 12,
+      color: theme.black80,
+      paddingHorizontal: 16,
+      marginTop: -6,
+      paddingBottom: 8,
+      textAlign: LEADING_TEXT_ALIGN,
+    },
     diffContainer: {
       backgroundColor: theme.black10,
     },
@@ -124,6 +166,16 @@ const getStyles = (theme: ColorTheme) =>
       fontSize: 12,
       lineHeight: 18,
       color: theme.black,
+    },
+    showMore: {
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    showMoreText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.primary,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     emptyText: {
       fontSize: 14,
@@ -185,11 +237,27 @@ function CommitDetailScreenImpl({
   });
 
   const commit = data?.getCommitDetails;
-  const diffLines = commit?.diff ? parseDiff(commit.diff) : null;
+  const diff = commit?.diff;
+  // Parsed once per diff, not on every render.
+  const diffLines = useMemo(() => (diff ? parseDiff(diff) : null), [diff]);
+  // How much of a large diff is drawn (w21/379).
+  const [shown, setShown] = useState(DIFF_PAGE_LINES);
+  const fileRows = commit ? commitFileRows(commit.files, commit.diff) : [];
   // The subject heads the summary; the body reflows below it rather than
   // keeping git's ~72-column hard wraps (w0/032).
   const message = splitCommitMessage(commit?.message ?? "");
   const shortSha = sha ? sha.slice(0, 7) : "";
+
+  // An unknown or rewritten sha (a stale Latest Updates row after a force
+  // push) answers NOT_FOUND; Try Again could never succeed (w21/297).
+  if (!commit && graphQLErrorCodes(error).includes("NOT_FOUND")) {
+    return (
+      <RouteLedgerUnavailable
+        title={shortSha}
+        message={t("commitDetailGone")}
+      />
+    );
+  }
 
   return (
     <>
@@ -211,7 +279,9 @@ function CommitDetailScreenImpl({
             <ScrollView>
               {/* Summary */}
               <View style={styles.section}>
-                <Text style={styles.messageLine}>{message.subject}</Text>
+                <Text style={styles.messageLine}>
+                  {message.subject || t("commitNoMessage")}
+                </Text>
                 {message.body !== null && (
                   <Text style={styles.messageBody}>{message.body}</Text>
                 )}
@@ -250,7 +320,7 @@ function CommitDetailScreenImpl({
               <View style={styles.divider} />
 
               {/* Files */}
-              {commit.files.length > 0 && (
+              {fileRows.length > 0 && (
                 <>
                   <View style={styles.section}>
                     <Text
@@ -259,10 +329,17 @@ function CommitDetailScreenImpl({
                     >
                       {t("commitDetailFiles")}
                     </Text>
-                    {commit.files.map((f) => (
+                    {fileRows.map((f) => (
                       <View
                         key={f.filename}
-                        accessibilityLabel={`${f.filename}, +${f.additions} −${f.deletions}`}
+                        accessible
+                        accessibilityLabel={[
+                          f.filename,
+                          fileStatusText(f, t),
+                          `+${f.additions} −${f.deletions}`,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
                       >
                         <View style={styles.fileRow}>
                           <Text
@@ -276,6 +353,11 @@ function CommitDetailScreenImpl({
                             +{f.additions} −{f.deletions}
                           </Text>
                         </View>
+                        {f.status !== "modified" && (
+                          <Text style={styles.fileStatus} numberOfLines={1}>
+                            {fileStatusText(f, t)}
+                          </Text>
+                        )}
                       </View>
                     ))}
                   </View>
@@ -290,21 +372,39 @@ function CommitDetailScreenImpl({
                 </Text>
               </View>
               {diffLines && diffLines.length > 0 ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator
-                  style={LTR_SOURCE}
-                  contentContainerStyle={LTR_SOURCE}
-                >
-                  <View style={styles.diffContainer}>
-                    <FlatList
-                      data={diffLines}
-                      keyExtractor={(_, i) => String(i)}
-                      renderItem={({ item }) => <DiffLineView line={item} />}
-                      scrollEnabled={false}
-                    />
-                  </View>
-                </ScrollView>
+                <>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator
+                    style={LTR_SOURCE}
+                    contentContainerStyle={LTR_SOURCE}
+                  >
+                    <View style={styles.diffContainer}>
+                      <FlatList
+                        data={diffLines.slice(0, shown)}
+                        keyExtractor={(_, i) => String(i)}
+                        renderItem={({ item }) => <DiffLineView line={item} />}
+                        scrollEnabled={false}
+                      />
+                    </View>
+                  </ScrollView>
+                  {shown < diffLines.length ? (
+                    <Pressable
+                      testID="commit-diff-show-more"
+                      style={styles.showMore}
+                      onPress={() =>
+                        setShown((count) => count + DIFF_PAGE_LINES)
+                      }
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.showMoreText}>
+                        {t("commitDetailShowMore", {
+                          count: nextDiffChunk(shown, diffLines.length),
+                        })}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </>
               ) : (
                 // Outside the horizontal scroller, which sized the panel to
                 // its text: the empty state spans the row (w0/032).
@@ -327,7 +427,7 @@ function CommitDetailRoute({
   ledger,
 }: {
   sha: string;
-  ledger?: string | string[];
+  ledger?: string;
 }): JSX.Element {
   const { t } = useTranslations();
   const binding = bindRouteLedger(ledger, useLedgerGuard());
@@ -349,17 +449,19 @@ function CommitDetailRoute({
 export function CommitDetailScreen(): JSX.Element {
   // `ledger` binds the entry to the ledger it was opened for; see
   // `common/route-ledger` for why the ambient selection is not enough.
-  const params = useLocalSearchParams<{
-    sha?: string | string[];
-    ledger?: string | string[];
+  const params = useRouteParams<{
+    sha?: string;
+    ledger?: string;
   }>();
+  const sha = firstRouteParam(params.sha);
+
+  // Opened by URL without a commit there is nothing to show; a blank title over
+  // "No diff available." read as an empty commit (w21/297).
+  if (!sha) return <Redirect href="/(app)/(tabs)" />;
 
   return (
     <LedgerGuard>
-      <CommitDetailRoute
-        sha={firstRouteParam(params.sha)}
-        ledger={params.ledger}
-      />
+      <CommitDetailRoute sha={sha} ledger={params.ledger} />
     </LedgerGuard>
   );
 }

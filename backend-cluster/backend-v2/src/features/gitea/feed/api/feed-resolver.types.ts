@@ -53,10 +53,16 @@ export class FeedResponse {
 
 @ArgsType()
 export class GetFeedArgs {
-  @Field(() => Number, { defaultValue: 0 })
+  @Field(() => Number, {
+    defaultValue: 0,
+    description: "Items to skip: a non-negative integer.",
+  })
   offset: number;
 
-  @Field(() => Number, { defaultValue: 10 })
+  @Field(() => Number, {
+    defaultValue: 10,
+    description: "Items per page: an integer from 1 to 100.",
+  })
   limit: number;
 
   @Field(() => String, {

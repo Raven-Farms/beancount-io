@@ -20,6 +20,11 @@
  *    prefer bucketed/derived attributes.
  */
 import type { UserTier } from "@/common/hooks/use-user-limits";
+import type { CancellationReason, PlanChangeKind } from "@/graphql/definitions";
+import type {
+  BillingCycle,
+  SubscriptionTier,
+} from "@/features/user-settings/pages/general/stripe-config";
 import { trackEvent, setUserProperties as setRawUserProperties } from "./track";
 
 /**
@@ -48,6 +53,47 @@ export type ReportExportFailure =
 
 /** Subscription tier. Mirrors UserTier so it stays in sync with billing. */
 export type PlanTier = UserTier;
+
+/** The in-product prompts that open Billing on a recommended plan. */
+export const UPGRADE_SURFACES = [
+  "ai_cfo_panel",
+  "importer_paywall",
+  "ledgers_limit",
+  "collaborators_limit",
+  "directive_usage",
+] as const;
+export type UpgradeSurface = (typeof UPGRADE_SURFACES)[number];
+
+/**
+ * Where a plan change started: a prompt's deep link, Billing's own plan rows
+ * or yearly offer, or a deep link from elsewhere (the pricing page).
+ */
+export type BillingSurface =
+  | UpgradeSurface
+  | "settings_billing"
+  | "pay_yearly_offer"
+  | "cancel_sheet"
+  | "deep_link";
+
+/**
+ * A plan as an analytics value: tier and cycle (`growth_yearly`), or the tier
+ * alone when it has no billing cycle (`free`, `enterprise`, a paid tier held
+ * without a Stripe subscription).
+ */
+export type PlanValue =
+  | Lowercase<PlanTier>
+  | `${SubscriptionTier}_${BillingCycle}`;
+
+/** Why a subscriber cancels, as the cancel sheet offers it. */
+export type CancelReason = Lowercase<`${CancellationReason}`>;
+
+/** One plan change, as every plan-change event describes it. */
+interface PlanChangeParams {
+  kind: PlanChangeKind;
+  from: PlanValue;
+  to: PlanValue;
+  surface: BillingSurface;
+}
 
 /**
  * Standard parameters that may accompany any event. Attach whatever is in
@@ -160,31 +206,98 @@ export interface AnalyticsEvents {
   // --- Monetization ---
   /**
    * A user clicked an "Upgrade" CTA that surfaces subscription intent at a
-   * friction point and routes to the billing page (`/settings/general`) rather
-   * than starting checkout inline: the AI-CFO usage panel, the importer premium
-   * paywall, the collaborators/ledger limit walls, and the sidebar
-   * directive-usage nudge. Captures intent at the moment of interest —
-   * independent of whether a checkout is ever started — so it measures the top
-   * of the monetization funnel (which friction points drive upgrade interest).
-   * Always pair with `surface`; `target_tier` is attached when the CTA points at
-   * a specific plan (the AI-CFO cards, the importer's Premium upsell) and omitted
-   * for the generic limit nudges that just open the billing page.
+   * friction point and opens the billing page's change sheet on a recommended
+   * plan (`/settings/billing?plan=…&from=<surface>`) rather than starting
+   * checkout inline: the AI-CFO usage panel, the importer premium paywall, the
+   * collaborators/ledger limit walls, and the sidebar directive-usage nudge.
+   * Captures intent at the moment of interest — independent of whether a
+   * checkout is ever started — so it measures the top of the monetization
+   * funnel (which friction points drive upgrade interest). `target_tier` is the
+   * recommended plan, omitted only when no tier is above the user's.
    */
-  upgrade_prompt_clicked: { target_tier?: PlanTier };
+  upgrade_prompt_clicked: { surface: UpgradeSurface; target_tier?: PlanTier };
   /**
-   * A new (free-tier) subscriber started Stripe Checkout from the billing page's
-   * plan cards (`subscription-upgrade-cards.tsx`, settings › subscription). Fired
-   * on click of a plan's "Upgrade" button on the new-subscriber
-   * (`createSubscriptionSession` → hosted Checkout) path — the single,
-   * consolidated checkout entry point — so it marks the paid transaction actually
-   * beginning. `target_tier` is the plan being purchased. This is the deep funnel
-   * stage below `upgrade_prompt_clicked`: intent → checkout_started → `purchase`
-   * (the last fired server-side from the Stripe webhook). In-place tier changes by
-   * existing subscribers (`upgradeSubscription`, no checkout session) are NOT
-   * counted here. Note: `target_tier` (the plan being purchased) is distinct from
-   * the standard `plan_tier`, which is the actor's *current* tier.
+   * A reader without a subscription confirmed a plan in Billing's change sheet
+   * and is leaving for Stripe Checkout (`createSubscriptionSession`), the
+   * single checkout entry point. `target_tier` is the plan being purchased and
+   * `surface` is where the change started. It is the funnel stage below
+   * `upgrade_prompt_clicked`: intent → checkout_started → `purchase` (sent
+   * from the browser once the payment is confirmed). An existing subscriber's in-place
+   * change (`changePlan`) is not a checkout; it is `plan_change_confirmed`.
+   * `target_tier` is distinct from the standard `plan_tier`, which is the
+   * actor's *current* tier.
    */
-  checkout_started: { target_tier: PlanTier };
+  checkout_started: { target_tier: PlanTier; surface: BillingSurface };
+  /**
+   * GA4's recommended purchase: a plan that took effect, from Checkout's
+   * confirmation or an immediate change in the change sheet, with what its
+   * invoice charged (0 included). The one event that carries money (what the
+   * customer pays us, never a ledger amount). Sent once per invoice from this
+   * browser.
+   */
+  purchase: {
+    /** The Stripe invoice id; GA4 deduplicates purchases on it. */
+    transaction_id: string;
+    /** Major units, discounts applied. */
+    value: number;
+    /** ISO 4217, upper case. */
+    currency: string;
+    items: PurchaseItem[];
+  };
+  /**
+   * The monthly/yearly switch above Billing's plan rows changed. Yearly is the
+   * default, so this counts the readers who look at monthly first (PRFAQ005
+   * question 19).
+   */
+  billing_toggle_changed: { to: BillingCycle; surface: "settings_billing" };
+  /**
+   * The change sheet received the server's preview of a change it can
+   * describe (a `kind`); a refused preview is not counted. Fired once per
+   * preview response, so a retry after an error counts again.
+   */
+  plan_change_previewed: PlanChangeParams;
+  /**
+   * The reader confirmed a previewed change: the sheet's pay-and-switch
+   * button, its schedule button for a change at the period end, or its
+   * checkout button for a `NEW` subscription (which then also sends
+   * `checkout_started`). Paired with `plan_change_previewed` it gives the
+   * preview → confirm rate per kind.
+   */
+  plan_change_confirmed: PlanChangeParams;
+  /**
+   * The bank must approve the change's payment. The sheet asks for it with
+   * Stripe.js, or links to Stripe's page when Stripe.js cannot run.
+   */
+  payment_action_required: PlanChangeParams;
+  /** The bank approved the payment in the sheet, so the change landed. */
+  payment_action_completed: PlanChangeParams;
+  /** The change's payment was declined, at once or by the bank; nothing changed. */
+  payment_action_failed: PlanChangeParams;
+  /** A change that waits for the end of the paid period was scheduled. */
+  plan_change_scheduled: PlanChangeParams;
+  /** The reader kept their plan, undoing a scheduled change to `to`. */
+  plan_change_reverted: { from: PlanValue; to: PlanValue };
+  /** The cancel sheet opened. */
+  cancel_started: { from: PlanValue };
+  /**
+   * The subscription was set to end at the period's end, with the reader's
+   * optional reason. Recorded on the server's success.
+   */
+  cancel_confirmed: { from: PlanValue; reason?: CancelReason };
+  /** A pending cancellation was withdrawn with Resume. */
+  subscription_resumed: { from: PlanValue };
+}
+
+/** The plan line of a `purchase`, in GA4's item shape. */
+export interface PurchaseItem {
+  /** The Stripe price id. */
+  item_id: string;
+  /** The plan, e.g. "premium". */
+  item_name: string;
+  /** The billing cycle; omitted for a price this app does not know. */
+  item_variant?: "month" | "year";
+  price: number;
+  quantity: 1;
 }
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

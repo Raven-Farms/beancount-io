@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 HEAD = """option "operating_currency" "{home}"
@@ -200,3 +202,101 @@ def test_the_routed_holding_before_its_route_still_names_the_date(tmp_path: Path
     ledger = _ledger(tmp_path, ROUTED)
 
     assert ROUTED_LINE in _refusal(tmp_path, ledger, "report", "balance-sheet", "-t", "2026-01")["details"]
+
+
+SOLD_USD_LOT = """option "operating_currency" "EUR"
+2025-01-01 open Assets:Broker
+2025-01-01 open Assets:Cash
+2025-01-01 open Equity:Opening
+
+2025-02-01 * "Buy at USD cost"
+  Assets:Broker  5 HOOL {100.00 USD}
+  Assets:Cash
+
+2025-03-01 * "Sell it all"
+  Assets:Broker  -5 HOOL {100.00 USD}
+  Assets:Cash
+
+2025-12-02 * "Buy at EUR cost"
+  Assets:Broker  5 HOOL {90.00 EUR}
+  Assets:Cash
+
+2026-01-01 price HOOL 120 USD
+2026-01-01 price USD 0.90 EUR
+"""
+LATER_USD_LOT = """option "operating_currency" "EUR"
+2025-01-01 open Assets:Broker
+2025-01-01 open Assets:Cash
+2025-01-01 open Equity:Opening
+
+2025-12-02 * "Buy at EUR cost"
+  Assets:Broker  5 HOOL {90.00 EUR}
+  Assets:Cash
+
+2026-02-01 * "Buy at USD cost, after the period"
+  Assets:Broker  5 HOOL {100.00 USD}
+  Assets:Cash
+
+2026-01-01 price HOOL 120 USD
+2026-01-01 price USD 0.90 EUR
+"""
+SOLD_AND_HELD_USD_LOTS = """option "operating_currency" "EUR"
+2025-01-01 open Assets:Broker
+2025-01-01 open Assets:Cash
+2025-01-01 open Equity:Opening
+
+2025-02-01 * "Buy at USD cost"
+  Assets:Broker  5 HOOL {100.00 USD}
+  Assets:Cash
+
+2025-03-01 * "Sell it all"
+  Assets:Broker  -5 HOOL {100.00 USD}
+  Assets:Cash
+
+2025-12-01 * "Buy at USD cost again, and hold it"
+  Assets:Broker  5 HOOL {100.00 USD}
+  Assets:Cash  -450.00 EUR @@ 500.00 USD
+
+2025-12-02 * "Buy at EUR cost"
+  Assets:Broker  5 HOOL {90.00 EUR}
+  Assets:Cash
+
+2026-01-01 price HOOL 120 USD
+2026-01-01 price USD 0.90 EUR
+"""
+HOOL_NEVER = "HOOL has no EUR price at any date; shown in units"
+HOOL_ROUTED = "HOOL → EUR has no price before 2026-01-01; earlier rows shown in HOOL"
+# The mixed ledger pays EUR for its held USD-cost lot, leaving a genuine USD
+# conversion residual that stays unvalued in December.
+USD_ROUTED = "USD → EUR has no price before 2026-01-01; earlier rows shown in USD"
+# That ledger also holds a lot at a cost in EUR, which the USD route cannot
+# value, so the route is qualified (w5/905).
+HOOL_ROUTED_MIXED = (
+    HOOL_ROUTED + "; from then only lots held at a cost in USD are valued, "
+    "the others still need a direct HOOL → EUR price"
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "lines", "sheet_lines"),
+    [
+        (SOLD_USD_LOT, [HOOL_NEVER], [HOOL_NEVER]),
+        (LATER_USD_LOT, [HOOL_NEVER], [HOOL_NEVER]),
+        (SOLD_AND_HELD_USD_LOTS, [HOOL_ROUTED_MIXED, USD_ROUTED], [HOOL_ROUTED_MIXED]),
+    ],
+    ids=["sold-before-the-row", "bought-after-the-row", "one-held-one-sold"],
+)
+def test_a_route_counts_only_for_lots_held_unvalued(
+    tmp_path: Path, text: str, lines: list[str], sheet_lines: list[str]
+) -> None:
+    """A USD-cost lot sold before the row, or bought after it, routes nothing (w5/748)."""
+    ledger = _ledger(tmp_path, text)
+
+    assert _partial(tmp_path, ledger, "balance", "-t", "2025-12")["missing_price_summary"] == lines
+    # The sheet folds the clamp's conversion bookings into its adjustment
+    # (w5/789), so it no longer shows — or warns for — their USD residual;
+    # `balance` still lists the row and keeps both notices.
+    assert _refusal(tmp_path, ledger, "report", "balance-sheet", "-t", "2025-12")["details"] == sheet_lines
+    shown = _bea(tmp_path, "--file", str(ledger), "balance", "-t", "2025-12", "--allow-errors")
+    for line in lines:
+        assert line in shown.stderr.splitlines(), shown.stderr

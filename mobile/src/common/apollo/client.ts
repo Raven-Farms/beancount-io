@@ -4,6 +4,7 @@ import { setContext } from "@apollo/client/link/context";
 import { getEndpoint } from "@/common/request";
 import { onErrorLink } from "@/common/apollo/error-handling";
 import { cache } from "@/common/apollo/cache";
+import { APOLLO_DEFAULT_OPTIONS } from "@/common/apollo/default-options";
 import { oauthTokenManager } from "@/common/oauth/oauth-token-manager";
 import { buildAuthHeaders } from "@/common/apollo/auth-headers";
 
@@ -29,4 +30,5 @@ const link = middlewareLink.concat(
 export const apolloClient = new ApolloClient({
   link,
   cache,
+  defaultOptions: APOLLO_DEFAULT_OPTIONS,
 });

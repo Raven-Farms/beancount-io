@@ -1,17 +1,27 @@
+import { routeText } from "@/common/route-text";
 import { memo, useEffect, useRef, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { AccessibilityInfo, Alert, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as ImagePicker from "expo-image-picker";
 import * as LegacyFS from "expo-file-system/legacy";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { haptics } from "@/common/haptics";
+import { useLedgerReadContext } from "@/common/hooks/use-ledger-read-context";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { useReceiptWorkflow } from "./use-receipt-workflow";
-import { receiptErrorKey, shotFromLibraryResult } from "./receipt-utils";
+import {
+  receiptAmountText,
+  receiptCanRetry,
+  receiptErrorKey,
+  receiptRevealFields,
+  shotFromLibraryResult,
+} from "./receipt-utils";
 import { CameraView, type CapturedShot } from "./camera-view";
+import { deleteReceiptShot } from "@/common/receipt-files";
 import { PreviewView } from "./preview-view";
 import { CHROME } from "./chrome";
+import { useRouteParams } from "@/common/hooks/use-route-params";
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: CHROME.background },
@@ -26,6 +36,9 @@ const styles = StyleSheet.create({
  * not a transition; the animations inside it are what the budget governs.
  */
 const REVEAL_DWELL_MS = 1200;
+// A screen reader needs the time to say what was read before the form opens
+// (w21/284).
+const REVEAL_DWELL_SCREEN_READER_MS = 4500;
 
 // Minimal 1×1 white JPEG used in __DEV__ test mode to bypass the camera.
 // XCUITest (used by expo-mcp) dismisses native camera UI on attach.
@@ -33,17 +46,42 @@ const TEST_JPEG_B64 =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/APvSiigD/9k=";
 
 const ReceiptCaptureScreenImpl = () => {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const ledgerId = useLedgerGuard();
+  const { primaryCurrency } = useLedgerReadContext(ledgerId);
   const workflow = useReceiptWorkflow();
-  const { testMode } = useLocalSearchParams<{ testMode?: string }>();
+  const { testMode } = useRouteParams<{ testMode?: string }>();
 
   const [shot, setShot] = useState<CapturedShot | null>(null);
+  // Every photo taken or picked on this visit, so none outlives it (w21/585):
+  // a retake drops the one it replaces, leaving drops what is left.
+  const photos = useRef<string[]>([]);
+  const keepPhoto = (taken: CapturedShot) => {
+    photos.current.push(taken.uri);
+    setShot(taken);
+  };
+  const dropPhotos = () => {
+    for (const uri of photos.current.splice(0)) void deleteReceiptShot(uri);
+  };
+  useEffect(() => dropPhotos, []);
   const launched = useRef(false);
   const handedOff = useRef(false);
   const failed = useRef(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const screenReader = useRef(false);
+  useEffect(() => {
+    void AccessibilityInfo.isScreenReaderEnabled().then((on) => {
+      screenReader.current = on;
+    });
+    const subscription = AccessibilityInfo.addEventListener(
+      "screenReaderChanged",
+      (on) => {
+        screenReader.current = on;
+      },
+    );
+    return () => subscription.remove();
+  }, []);
 
   // No permission request in front of this. For this call shape — images only,
   // no `allowsEditing`, not the camera — expo-image-picker presents the iOS
@@ -58,10 +96,16 @@ const ReceiptCaptureScreenImpl = () => {
         await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           quality: 0.85,
+          // iOS hands back the original otherwise: an iPhone photo is HEIC,
+          // which the parsing models cannot read (w21/108). Compatible
+          // transcodes it to JPEG.
+          preferredAssetRepresentationMode:
+            ImagePicker.UIImagePickerPreferredAssetRepresentationMode
+              .Compatible,
         }),
       );
       if (picked) {
-        setShot(picked);
+        keepPhoto(picked);
       }
     } catch {
       // Only a genuine picker rejection reaches here — a device that restricts
@@ -71,11 +115,12 @@ const ReceiptCaptureScreenImpl = () => {
   };
 
   const handleCapture = (captured: CapturedShot) => {
-    setShot(captured);
+    keepPhoto(captured);
   };
 
   const handleRetake = () => {
     workflow.reset();
+    dropPhotos();
     setShot(null);
     failed.current = false;
   };
@@ -83,6 +128,14 @@ const ReceiptCaptureScreenImpl = () => {
   const handleUpload = () => {
     if (!shot) return;
     workflow.startCapture(shot.uri, shot.mimeType, shot.filename, ledgerId);
+  };
+
+  // The same photo again, without going back through the camera or library:
+  // after a dropped connection the paper receipt may be gone (w21/204). Re-arm
+  // the failure haptic so a second failure is felt too.
+  const handleRetry = () => {
+    failed.current = false;
+    handleUpload();
   };
 
   useEffect(() => {
@@ -94,7 +147,7 @@ const ReceiptCaptureScreenImpl = () => {
           await LegacyFS.writeAsStringAsync(uri, TEST_JPEG_B64, {
             encoding: LegacyFS.EncodingType.Base64,
           });
-          setShot({
+          keepPhoto({
             uri,
             mimeType: "image/jpeg",
             filename: "test-receipt.jpg",
@@ -130,21 +183,22 @@ const ReceiptCaptureScreenImpl = () => {
 
     haptics.success();
 
-    revealTimer.current = setTimeout(() => {
-      router.replace({
-        pathname: "/(app)/add-transaction",
-        params: {
-          prefillDate: phase.date,
-          prefillPayee: phase.payee,
-          prefillNarration: phase.description,
-          prefillSourceAccount: phase.sourceAccount,
-          prefillTargetAccount: phase.targetAccount,
-          // Receipts are expenses; normalize so the form always seeds a clean
-          // positive total regardless of how the model signed it.
-          prefillAmount: Math.abs(phase.amount).toFixed(2),
-        },
-      });
-    }, REVEAL_DWELL_MS);
+    revealTimer.current = setTimeout(
+      () => {
+        router.replace({
+          pathname: "/(app)/add-transaction",
+          params: {
+            prefillDate: phase.date,
+            prefillPayee: routeText(phase.payee),
+            prefillNarration: routeText(phase.description),
+            prefillSourceAccount: phase.sourceAccount,
+            prefillTargetAccount: phase.targetAccount,
+            prefillAmount: receiptAmountText(phase.amount),
+          },
+        });
+      },
+      screenReader.current ? REVEAL_DWELL_SCREEN_READER_MS : REVEAL_DWELL_MS,
+    );
   }, [workflow.phase, router, ledgerId]);
 
   // A failed parse should feel different from a successful one, not just read
@@ -196,16 +250,19 @@ const ReceiptCaptureScreenImpl = () => {
         }
         reveal={
           phase.kind === "parsed"
-            ? {
-                payee: phase.payee,
-                amount: Math.abs(phase.amount).toFixed(2),
-                date: phase.date,
-              }
+            ? receiptRevealFields(phase, primaryCurrency, locale)
             : undefined
         }
         onRetake={handleRetake}
         onUpload={handleUpload}
+        onRetry={
+          phase.kind === "error" && receiptCanRetry(phase.message)
+            ? handleRetry
+            : undefined
+        }
         onCancel={() => router.back()}
+        onCancelBusy={workflow.cancel}
+        uploadPercent={phase.kind === "uploading" ? phase.percent : undefined}
       />
     );
   };

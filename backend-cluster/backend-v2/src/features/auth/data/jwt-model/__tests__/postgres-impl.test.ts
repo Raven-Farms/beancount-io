@@ -149,6 +149,7 @@ describe("JwtPostgresModel", () => {
 
       expect(result).toEqual({
         userId: "user1",
+        tokenId: "jwt-id-123",
         issuedAt: 1000000000,
         expiresAt: 9999999999,
       });
@@ -176,6 +177,7 @@ describe("JwtPostgresModel", () => {
 
       expect(result).toEqual({
         userId: "user1",
+        tokenId: "jwt-id-123",
         issuedAt: 1000000000,
         expiresAt: 9999999999,
       });

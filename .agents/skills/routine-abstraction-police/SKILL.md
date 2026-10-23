@@ -9,6 +9,7 @@ description: Autonomous maintenance routine that finds imports crossing a stated
   violations. Only rules stated in a AGENTS.md count; SKIP for too-many-layers
   (routine-abstraction-improver) and duplicated logic (routine-dup-unifier). The
   core trigger is "this import points the wrong way across a stated boundary".
+metadata: {"internal": true}
 ---
 
 # Task: Fix imports that cross a stated boundary the wrong way

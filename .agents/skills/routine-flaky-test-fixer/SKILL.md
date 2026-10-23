@@ -9,6 +9,7 @@ description: Autonomous maintenance routine that root-causes intermittently
   tests that can never fail (routine-useless-test-pruner) and for logic bugs
   that fail deterministically (routine-logic-bugfixer). The core trigger is
   "this test sometimes fails; make it deterministic".
+metadata: {"internal": true}
 ---
 
 # Task: Root-cause flaky CI tests and make them deterministic

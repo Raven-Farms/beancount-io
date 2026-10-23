@@ -10,6 +10,8 @@ import { getSafeRedirectPath } from "@/common/lib/auth/auth";
  */
 const AUTH_FLOW_OPERATIONS = new Set([
   "SignIn",
+  "RequestSignInRecovery",
+  "SignInWithEmailCode",
   "SignInWithOneTimeToken",
   "RefreshToken",
   "Logout",

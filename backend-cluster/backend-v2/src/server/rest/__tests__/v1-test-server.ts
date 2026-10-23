@@ -13,6 +13,7 @@ import { restOpId } from "@/server/api/op-class";
 import { normalizeRestPath, opMethodsForLayer } from "@/server/api/rest-op-id";
 import { restErrorMiddleware } from "../error-middleware";
 import { restScopeMiddleware } from "../scope-middleware";
+import { restRateLimitMiddleware } from "../rate-limit-middleware";
 
 import { setLedgerV1Routes } from "@/features/ledger/api/rest/v1";
 import { setApiKeyRoutes } from "@/features/apikeys/api/api-key-rest";
@@ -54,6 +55,7 @@ export async function startV1TestServer(
   layers: AppLayers,
   config: AppConfig,
   fragments: V1TestFragments = { ledger: true, apiKeys: true },
+  rateLimited = false,
 ): Promise<V1TestServer> {
   const router = new Router();
   let identity: Identity | undefined;
@@ -64,6 +66,7 @@ export async function startV1TestServer(
     ctx.state.identity = identity;
     await next();
   });
+  if (rateLimited) router.use(restRateLimitMiddleware());
   router.use(restScopeMiddleware(config, gates));
 
   const before = router.stack.length;

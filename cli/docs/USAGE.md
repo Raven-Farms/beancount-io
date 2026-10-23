@@ -38,7 +38,7 @@ managed engine environment that `bea` provisions.
 | Channel | Provisioning | Offline reuse | Upgrade |
 | --- | --- | --- | --- |
 | Homebrew (`brew install bex-co/tap/bea`) | Frontend and engine virtualenvs are created during installation | Local commands use the keg-local engine with no further download | `bea upgrade` → `brew upgrade bea` refreshes both |
-| PyPI (`uv tool install beancount-io` or pipx) | First local command that needs the engine downloads the hash-pinned combination (needs network and `uv` on `PATH`) | Later commands reuse `$XDG_DATA_HOME/bea/engine/<version>` (default `~/.local/share/bea/engine/…`) | `bea upgrade` upgrades the frontend and, when the version changed, provisions the matching engine |
+| PyPI (`uv tool install beancount-io` or pipx) | First local command that needs the engine downloads the hash-pinned combination (needs network and `uv` on `PATH`) | Later commands reuse `$XDG_DATA_HOME/bea/engine/<version>` (default `~/.local/share/bea/engine/…`) | `bea upgrade` upgrades the frontend and, when the version changed, provisions the matching engine and prunes superseded engine versions |
 
 If first-use or upgrade provisioning fails, fix network/`uv` availability and
 retry a local command such as `bea check` — do not `pip install beancount`.
@@ -59,7 +59,10 @@ checkout's `cli/src` (development only). When none of those exists it reports
 `not provisioned; provisions on first use`. `--json` carries the same answer as
 `serving.tier` (`override`, `managed`, `checkout`, or `first-use`) and
 `serving.location`. A managed or override interpreter is probed, with the result
-in `usable`. A failed probe adds the reason in `unusable` for an override or
+in `usable`. An override is usable only when `bean-check`, `bean-doctor`,
+`bean-example` and `treeify` beside it can run: a missing tool, a directory, or
+a file without execute permission makes it unusable, naming each one. A failed
+probe adds the reason in `unusable` for an override or
 `damaged` for the managed engine. Status still exits **0**; inspect those fields
 before relying on the engine. Checkout and first-use status omit these probe fields.
 
@@ -140,7 +143,13 @@ An `include` that reaches a file without read permission, a directory, or a
 broken symbolic link also exits **2** on every command, `bea check` included,
 in one line naming the include and the file that includes it; `--allow-errors`
 does not skip it. An include that matches nothing stays an ordinary ledger
-error. One file reached under two names (a symbolic or hard link, or another
+error. A glob include in plaintext source also exits **2** naming any
+directory it needs to list but cannot read, rather than loading a partial
+ledger; this applies to cached loads too. Unmatched directories and hidden directories the pattern skips do
+not need read permission. `format` reports the same traversal failures in its
+missing-include results (`--check` and `-i` fail; `--dry-run` keeps its usual
+report-only status).
+One file reached under two names (a symbolic or hard link, or another
 letter case or Unicode form on a volume that ignores them) is loaded once, from
 its first include, and each repeat is a `Duplicate include` ledger error naming
 both names; `price export` copies it once and comments out the repeat.
@@ -193,7 +202,8 @@ destination is refused with exit **2**, before anything is written, when it
 - would become part of the ledger once written: a path that does not exist yet
   but that one of the ledger's `include` patterns matches — `-o txns/backup.bean`
   under `include "txns/*.bean"` — which the next load would read back as
-  entries. The refusal names the path and the include; `--force` does not get
+  entries — for `price export`, the directory it creates as well as each file
+  in it. The refusal names the path and the include; `--force` does not get
   past it, and another suffix or a directory no include reaches is fine, or
 - would replace a file that did not come from this command: an existing
   `.bean`/`.beancount` file for `treeify -o` (named directly or reached
@@ -212,6 +222,9 @@ Encrypted files are left to Beancount's loader to decrypt and are skipped by
 text scans. `doctor context` cannot inspect a location inside an encrypted
 member; use a location in a plaintext ledger file instead.
 
+A destination with a name longer than the filesystem allows is refused the
+same way, exit **2** naming the flag, and so is such a `--file` or `--into`
+path.
 A refusal names the colliding path and leaves the destination byte-identical,
 its file list included. `--force` is the only way past the second case
 (`treeify -o`, `price export`, `example -o`); nothing gets past the first.
@@ -220,6 +233,9 @@ failure, exit **3**, in text and under `--json` alike: `query -o`, `format -o`
 and `treeify -o` refuse a read-only existing file rather than replacing it, and
 a new file in a directory that is not writable, naming the path and leaving
 everything as it was.
+`price export` stages every file before any lands: a stop (SIGTERM, SIGHUP or
+Ctrl-C) or a failed write while it stages, such as a full disk, leaves the
+destination as it was, directories included, so the retry needs no `--force`.
 `bea check --cache-filename` follows the first case as well: bean-check
 deletes a cache file it cannot read, so a cache path that is the ledger or one
 of its includes is refused before bean-check runs, with or without `--no-cache`.
@@ -248,7 +264,10 @@ of a cached load resolved and its file's size and modification time, so
 editing a plugin beside the ledger, removing it, or running without the
 `PYTHONPATH` that found it reloads instead of serving the old plugin's output;
 a load whose errors are types a local plugin defined is not cached at all.
-A cached load that still matches the disk is served as before.
+The record also carries the load's local day: a plugin whose output depends
+on today's date (`amortize_over`, `forecast`) would otherwise serve
+yesterday's rows, so a cache written on an earlier day loads again.
+A cached load written today that still matches the disk is served as before.
 Nor does it record who loaded it: `bea` reads a ledger BOM-stripped and
 NFC-normalized, Beancount's own tools read the bytes as they are. So `bea`'s
 reads serve only a cache they wrote themselves and load again over one left by
@@ -279,7 +298,9 @@ documented. `query -o` and `format -o` overwrite an ordinary existing export
 file by the usual CLI convention; only ledger files are protected there.
 A device or FIFO destination is written through rather than replaced, so
 `query -o /dev/null` discards the result, and `query -o /dev/stdout` (or
-`/dev/fd/1`) prints it as `-o -` does.
+`/dev/fd/1`) prints it as `-o -` does. Any other descriptor `bea` holds —
+`-o >(cmd)`, `-o /dev/fd/3` with `3>file`, `-o /dev/stderr` — receives the
+result too, under `--json` as well; a closed one is refused naming `--output`.
 
 ## Exit codes
 
@@ -323,8 +344,13 @@ These five codes are the whole table. If the engine process dies on a signal —
 an upstream crash, an out-of-memory kill — `bea` reports it as exit 1 with a
 message naming the signal, rather than passing the shell's `128+N` convention
 through as an undocumented status. The exceptions are the two signals that mean
-the run was ended on purpose: `Ctrl-C` still exits 130 and a closed downstream
-pipe still exits 141, both without a message.
+the run was ended on purpose: `Ctrl-C` still exits 130 and a write to a closed
+downstream pipe exits 141, both without a message. This includes deferred
+warnings and update notices. A native command that fails without writing to
+the closed stream keeps its own failure status; diagnostics to a separate,
+live stderr remain available.
+Bare `bea` keeps its usage/help exit **2**, including when its help cannot be
+written to a closed diagnostic pipe.
 
 In `--json` mode a failure writes nothing to stdout and one object to stderr:
 
@@ -360,8 +386,10 @@ and `523` (origin unreachable) instead exit **1** with `Could not reach the serv
 can occur during connection setup or while waiting for a request acknowledgment
 on an established connection; its status alone cannot establish a write's outcome. A
 write that never connected (a refused connection, a failed DNS lookup, a connect
-timeout) sent nothing, so it exits **1** with `Could not reach the server (…)`,
-like a read.
+timeout, or a proxy tunnel that was refused, dropped, or never answered) sent
+nothing, so it exits **1** with `Could not reach the server (…)`, like a read.
+Once the API request starts through an established tunnel, a lost answer still
+leaves the write's outcome unknown and exits **4**.
 
 An HTTP `401` asks you to replace the rejected credential: log in again for a
 stored session, or correct or unset `BEA_TOKEN` when it supplies the credential.
@@ -395,8 +423,8 @@ upstream's output unchanged; these are the failure modes:
 | `parse`, `lex` | The ledger has syntax errors (upstream's trace still prints) |
 | `print-options` | The ledger or any file it includes does not parse; no default options are printed |
 | `roundtrip` | The ledger or any file it includes does not parse (the trace prints without its congratulations), **or** the comparison reports `Entries differ!` — a valid ledger that does not survive upstream's own print/parse cycle. `roundtrip` exits **4** without running when `<stem>.roundtrip1<suffix>` or `.roundtrip2<suffix>` already exists beside the ledger (beside its target, for a symlinked ledger), since upstream would overwrite and then delete them |
-| `linked`, `region` | The ledger or any file it includes does not parse, before anything prints, **or** the link or region matches no entries |
-| `missing-open` | The ledger or any file it includes does not parse, before anything prints; **or** postings reference an inactive account, dated before its `open` or after its `close` (upstream's missing opens still print on stdout, and the inactive references on stderr, so the output can be appended to the ledger) |
+| `linked`, `region` | The ledger or any file it includes does not parse, or an include matches no file, before anything prints, **or** the link or region matches no entries |
+| `missing-open` | The ledger or any file it includes does not parse, or an include matches no file, before anything prints; **or** postings reference an inactive account, dated before its `open` or after its `close` (upstream's missing opens still print on stdout, and the inactive references on stderr, so the output can be appended to the ledger) |
 | `directories` | Upstream reports an `ERROR:` line |
 
 `context`, `display-context`, and `list-options` forward upstream's exit
@@ -404,9 +432,12 @@ unchanged. A nonzero upstream status is never rewritten.
 
 Every operation that loads the ledger (all but `lex`, `parse` and
 `list-options`) first exits 1, without running upstream, on a ledger `bea check`
-rejects for a string that is not UTF-8 or for a plugin that cannot be imported
-or fails while running, with check's own one-line message. Upstream logs those
-and carries on, so its answer would describe a ledger other than yours.
+rejects for a string that is not UTF-8, for a plugin that cannot be imported
+or fails while running, or for a transaction booking cannot do the arithmetic
+for, with check's own one-line message. Upstream logs the first two and carries
+on, so its answer would describe a ledger other than yours, and dies on the
+third with a bare `DivisionByZero` or `InvalidOperation` traceback. A ledger
+with only other errors (an unopened account, a failed balance) still runs.
 
 Every operation reads a BOM-marked file, and NFC and NFD spellings of one
 account, as the rest of `bea` does: such a ledger runs the same upstream
@@ -448,9 +479,9 @@ history. `--file` must name a ledger file: an existing directory exits **2**
 with suggestions to pass it to `bea init DIR` or use `--file DIR/main.bean`.
 The asset and liability accounts are opened for the chosen currency
 only; the income, expense and equity categories take any currency, so a
-foreign charge such as `Expenses:Dining 45 EUR @ 1.10 USD` books without
-editing an open. To hold another currency in an account, add it to that
-account's open line (`2026-08-01 open Assets:Checking EUR,USD`): `bea add open`
+foreign charge such as `Expenses:Dining 45 USD @ 0.90 EUR` books in the EUR
+ledger above without editing an open. To hold another currency in an account,
+add it to that account's open line (`2026-08-01 open Assets:Checking EUR,USD`): `bea add open`
 refuses an account that is already open, and a refused posting names the open
 to edit. New ledger files are
 private by default (`0600` on POSIX: readable and writable only by their owner).
@@ -477,15 +508,17 @@ Invalid answers re-prompt the current question while keeping earlier answers.
 Invalid command-line options still fail with exit **2**.
 Opening balances, `add price --amount` and custom `number:`/`amount:` values
 accept finite decimal notation with ASCII digits and an optional sign and
-decimal point. Comma grouping in threes (`1,000.00`, `65,432.10`) is read as
-`add balance` and `--posting` read it and written without the commas; any
-other comma (`1,50`, `12,34,567`) is refused naming the thousands separators.
+decimal point. Comma grouping in threes (`1,000.00`, `65,432.10`) is accepted
+for these values, as it is for `add balance` and `--posting`; numbers are
+written without the commas. Other comma placements (`1,50`, `12,34,567`) are
+refused naming the thousands separators.
 Exponents, underscores, and non-ASCII digits are refused before anything is
 written.
 
 The personal template opens checking, savings, cash, credit card, salary,
-interest, groceries, dining, rent, transport, utilities, fees, and opening
-equity accounts. Opening balances use that currency and balance against
+interest, groceries, dining, rent, transport, utilities, fees, uncategorized
+expenses (`Expenses:Uncategorized`), and opening equity accounts. Opening
+balances use that currency and balance against
 `Equity:OpeningBalances`; credit card debt is negative. Add other accounts with
 `bea add open` before posting to them.
 
@@ -543,16 +576,20 @@ the plugin, its `SystemExit` value, and what it printed. This stops the load
 on reads and writes, including doctor, native-source queries, `--debug`, and
 `--allow-errors`; the plugin did not finish transforming the ledger.
 A transaction Beancount's booking cannot do the arithmetic for — zero units
-at a total cost (`0 HOOL {{310 USD}}`), or an amount it must infer wider than
+at a total cost (`0 HOOL {{310 USD}}`), units elided beside a zero cost or
+price (`HOOL {0 USD}`, `EUR @ 0 USD`), or an amount it must infer wider than
 the 28 significant digits it keeps — is reported the same way, as `FILE:LINE:
 Beancount cannot book this transaction: …`, where bean-check raises an
-uncaught `DivisionByZero` or `InvalidOperation`; every other read reports it
-at that line too, and leaves that transaction out.
+uncaught error; every other read reports it at that line too, and leaves
+that transaction out.
 `bea --debug check` keeps bean-check's traceback for ordinary exceptions;
 a terminating plugin is refused before bean-check can run it again.
-Metadata named `filename` or `lineno`, on a directive or in a `pushmeta`, is
-an error at its line under every option, `--debug` included: `Metadata key
-'filename' is reserved for Beancount's source location; choose another key.`
+Metadata named `filename` or `lineno`, on a directive, a posting or in a
+`pushmeta`, is an error at its line under every option, `--debug` included:
+`Metadata key 'filename' is reserved for Beancount's source location; choose
+another key.` It is added to the ledger's other errors, never in place of
+them: with bean-check's own options (`-C`, `-v`, its `--json`) bean-check
+still reports the rest, and the key joins its list.
 Beancount writes such a value over the entry's location without a word, so
 every read would place the entry in a file that does not exist. Reads keep the
 real location; rename the key, for example to `receipt:` or `statement:`.
@@ -599,6 +636,9 @@ writing nothing: `-o` is written by `bea`, only after the run validates, so a
 failed run leaves no new file and an existing `--force` target untouched.
 `bea treeify` exits 2 when its input has no hierarchical column to render,
 naming what it looked for — piping plain text is not a tree. Its `-o`
+option accepts `-` for stdout, and an input of `-` reads stdin, just like
+omitting the input. Neither form reads or creates a file named `-`; use `./-`
+when that literal file is intended. Its file output
 destination follows [Output destinations](#output-destinations): the ledger
 under read is refused, an existing `.bean`/`.beancount` file needs
 `--force`, and a destination that is the input file is refused. The
@@ -611,6 +651,21 @@ which is the command that shape belongs to. An annotated
 inside `try`/`if`/`with` is the same module and is refused the same way, and an
 `Ingest(` in a comment or docstring calls nothing; a script with an `if __name__ == "__main__":` block runs, whatever it names its
 importer list and wherever its `Ingest` call lives.
+
+`ingest extract -e/--existing LEDGER` uses Beangulp's own loader for duplicate
+detection. It refuses a plaintext root or included file with a UTF-8 BOM or text outside
+Unicode NFC (exit **2**, naming the file), before running the ingest script or
+writing output. Run the printed `bea format -i FILE` command to remove a BOM.
+For Unicode normalization, re-save the named file in NFC; `format -i` does not
+renormalize existing text. Retry extraction after correcting the file. This
+guard applies to all text in those plaintext files, including comments and strings;
+encrypted files pass through to Beangulp without this preflight inspection.
+The existing ledger must be a regular file; a directory is refused with a
+`--existing` hint naming its root ledger. Extract also checks that a file output
+has an existing parent and can be written before running the ingest script.
+An invalid destination exits **2**, and a permission refusal exits **3**, with
+existing output left untouched. `-o -` keeps Beangulp's stdout behavior;
+`archive -o` continues to name an archive directory.
 
 ### `bea format` writes to stdout unless you ask for a file
 
@@ -651,7 +706,9 @@ convergence path instead — it rewrites CRLF line endings to LF, strips a UTF-8
 BOM, and reports the file as formatted even when alignment alone did not change
 — so `--check` fails on a BOM-marked or CRLF file until `-i` has run. A lone
 carriage return inside a line is text to Beancount (in a comment or a string),
-so the formatter keeps it and leaves that line unaligned.
+so the formatter keeps it and leaves that line unaligned. Carriage returns
+at line endings or EOF become a single LF on the first format pass. Appends preserve
+the original bytes and add the missing newline and blank separator there.
 
 `-i` is a write like any other here, with the same guarantee: each target ends
 up either exactly as it was or completely formatted, never partially written.
@@ -751,8 +808,9 @@ it parses as JSON and never shows a Python `Decimal('1E-8')` or
 `datetime.date(...)`; a text or CSV directive cell is the directive's
 Beancount text, one line per table row in text. Text-table numbers, `-m`
 included, are fixed-point (`0.00000001` and `1500`, never `1E-8` or
-`1.5E+3`), aligned on the decimal point, and a NaN or an infinity prints as
-`NaN` or `Infinity`, as in CSV and JSON. Native `--source` queries keep
+`1.5E+3`), aligned on the decimal point, with columns padded by display
+width so CJK text keeps its row aligned, and a NaN or an infinity prints
+as `NaN` or `Infinity`, as in CSV and JSON. Native `--source` queries keep
 upstream's rendering.
 
 CSV cells hold the ledger's values verbatim, as `bean-query` writes them, so a
@@ -847,7 +905,9 @@ the interactive prompt, where the refusal is an ordinary error and the shell
 stays usable. `.run *` still runs several separate stored queries. A stored
 `query` directive whose body is empty, blank or only a comment is refused by
 name under `.run NAME`; `.run *` skips it with a line on stderr and answers the
-rest.
+rest. A stored query whose window covers no days is refused by name the same
+way, and a stored `OPEN ON` beside a bare `CLOSE` is told the window closes at
+the query directive's date, not the end of the ledger.
 Native `--source` one-shots keep upstream's rendering but not its exit status:
 `.run` naming a missing stored query, and BQL that does not parse or compile,
 exit 2 with the reason on stderr, and an existing `--output` export is replaced
@@ -895,7 +955,9 @@ implicitly, so one BQL cannot hash — `other_accounts`, `balance`, `meta` — i
 the same usage error (exit **2**), named with its type:
 `SELECT joinstr(other_accounts), count(*)` or `str(meta)` groups by its text.
 
-An empty result prints `(no rows)` on stderr. JSON mode keeps the usual
+An empty result prints `(no rows)` on stderr, as an empty `bea list` prints
+`No transactions found.` (or its type's notice) there, so a `> file` or `| head`
+never reads it as a row. JSON mode keeps the usual
 envelope with an empty `rows` array and no human notice.
 
 BQL's `CLOSE ON D` is exclusive, unlike the inclusive `--from-date` /
@@ -945,6 +1007,8 @@ decrypts them. These intentional skips do not cause a nonzero exit; the gate
 judges the plaintext files only. `--in-place` formats every reachable plaintext
 file and skips the unparseable ones, exiting nonzero for parse failures or
 missing/unreadable includes, as well as write failures.
+When several roots or include directives reach one unreadable member, the
+report names each includer.
 Semantic validity stays with `bea check`: a failing balance assertion or an
 unbalanced transaction does not fail `--check`, so for CI or a pre-commit hook
 run `bea check` alongside `bea format --check`. Included files are formatted
@@ -973,11 +1037,11 @@ without a Beancount.io login and never formats or commits them automatically.
 |---|---|
 | `--limit / -l` | Positive maximum results (default 50). The envelope reports `truncated` when more exist. |
 | `--sort oldest/newest` | Date order, applied before the limit, so it also decides which end of the ledger a truncated listing keeps. `transaction` defaults to `newest`; the other ten types default to `oldest`, so pass `--sort newest` for the latest prices or balance assertions. Specify the order in scripts that depend on it. |
-| `--details` | Transactions: render Beancount syntax with every posting, cost/price, metadata, and source location |
+| `--details` | Transactions: render Beancount syntax with every posting, cost/price, metadata, and source location; strings exactly as the ledger holds them, so redirected output parses back (a terminal sees control characters as `\xNN`) |
 | `--flag` | Transactions: select a flag, such as `!` for entries needing review; applied before the limit. |
-| `--search TEXT` | Transactions: case-insensitive substring over payee and narration; a line break, in the entry or the term, compares as one space, as the table shows it. Repeatable (AND — every term must match a row), applied before the limit. |
-| `--tag TAG` | Transactions: tag with or without `#`; repeatable. |
-| `--link LINK` | Transactions: link with or without `^`; repeatable. |
+| `--search TEXT` | Transactions: case-insensitive substring over payee and narration; every run of spaces, tabs and line breaks, in the entry or the term, compares as one space, so the text the table shows matches however it spaced a line break. Repeatable (AND — every term must match a row), applied before the limit. |
+| `--tag TAG` | Transactions: tag with or without `#`, matched case-sensitively. Repeatable (AND — a row must carry every tag given). |
+| `--link LINK` | Transactions: link with or without `^`, matched case-sensitively. Repeatable (AND — a row must carry every link given). |
 | `--from-date` | Only directives on or after this date (`YYYY-MM-DD`) |
 | `--to-date` | Only directives on or before this date (`YYYY-MM-DD`) |
 | `--account / -a` | Case-insensitive substring account filter (`transaction`, `note`, `balance`, `open`, `close`, `document`, `pad`). Matching ignores Unicode normalization, so the NFC and NFD spellings of one account name find each other, and folds Turkish `İ`/`ı` to `i` like `--search` and `bea balance` do. |
@@ -985,6 +1049,10 @@ without a Beancount.io login and never formats or commits them automatically.
 | `--type / -t` | Exact type, case-insensitive (`event`, `custom`); `Location` matches `location` |
 | `--allow-errors` | Return data even though the ledger has loader errors (they still print on stderr) |
 | `--on-disk` | Only directives written in a ledger file; hide rows a plugin synthesized |
+
+A `document` row's `filename` is relative to the file that wrote the directive
+(the form `add document --into` takes back), so each row also names that file:
+`source` (`filename`, `lineno`) in JSON and a `WRITTEN IN` column in the table.
 
 ```bash
 bea list transaction
@@ -1103,9 +1171,13 @@ commits, with or without `--allow-errors`. The atomic replace itself is the
 dividing line. A stop (SIGTERM, SIGINT, SIGHUP) that arrives during the replace
 or after it never undoes the write or silences it. bea prints the write's normal
 result, adds `Stopped (SIGTERM) after the write had completed; its result
-stands.` on stderr, and exits 0, so a retry is never needed. Only a `kill -9`
-of the helper itself in that moment can end it unreported: SIGKILL cannot be
-caught, so after one, check the ledger before retrying.
+stands.` on stderr, and exits 0, so a retry is never needed. A multi-file
+`format -i` stopped after a rewrite ends before the next file and exits **1**,
+listing the files it formatted and the ones it did not attempt; re-running it
+formats the rest. A helper that cannot finish within the grace period after a
+stop is killed, and the write then exits **4**, its outcome unknown. Only a
+`kill -9` of the helper itself in that moment can end it unreported: SIGKILL
+cannot be caught, so after one, check the ledger before retrying.
 
 For split ledgers, keep `--file` pointed at the root and choose the included
 destination with `--into`. Its path is relative to the root ledger's directory
@@ -1114,16 +1186,21 @@ created only when a validated write succeeds; its parent directory must already
 exist. Previews, rejected writes, and duplicate-only imports leave it absent.
 New destinations are private (`0600` on POSIX). When `--file` names an included file anyway, a
 write (`add`, `import`, `ask`) that has no `--into` finds the ledger that
-includes it in the same or the parent directory and runs through that root
+includes it — searching the file's directory and up to three above it (stopping
+at a `.git` directory), each with its immediate subdirectories, opening at most
+64 candidate `.bean`/`.beancount` files — and runs through that root
 with `--into` set to the file: the entry still lands in the named file, but it
 is validated and deduplicated against the whole ledger, and a note says so (in
 `warnings`, or `notes` for import, under `--json`). Such a write is the root's:
 `target.file` names the root, as the same write with `--file` on the root and
 `--into` does, and import memory is kept under the root, so both spellings
 share one remembered mapping. That holds only when the including ledger defines what the file
-reads (an account it opens, a plugin, an option other than its title): a Fava
+reads: an account it opens, a plugin for entries the file posts to accounts it
+never opens, or an option the file does not already set (beyond its title). A Fava
 or forecast overlay that includes a working ledger and only adds entries is
-not its root, so writes and failing reads stay with the ledger named.
+not its root even when it repeats an option or names the forecast plugin, so
+writes and failing reads stay with the ledger named, and a leaf below the
+working ledger stops its climb there rather than at the overlay above.
 
 Beancount applies `option "name_assets"` and the other root-renaming options
 only while it parses the file that sets them, so an included file reads the
@@ -1131,6 +1208,8 @@ default roots unless it repeats them. A new destination on a ledger with renamed
 roots starts with the root's `name_*` option lines. A write into an existing
 include that lacks them is refused, and the error lists the lines to add at
 the top of that file.
+Write checks and new-file seeds use NFC root names and the last valid option
+values; a leading UTF-8 BOM does not hide the first option.
 
 ```bash
 bea --file main.bean add transaction --into 2026.bean \
@@ -1155,7 +1234,12 @@ writable `--into` file.
 Payees, narrations, lot labels, string metadata, and the string fields of
 `note`, `event`, and `custom` are written on one line: runs of CR/LF line breaks become spaces
 in single adds, bulk JSON, and imports, so a pasted multi-line value can never
-write a directive that breaks the file. Every other control character —
+write a directive that breaks the file. That applies to a value given as its own
+field — a bulk `cost.label`, a `--payee`. A posting fragment is refused instead:
+a `--posting` argument or a bulk `amount` containing a line break (a lot label
+spelled inside `{…}` included) exits with an error naming it, writing nothing. A sale's lot label is the exception:
+it selects an existing lot, so it is matched — and written — exactly as
+typed. Every other control character —
 `ESC`, the rest of the C0 range including tab, `DEL`, and C1 — is replaced by
 a visible `\xNN` rather than passed through, so text from an untrusted source
 such as an imported bank export cannot drive your terminal. The Unicode
@@ -1193,9 +1277,14 @@ an account until something uses it, so there `add open` needs `--allow-errors`,
 reports `Unused account` as staged, and the account's first `add transaction`,
 `add transactions` or `import` clears it without the flag; the refusals for a
 missing account print the `add open` line with the flag. Syntax errors and pad references to unknown or inactive accounts
-are always rejected. A syntax error is text Beancount could not read; what it
+are always rejected. An unterminated string in the append destination is
+reported at its original file and line, even with `--allow-errors`.
+A syntax error is text Beancount could not read; what it
 reports about text it did read — an unknown option, a duplicate metadata key, an
-unbalanced `pushtag` — is tolerated like any other existing error. For an
+unbalanced `pushtag` — is tolerated like any other existing error. An append
+destination that ends inside `pushtag` or `pushmeta` is always refused, even
+with `--allow-errors` or a leading UTF-8 BOM, because the new entry would
+inherit that context. Close the push or choose another destination. For an
 opening adjustment, prefer an explicit atomic pad and balance:
 
 ```bash
@@ -1290,7 +1379,7 @@ bea add transaction \
 
 ```bash
 bea add open --date 2026-01-01 --account Assets:Reserve --currency USD
-bea add close --date 2026-12-31 --account Assets:OldAccount
+bea add close --date 2026-12-31 --account Assets:OldAccount   # refused while it still holds a balance; --force closes anyway
 bea add balance --date 2026-04-30 --account Assets:Cash --amount "1000 USD"
 # Advanced two-step pad: complete the pair before adding anything else
 bea add pad --date 2026-01-01 --account Assets:Savings --source Equity:OpeningBalances --allow-errors
@@ -1394,8 +1483,7 @@ date and commodity is refused with conflict exit **4**, naming both values;
 pass `--force` to record a
 corrected quote. So is a same-day quote that disagrees with one written in the
 other direction (`EUR 1.20 USD` beside `USD 0.80 EUR`, which says 1.25); with
-both on record, every read values the pair by the inverse of the direction
-quoted less often, as `bea query` does, whatever their line order. Only written price directives count: a price a plugin such as
+both on record, every read settles each day from the quotes up to that day, as `bea query` does, whatever their line order: the pair is valued by the inverse of the direction quoted less often, and a tie is broken in favor of the quote from the alphabetically later currency. Two quotes agree when the inverse of one rounds to the other at the typed precision (`0.3333` beside `3`). A quote that loses its day to a price a plugin implied is still written, with a warning naming the implied price, since no read will use it. Only written price directives count: a price a plugin such as
 `implicit_prices` generates is neither a duplicate nor a conflict. `add balance` is idempotent the same way: re-running an
 identical assertion reports the existing location and writes nothing, including
 with `--pad-from` (no new pad is written). A different value for the same date,
@@ -1482,7 +1570,10 @@ Omit `units`/`amount` for a balancing posting; it carries no `cost`, so a
 `cost` without `units`/`amount` rejects its row. Supplying both forms or unknown
 fields — at the transaction or posting level, or inside `units`, `cost`,
 `price` and `price_total` — is rejected, and so is an `amount` whose text
-carries a cost or price beside an explicit `cost`, `price` or `price_total`.
+carries a cost beside an explicit `cost`, or a price beside an explicit
+`price` or `price_total`. A cost in one place and a price in the other combine:
+`"amount": "1 HOOL {100 USD}"` with `"price"`, or `"amount": "1 HOOL @@ 110 USD"`
+with `"cost"`, writes both annotations.
 Schema errors show a human row number, field path,
 and example; `bea add transactions --help` contains a complete minimal batch.
 An account name Beancount cannot read (`expenses:food`, `Expenses:Food Court`)
@@ -1498,8 +1589,15 @@ commodity at cost that another row buys at cost into the same account that day
 is written after that day's other rows — a broker export listing a same-day
 sale first still books it against the purchase; rows otherwise keep their input
 order. Partial
-recovery tries rows in input order and validates each accepted subset. When
-some rows are written, the JSON error includes `result.written`, `written_rows`,
+recovery tries rows in input order and validates each accepted subset. Rows
+the failure names are dropped first; what remains is scanned forward, keeping
+every leading run that loads and refusing the row that breaks it, judging the
+rest in order once bisection would cost more than row-by-row trials. The kept
+rows always load together, and which rows are kept is deterministic for a given
+row order — but around a balance assertion a kept row can fail on its own when
+a later kept row offsets it, so reorder the rows when a surprising row is
+refused. When the ledger already fails on its own, `--partial` reports that
+failure once instead of judging rows. When some rows are written, the JSON error includes `result.written`, `written_rows`,
 and `rejected_rows` (zero-based indexes); a failed atomic batch reports zero
 written and `unwritten_rows` when the failure concerns the combined ledger.
 This command appends supplied transactions and does not deduplicate them. Use
@@ -1516,7 +1614,8 @@ bea add transaction "Buy AAPL" --date 2026-08-02 \
 
 Per-unit and total prices (`@`, `@@`) and total costs (`{{...}}`) are supported;
 a total cost needs units to divide among, so zero units at one is refused
-(exit **2** for `--posting`, `Row N, postings.<i>` in bulk input).
+(exit **2** for `--posting`, `Row N, postings.<i>` in bulk input), as is a
+`--posting` that elides its units beside a zero cost or price.
 A `@@` total is written back with `@@` and its exact total, never divided
 into a repeating unit price. A cost is written whole: a total cost keeps its
 total (`{0 # 250.00 USD}`, the same lot as `{{250.00 USD}}`), a currency-only
@@ -1525,7 +1624,11 @@ instead of relaxing to `{}`, and the JSON answer reports the same constraint —
 `number`, `number_total`, `currency`, `date` and `label`, with `null` for the
 parts you left open — so it can be fed straight back to
 `bea add transactions`. In bulk input a `cost` with a `number_total` and a `null`
-`number` is that total cost. JSON remains useful for batches and metadata.
+`number` is that total cost, and `units` with a `null` `number` leaves the
+number for booking to interpolate, as the `--posting` spelling does
+(`HOOL {100 USD}`); only one posting per row may leave its number open, and
+the `amount` shorthand cannot spell one — use structured `units`. JSON
+remains useful for batches and metadata.
 Open `Assets:Brokerage` in AAPL and `Assets:Cash` in USD before applying this purchase:
 
 ```json
@@ -1668,14 +1771,22 @@ falling back to the unfiltered default.
 
 A fiscal period (`--time FY2026`, `FY2026-Q1`, `fiscal_year`, `fiscal_quarter`)
 follows the ledger's `custom "fava-option" "fiscal-year-end" "MM-DD"`, and the
-calendar year when none is declared. If that option is declared but is not a
-real month and day (`"06-31"`, `"6-30"`), a fiscal period is refused (exit 1)
-naming the option's line, with or without `--allow-errors`, rather than
-reporting the calendar year under the fiscal label. Fiscal quarters need a
+calendar year when none is declared. As in Fava, a month from 13 to 24 is a
+year end in the following calendar year: `"15-31"` runs FY2026 from 2026-04-01
+through 2027-03-31, where `"03-31"` ends it on 2026-03-31. If that option is
+declared but is not a real month and day (`"06-31"`, `"6-30"`, `"00-31"`,
+`"99-31"`), a fiscal period is refused (exit 1) naming the option, with or
+without `--allow-errors`, rather than reporting another year under the fiscal
+label. With several declarations the last one is in effect, as in Fava: an
+invalid earlier line is passed over, and an invalid last one refuses fiscal
+periods. So does a misspelled name such as `fiscal-year-ends` when no
+`fiscal-year-end` is declared, naming its line. Fiscal quarters need a
 fiscal year that starts on the first of a month: with a year end such as
 `"04-05"`, `FY2027-Q2` and `fiscal_quarter` exit **2** naming the option and
 its line, while `FY2027` still reports the whole year. Calendar periods are
-unaffected.
+unaffected. `fiscal-year-end` is the only Fava option bea reads: every other
+`custom "fava-option"` value, and every `fava-extension`, is ignored, and
+`bea check` does not validate them.
 
 A parent whose children cancel under the conversion — a long and a short lot at
 the same cost, two funds whose cost bases offset, or a 10.00 USD expense and its
@@ -1722,6 +1833,8 @@ line per commodity, for example `VACHR has no USD price at any date; shown in
 units` or `EUR → USD has no price before 2026-08-31; earlier rows shown in
 EUR`. A holding valued through its cost currency (a USD-cost stock in a EUR
 ledger) gets the dated wording from the first date both legs are quoted.
+A cost currency routes only rows holding a lot at that cost: one sold
+before the row, or bought after it, leaves the undated wording.
 Under `--json`, with piped stdout, under `CI`, or with `--strict`, a
 missing price exits **1** unless `--allow-errors` is passed; the error's
 `details` carry the same per-commodity summary, and `error.result` keeps the
@@ -1819,6 +1932,10 @@ validated. This measures observation age, not exchange trading hours.
 `observed-at` stamps compare as instants; a stamp without an offset (or a bare
 date) reads as UTC, and one more than five minutes ahead of the clock reads
 `stale`.
+A URL include the origin policy refuses (managed price includes disabled, an
+origin not in `MANAGED_PRICE_ORIGINS`) is no source and is never fetched;
+`price status` lists it under `Refused URL includes` with its reason (JSON:
+`refused`, one `{url, reason}` each) beside the load error that names its line.
 A failed refresh never replaces the last good revision. `--offline` never writes
 the price cache. A cache that cannot be written still loads its prices, with a
 `price cache not writable` warning and source error. Explicit `price refresh`
@@ -1860,10 +1977,16 @@ copy at that path; one outside that tree (including a symlink pointing out of
 it), or named by an absolute path, refuses the export before anything is written.
 So does a `document` whose file is missing, naming the directive's file and
 line, with or without `--allow-errors`.
-With `option "insert_pythonpath"`, a plugin module or package that sits beside
-the root ledger is copied to the same relative place too, with any module or
-package beside the root that the plugin imports, so the snapshot's `plugin`
-lines still resolve; a plugin installed elsewhere is not copied. An
+With `option "insert_pythonpath"` (in the root or any included file), a plugin
+module or package that sits beside a ledger file setting it is copied to the
+same relative place too, with any module or package under those directories
+that the plugin imports, so the snapshot's `plugin` lines still resolve. A
+package travels whole — its data files, such as a `settings.json` read through
+`importlib.resources`, as well as its modules — leaving only bytecode caches
+behind; a package entry that cannot be copied as a plain file (a linked
+directory, a named pipe, a file this user cannot read) refuses the export
+naming it. A plugin installed elsewhere is not copied, while a module or
+package file outside the ledger tree refuses the export naming it. An
 unavailable source refuses the export unless `--allow-errors` carries its
 marker alone, and a URL include the load refused (an origin that is not
 allowlisted) refuses it unless `--allow-errors` writes it as a
@@ -1927,9 +2050,17 @@ atomically only if the root ledger and included files still match the preview.
 The confirmation names the file the write will actually change — with
 `--into FILE` that is the included destination, not the root ledger — and shows
 the directive as it will be appended, aligned as `bea format` leaves it (a
-model's tab indentation shows as the spaces that are written). Text still
-carrying a control character in a string is escaped to a visible `\xNN`, so
-what is on screen is what will be written. The panel starts on **No**, so Enter alone
+model's tab indentation shows as the spaces that are written). Its heading
+says how many directives it approves (`these 60 directives`), and so does the
+**Yes** option. A destination the write creates is marked `(new file, created
+by this write)`, with the `option "name_*"` lines it starts with shown above the
+directives, since they are written too. Text still
+carrying a control character in a string is escaped to a visible `\xNN`, and an
+invisible format character (a zero-width space, a soft hyphen, a BOM) to
+`\uNNNN`, so what is on screen is what will be written. An account the text
+opens or posts to that carries a format character is refused before any panel,
+unless the ledger already opens that exact name, so an approval can never
+create a lookalike of an existing account. The panel starts on **No**, so Enter alone
 declines. Arrows, `j`/`k`, the option numbers `1`–`4` and the letters `y`, `n`,
 `a` (yes to all) and `d` (deny all) move the selection, Enter confirms it, and
 Ctrl-C declines. When one model reply proposes several writes, their panels
@@ -1939,9 +2070,14 @@ character is refused rather than rewritten, so no AI-proposed write can leave on
 in a ledger file. Use `ask --into FILE` for an included destination. The write
 tool accepts dated directives; configure plugins, options and includes
 separately. Noninteractive
-sessions do not write ledger entries. The interactive session draws its prompt
+sessions do not write ledger entries: a proposed write is skipped before it is
+validated, so the model is told the same thing whatever the text names and
+learns nothing about local files from it. In an interactive session an
+AI-proposed `document` must name a file inside the ledger's folder; one outside
+it is refused before anything checks whether it exists. The interactive session draws its prompt
 and approval panel on the terminal, so with stdout redirected it exits **2**
-instead; save one answer with `bea ask QUESTION --print > FILE`. AI write permission is separate from
+instead; save one answer with `bea ask QUESTION --print > FILE` — the saved
+text keeps every character, never wrapped or cut. AI write permission is separate from
 global `--yes`: one-answer and non-interactive mode cannot obtain it and never
 apply AI-proposed writes.
 
@@ -1961,6 +2097,9 @@ write), and costs no more.
 Each answer also carries an explicit output cap rather than reserving the
 model's default allowance. An answer that reaches it is printed with a notice
 that it was cut off, and `--print` then exits **1**: ask a narrower question.
+An answer the provider's content filter stops partway prints its partial text
+with a notice naming the filter instead, and `--print` exits **1** the same
+way: rephrase the question and retry.
 
 A query's result reaches the assistant as rows with a row count, the relation
 they came from, and a zero written as `0` — a total that nets to zero is a zero,
@@ -1997,7 +2136,39 @@ bea cloud status
 bea cloud logout
 ```
 
-`bea cloud status` reports the credential source (`file` or `environment`), its expiry, and the account it belongs to. For CI, set `BEA_TOKEN` instead of logging in — it is never written to disk, and `cloud status` reports `source: environment`. `cloud logout` revokes the stored session and deletes the credential file. The file is deleted even when revocation fails, but then the command exits nonzero and says the session may still be valid (revoke it from the dashboard): exit 1 when the server is unreachable or answers with an error, exit 4 when the request timed out and the outcome is unknown. A 401 answer means the session was already revoked, so it exits 0. A credential file that exists but cannot be used — unreadable, not JSON, or missing its `token` or `expireAt` — is never read as "not logged in": cloud commands exit 3 naming the file and the reason, and `cloud logout` deletes it and exits 1, since a token it cannot read cannot be revoked. When `BEA_TOKEN` is set, `cloud login` exits 2 before starting the browser flow, since the new session would never be used, and `cloud logout` changes nothing: it neither revokes the token (another job may share it) nor unsets it in the shell — unset the variable yourself, or revoke the token from the dashboard. A credential the server rejects is reported against the source actually in use: `BEA_TOKEN` takes precedence over the stored file unconditionally, so that failure tells you to correct or unset the variable rather than to log in, which would not change which credential is sent.
+`bea cloud status` reports the credential source (`file` or `environment`),
+its expiry, and the account it belongs to. For CI, set `BEA_TOKEN` instead of
+logging in — it is never written to disk, and `cloud status` reports
+`source: environment`.
+
+`cloud logout` revokes the stored session and deletes the credential file
+after an attempted revocation, including when that attempt fails. An invalid
+endpoint is refused before any revocation attempt, keeping the credential. Failed attempts
+say the session may still be valid and can be revoked from the dashboard.
+Connection failures (including connection timeouts and failed proxy tunnel setup)
+and ordinary server errors exit **1**. Other timeouts, connections lost after sending,
+unreadable successful replies, and gateway HTTP **504, 520, 522, or 524** exit
+**4** because the revocation outcome is unknown. Server request IDs are kept
+in both JSON and human errors. A **401** answer means the session was already
+revoked, so it exits **0**.
+
+A credential file that exists but cannot be used — unreadable, not JSON, or
+missing its `token` or `expireAt` — is never read as "not logged in": cloud
+commands exit **3** naming the file and the reason, and `cloud logout` deletes
+it and exits **1**, since a token it cannot read cannot be revoked.
+
+When `BEA_TOKEN` is set, `cloud login` exits **2** before starting the browser
+flow, since the new session would never be used, and `cloud logout` changes
+nothing: it neither revokes the token (another job may share it) nor unsets it
+in the shell — unset the variable yourself, or revoke the token from the
+dashboard. This no-op also applies to malformed nonempty values: logout does
+not validate or send the token, or read the stored credential. Commands that
+use a malformed `BEA_TOKEN` exit **3** and tell you to fix or unset that variable.
+An empty `BEA_TOKEN=` is treated as unset and falls back to the stored file.
+A credential the server rejects is reported against the source
+actually in use: `BEA_TOKEN` takes precedence over the stored file
+unconditionally, so that failure tells you to correct or unset the variable
+rather than to log in, which would not change which credential is sent.
 
 ## Cloud: hosted ledgers
 
@@ -2074,7 +2245,11 @@ $ bea upgrade
 | A checkout (editable install) | Nothing; prints `git pull` and `uv sync --all-groups`, exits 0 | — |
 | Anything else | Nothing; exits **2** naming both install channels | — |
 
-Uninstalling the executable leaves ledgers and user state in place.
+Uninstalling the executable leaves ledgers and user state in place. The
+downloaded Beancount engine (tens of megabytes under
+`$XDG_DATA_HOME/bea/engine/<version>`, or `$BEA_ENGINE_DIR` when set) stays
+too; delete that directory to reclaim it. Any Python `uv` downloaded for the
+install lives in `uv`'s own cache outside `bea`'s directories.
 
 If the manager itself fails, the command exits **1** and says so; nothing about
 the installation is changed. `--check` reports and runs nothing; when the
@@ -2202,6 +2377,18 @@ select targets, endpoints, and state directories:
 | `MANAGED_PRICE_ORIGINS` | `https://beancount.io` | Comma-separated origin allowlist for managed price includes; empty disables them. Each entry compares as its origin (`https://Beancount.io:443/` is `https://beancount.io`); one that is not an http(s) URL is ignored, and when every entry is, the refusal names them instead of saying includes are disabled |
 | `MANAGED_PRICE_OFFLINE` | — | Truthy resolves managed includes from the cache only, like `--offline` |
 | `MANAGED_PRICE_STRICT` | — | Truthy fails loads on stale or unavailable sources, like `--strict-prices` |
+
+`BEA_API_URL` and `BEA_DASHBOARD_URL` also validate Unicode and punycode
+hostnames. An invalid endpoint exits **2** before any request; `cloud logout`
+keeps the stored credential when endpoint validation fails.
+
+Hosted commands and `ask` also use HTTP(S) proxies from `HTTP_PROXY`,
+`HTTPS_PROXY`, and `ALL_PROXY` (including lowercase and mixed-case spellings).
+Unsupported schemes, malformed proxy URLs, and SOCKS proxies without the
+client's optional SOCKS support are refused with usage exit **2**. The refusal
+names the variables, omits their URL values, and shows how to clear every
+unusable setting for one invocation. Use a valid HTTP(S) proxy instead.
+`NO_PROXY=*` bypasses these proxy settings.
 
 A relative `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, or `XDG_CACHE_HOME` is ignored,
 as the XDG Base Directory spec requires, and the default applies.

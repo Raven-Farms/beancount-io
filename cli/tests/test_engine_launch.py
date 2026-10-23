@@ -620,6 +620,8 @@ def test_managed_engine_layout_and_native_executable(
     (site / "beancount").mkdir()
     command = python.parent / ("bean-check.exe" if platform == "win32" else "bean-check")
     command.touch()
+    # An installed tool is executable; one that is not cannot run (w5/863).
+    command.chmod(0o755)
     monkeypatch.setenv("BEA_ENGINE_DIR", str(root))
     monkeypatch.delenv("BEA_ENGINE_PYTHON", raising=False)
     assert paths.is_provisioned(root)

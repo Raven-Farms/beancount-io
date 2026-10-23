@@ -16,6 +16,10 @@ const skEvents: Record<string, TranslationEntry> = {
     message: "Udalosti: {filtered} / {total}",
     description: "Count of filtered events out of total",
   },
+  "page.events.emptyType": {
+    message: "(bez typu)",
+    description: "Label for an event whose type is empty, in the type filter",
+  },
   "page.events.noEventsFound": {
     message: "Nenašli sa žiadne udalosti",
     description: "Empty state title when no events exist",

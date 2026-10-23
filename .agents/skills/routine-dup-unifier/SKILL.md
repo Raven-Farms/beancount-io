@@ -9,6 +9,7 @@ description: Autonomous maintenance routine that finds duplicated implementation
   implementation (routine-abstraction-improver), and duplication across two
   packages — that is reported, never merged. The core trigger is "these are two
   copies of the same logic; make them one".
+metadata: {"internal": true}
 ---
 
 # Task: Merge duplicated implementations into one

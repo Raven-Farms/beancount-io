@@ -7,6 +7,7 @@ import { buildSchema } from "type-graphql";
 import { graphql } from "graphql";
 import { LedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow";
 import { LedgerMutationResolver } from "@/features/ledger/api/resolvers/ledger-resolver.mutation";
+import { LedgerQueryResolver } from "@/features/ledger/api/resolvers/ledger-resolver.query";
 import { HealthResolver } from "@/features/healthz/api/health-resolver";
 import {
   AuthorizationService,
@@ -28,6 +29,7 @@ const identity: Identity = {
 };
 const surfaces = ["rest", "gql", "mcp"] as const;
 let mutation: LedgerMutationResolver;
+let query: LedgerQueryResolver;
 let schemaPromise: ReturnType<typeof buildSchema>;
 async function fixture(caller = identity) {
   const stars = new Set<string>();
@@ -75,6 +77,12 @@ async function fixture(caller = identity) {
             write(true, owner, name),
           userCurrentDeleteStar: (owner: string, name: string) =>
             write(false, owner, name),
+          // Gitea answers 204 when starred and 404 when not.
+          userCurrentCheckStarring: async (owner: string, name: string) => {
+            if (!stars.has(`${caller.userId}:${owner}/${name}`))
+              throw { status: 404 };
+            return { status: 204 };
+          },
         },
       };
     },
@@ -87,22 +95,51 @@ async function fixture(caller = identity) {
       fava as never,
     ),
   );
+  const ledgerRecord = {
+    id: 42,
+    name: "books",
+    full_name: "ada/books",
+    empty: false,
+    private: true,
+    size: 1,
+    created_at: "2026-01-01",
+    updated_at: "2026-09-01",
+    description: "",
+    permissions: { admin: false, pull: true, push: true },
+  };
+  const favaFactory = {
+    getPublicApiClient: async () => ({
+      ledgers: {
+        getLedger: async () => ({
+          data: { success: true, data: ledgerRecord },
+        }),
+      },
+    }),
+  };
   const workflow = new LedgerWorkflow(
-    {} as never,
+    favaFactory as never,
     factory as never,
     {} as never,
     {} as never,
     {} as never,
     {} as never,
     {} as never,
-    config,
+    { ...config, gitea: { hostname: "example.com", sshPort: 22 } } as never,
     authorization,
   );
   mutation = new LedgerMutationResolver(workflow);
+  query = new LedgerQueryResolver(workflow);
   const health = new HealthResolver();
   schemaPromise ??= buildSchema({
-    resolvers: [HealthResolver, LedgerMutationResolver],
-    container: { get: (ctor) => (ctor === HealthResolver ? health : mutation) },
+    resolvers: [HealthResolver, LedgerMutationResolver, LedgerQueryResolver],
+    container: {
+      get: (ctor) =>
+        ctor === HealthResolver
+          ? health
+          : ctor === LedgerQueryResolver
+            ? query
+            : mutation,
+    },
     globalMiddlewares: [graphqlScopeMiddleware("enforce")],
     validate: true,
   });
@@ -159,6 +196,29 @@ async function fixture(caller = identity) {
           ?.result,
       };
     },
+    /** The caller's star state as each surface's `getLedger` reports it. */
+    read: async (surface: (typeof surfaces)[number]) => {
+      if (surface === "rest") {
+        const r = await fetch(`${rest.url}/api-gateway/v1/ledgers/ada/books`);
+        expect(r.status).toBe(200);
+        return ((await r.json()) as { isStarred?: boolean }).isStarred;
+      }
+      if (surface === "gql") {
+        const r = await graphql({
+          schema,
+          source: `{getLedger(ledgerId:"ada/books"){fullName isStarred}}`,
+          contextValue: { identity: caller, getCurrentIdentity: () => caller },
+        });
+        expect(r.errors).toBeUndefined();
+        return (r.data?.getLedger as { isStarred?: boolean }).isStarred;
+      }
+      const r = await client.readResource({
+        uri: "beancount://ada/books/metadata",
+      });
+      const content = r.contents[0];
+      if (!("text" in content)) throw new Error("Expected metadata text");
+      return (JSON.parse(content.text) as { isStarred?: boolean }).isStarred;
+    },
     close: async () => {
       await client.close();
       await server.close();
@@ -166,6 +226,32 @@ async function fixture(caller = identity) {
     },
   };
 }
+
+/**
+ * w23/009. GraphQL resolved `isStarred` as a field; REST `getLedger` and the
+ * MCP `metadata` resource serialized the workflow's ledger without it, so a
+ * star set through them could never be read back there.
+ */
+describe("star state reads back on every surface", () => {
+  it.each(surfaces)(
+    "a star set via %s reads as isStarred on REST, GraphQL and MCP",
+    async (writer) => {
+      const f = await fixture();
+      try {
+        for (const surface of surfaces)
+          expect(await f.read(surface)).toBe(false);
+        expect((await f.call(writer, true)).refused).toBe(false);
+        for (const surface of surfaces)
+          expect(await f.read(surface)).toBe(true);
+        expect((await f.call(writer, false)).refused).toBe(false);
+        for (const surface of surfaces)
+          expect(await f.read(surface)).toBe(false);
+      } finally {
+        await f.close();
+      }
+    },
+  );
+});
 
 describe("ledger star changes through actual transports and live relationship checks", () => {
   it.each(surfaces)(

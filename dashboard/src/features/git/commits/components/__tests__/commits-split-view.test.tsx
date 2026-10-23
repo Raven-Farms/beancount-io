@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mocks.navigate,
+  useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+    select({ isLoading: false, pendingMatches: [] }),
 }));
 
 vi.mock("@apollo/client/react", () => ({

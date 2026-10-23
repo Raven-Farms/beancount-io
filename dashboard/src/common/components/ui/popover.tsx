@@ -2,6 +2,7 @@ import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 
 import { cn } from "@/common/lib/utils/utils.ts";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 
 function Popover({
   ...props
@@ -15,10 +16,18 @@ function PopoverTrigger({
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+/**
+ * Portaled outside any Dialog or Sheet, whose scroll lock cancels wheel and
+ * touch scrolling from a `document` listener; stopping both at the popup keeps
+ * its own lists scrollable while the page behind stays locked (w4/m40).
+ */
 function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  onWheel,
+  onTouchMove,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
@@ -32,6 +41,24 @@ function PopoverContent({
           className,
         )}
         {...props}
+        // Radix hears Escape at the document before any field does. An input
+        // method's Escape only cancels its composition, so it must not close
+        // the popup and drop its search, as in DialogContent (w4/318).
+        onEscapeKeyDown={(event) => {
+          if (isCompositionKey(event)) {
+            event.preventDefault();
+            return;
+          }
+          onEscapeKeyDown?.(event);
+        }}
+        onWheel={(event) => {
+          onWheel?.(event);
+          event.stopPropagation();
+        }}
+        onTouchMove={(event) => {
+          onTouchMove?.(event);
+          event.stopPropagation();
+        }}
       />
     </PopoverPrimitive.Portal>
   );

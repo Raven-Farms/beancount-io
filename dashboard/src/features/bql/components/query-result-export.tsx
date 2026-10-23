@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/common/components/ui/button";
 import { exportQueryResultAsCSV } from "../lib/export-utils";
 import type { QueryResultTable } from "@/graphql/definitions";
@@ -16,7 +17,14 @@ export function QueryResultExport({
   const { t } = useTranslations();
 
   const handleExport = () => {
-    exportQueryResultAsCSV(result, queryString);
+    // The browser can refuse to build the download; say so here, where the
+    // reader acted, and keep the result for another try (w4/329).
+    try {
+      exportQueryResultAsCSV(result, queryString);
+    } catch (error) {
+      console.error("Failed to download query result:", error);
+      toast.error(t("common.downloadFailed"));
+    }
   };
 
   return (

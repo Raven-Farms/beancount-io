@@ -138,7 +138,14 @@ export default function LedgerDocumentsPage() {
         data={documents}
         loadingSlot={
           <div className="rounded-md border">
-            <Table>
+            {/* The six columns' preferred widths as a floor: on a phone the
+                table scrolls inside its own container instead of squeezing
+                filename, account and date to a character per line beside
+                the non-wrapping tag and link badges (w4/243). */}
+            <Table
+              aria-label={t("page.documents.documents")}
+              className="min-w-[59rem]"
+            >
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-64">
@@ -197,7 +204,14 @@ export default function LedgerDocumentsPage() {
       >
         {(docs) => (
           <div className="rounded-md border">
-            <Table>
+            {/* The six columns' preferred widths as a floor: on a phone the
+                table scrolls inside its own container instead of squeezing
+                filename, account and date to a character per line beside
+                the non-wrapping tag and link badges (w4/243). */}
+            <Table
+              aria-label={t("page.documents.documents")}
+              className="min-w-[59rem]"
+            >
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-64 px-2 sm:px-3 py-1.5 sm:py-2">

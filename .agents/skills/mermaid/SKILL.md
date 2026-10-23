@@ -5,6 +5,7 @@ description: >-
 
 
 allowed-tools: Bash(npx -y @mermaid-js/mermaid-cli@11.16.0:*), Write, Read
+metadata: {"internal": true}
 ---
 
 Draw a mermaid architecture diagram in markdown for: $ARGUMENTS

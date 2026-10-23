@@ -1,3 +1,4 @@
+import { isolateLtr } from "@/common/bidi";
 import {
   StyleSheet,
   Text,
@@ -22,6 +23,7 @@ import {
 import {
   AccountJournalRow,
   directiveTypeLabelKey,
+  formatOtherChanges,
 } from "@/screens/account-detail-screen/selectors/select-account-journal";
 import { LEADING_TEXT_ALIGN } from "@/common/rtl";
 import { prefersStackedLayout } from "@/common/theme/dynamic-type";
@@ -50,11 +52,19 @@ const getStyles = (theme: ColorTheme) =>
       alignItems: "flex-start",
       marginTop: 4,
     },
-    middle: {
+    middleColumn: {
       flex: 1,
+    },
+    middle: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
+    },
+    detail: {
+      marginTop: 2,
+      fontSize: fontSizes.sm,
+      color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
     },
     title: {
       fontSize: fontSizes.lg,
@@ -72,7 +82,7 @@ const getStyles = (theme: ColorTheme) =>
     badgeText: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.medium,
-      color: "#fff",
+      color: theme.onWarning,
     },
     typeBadge: {
       paddingHorizontal: 5,
@@ -126,9 +136,22 @@ export function AccountEntryRow({
   const isPending = row.flag === "!";
   // A commodity account's rows read in its units, with what each change cost.
   const { units } = row;
-  const changeText = units
-    ? formatUnits(row.change, units.currency, units.scale, true)
-    : formatAccountJournalChange(row.change, currency, row.moneyScale ?? 2);
+  // Moved only other currencies: show them, not a zero, and say they are
+  // outside the running total (w21/100). Moved both: the other leg goes on a
+  // line of its own under the shown change (w21/421).
+  const otherChanges = row.otherChanges ?? [];
+  const onlyOthers = otherChanges.length > 0 && row.change === 0;
+  const changeText = onlyOthers
+    ? formatOtherChanges(otherChanges)
+    : units
+      ? formatUnits(row.change, units.currency, units.scale, true)
+      : formatAccountJournalChange(row.change, currency, row.moneyScale ?? 2);
+  const notInTotalText =
+    otherChanges.length === 0
+      ? null
+      : onlyOthers
+        ? t("valuationNotInTotalTag")
+        : `${formatOtherChanges(otherChanges)} · ${t("valuationNotInTotalTag")}`;
   const balanceText = units
     ? formatUnits(row.balance, units.currency, units.scale)
     : formatAccountJournalBalance(row.balance, currency, row.moneyScale ?? 2);
@@ -139,33 +162,70 @@ export function AccountEntryRow({
   const changeColor =
     effect > 0 ? theme.success : effect < 0 ? theme.error : theme.black60;
 
-  const title = row.title || t("transactions");
+  const title = row.title || t("transaction");
   const costText =
     units && units.cost !== null
       ? t("atCost", {
-          amount: formatSignedMoneyWithCurrency(units.cost, currency, true),
+          amount: isolateLtr(
+            formatSignedMoneyWithCurrency(units.cost, currency, true),
+          ),
         })
       : null;
-  const balanceLine = `${t("balance")}: ${balanceText}`;
+  // Amounts are isolated so a Persian label cannot reorder their signs and
+  // symbols (w21/095).
+  const balanceLine = `${t("balance")}: ${isolateLtr(balanceText)}`;
+  const detail = row.detail;
+  const detailText =
+    detail === undefined
+      ? null
+      : detail.kind === "balance"
+        ? `${t("balance")} ${isolateLtr(detail.amount)}`
+        : detail.text;
+  const offByText =
+    detail?.kind === "balance" && detail.offBy
+      ? t("balanceOffBy", { amount: isolateLtr(detail.offBy) })
+      : null;
 
   const leading = (
     <>
-      <AccountTypeIcon postings={row.postings} payee={row.payee} />
+      {/* Decorative: its glyph was a focus stop of its own (w21/141). */}
+      <View accessible={false} importantForAccessibility="no-hide-descendants">
+        <AccountTypeIcon postings={row.postings} payee={row.payee} />
+      </View>
 
-      <View style={styles.middle}>
-        <Text style={styles.title} numberOfLines={stacked ? undefined : 1}>
-          {title}
-        </Text>
-        {typeLabelKey && (
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{t(typeLabelKey)}</Text>
-          </View>
-        )}
-        {isPending && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>P</Text>
-          </View>
-        )}
+      <View style={styles.middleColumn}>
+        <View style={styles.middle}>
+          <Text style={styles.title} numberOfLines={stacked ? undefined : 1}>
+            {title}
+          </Text>
+          {typeLabelKey && (
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeBadgeText}>{t(typeLabelKey)}</Text>
+            </View>
+          )}
+          {isPending && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>!</Text>
+            </View>
+          )}
+        </View>
+        {detailText !== null ? (
+          <Text
+            testID="account-entry-detail"
+            style={styles.detail}
+            numberOfLines={stacked ? undefined : 2}
+          >
+            {detailText}
+          </Text>
+        ) : null}
+        {offByText !== null ? (
+          <AmountText
+            testID="account-entry-off-by"
+            style={[styles.detail, { color: theme.error }]}
+          >
+            {offByText}
+          </AmountText>
+        ) : null}
       </View>
     </>
   );
@@ -180,6 +240,9 @@ export function AccountEntryRow({
         >
           {changeText}
         </AmountText>
+        {notInTotalText !== null ? (
+          <Text style={styles.balance}>{notInTotalText}</Text>
+        ) : null}
         {costText !== null ? (
           <AmountText style={styles.balance}>{costText}</AmountText>
         ) : null}
@@ -188,24 +251,32 @@ export function AccountEntryRow({
     </>
   );
 
+  // One name for the whole row, read from the visible text. The label also
+  // keeps the type icon's glyph out of the name.
+  // The type chip (Open, Close, Pad, Note, Balance) is part of it: Open, Pad and
+  // Close rows read alike without it (w21/559).
+  const accessibilityLabel = [
+    title,
+    typeLabelKey ? t(typeLabelKey) : null,
+    detailText,
+    offByText,
+    changeText,
+    notInTotalText,
+    costText,
+    balanceLine,
+    isPending ? t("pending") : null,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(", ");
+
   if (onPress) {
     return (
       <TouchableOpacity
         style={[styles.row, stacked && styles.rowStacked]}
         onPress={onPress}
         activeOpacity={0.7}
-        // One named button for the whole row, read from the visible text.
-        // The label also keeps the type icon's glyph out of the name.
         accessibilityRole="button"
-        accessibilityLabel={[
-          title,
-          changeText,
-          costText,
-          balanceLine,
-          isPending ? t("pending") : null,
-        ]
-          .filter((part): part is string => Boolean(part))
-          .join(", ")}
+        accessibilityLabel={accessibilityLabel}
       >
         {content}
       </TouchableOpacity>
@@ -213,6 +284,12 @@ export function AccountEntryRow({
   }
 
   return (
-    <View style={[styles.row, stacked && styles.rowStacked]}>{content}</View>
+    <View
+      style={[styles.row, stacked && styles.rowStacked]}
+      accessible
+      accessibilityLabel={accessibilityLabel}
+    >
+      {content}
+    </View>
   );
 }

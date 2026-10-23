@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SubscriptionSection } from "../subscription-section";
+import { stripePlanConfig } from "../stripe-config";
 import {
   MOCK_TIER_QUOTAS,
   mockActiveSubscriptionData,
@@ -13,7 +14,9 @@ const {
   mockResumeSubscription,
   mockCreateStripePortalSession,
   mockCreateSubscriptionSession,
-  mockUpgradeSubscription,
+  mockRunPreview,
+  mockChangePlan,
+  mockPreviewState,
   mockToastSuccess,
   mockToastError,
   mockToastInfo,
@@ -26,7 +29,15 @@ const {
   mockResumeSubscription: vi.fn(),
   mockCreateStripePortalSession: vi.fn(),
   mockCreateSubscriptionSession: vi.fn(),
-  mockUpgradeSubscription: vi.fn(),
+  mockRunPreview: vi.fn(() => Promise.resolve({ data: undefined })),
+  mockChangePlan: vi.fn(),
+  mockPreviewState: {
+    value: { data: undefined, loading: false, error: undefined } as {
+      data: unknown;
+      loading: boolean;
+      error: unknown;
+    },
+  },
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
   mockToastInfo: vi.fn(),
@@ -36,6 +47,10 @@ const {
 }));
 
 vi.mock("@apollo/client/react", () => ({
+  useLazyQuery: () => [
+    vi.fn(),
+    { data: undefined, loading: false, error: undefined },
+  ],
   useQuery: () => mockUseQuery(),
   useMutation: (document: {
     definitions?: Array<{ name?: { value?: string } }>;
@@ -69,11 +84,14 @@ vi.mock(
     }),
   }),
 );
-vi.mock("@/features/user-settings/hooks/use-upgrade-subscription", () => ({
-  useUpgradeSubscription: () => ({
-    upgradeSubscription: mockUpgradeSubscription,
-    loading: false,
-  }),
+vi.mock("@/features/user-settings/hooks/use-plan-change", () => ({
+  usePreviewPlanChange: () => [mockRunPreview, mockPreviewState.value],
+  useChangePlan: () => [mockChangePlan, { loading: false }],
+  useCancelScheduledPlanChange: () => [vi.fn(), { loading: false }],
+}));
+// jsdom has no 2D canvas, so a real confetti frame throws after the test.
+vi.mock("@/features/user-settings/lib/celebrate", () => ({
+  celebrate: vi.fn(async () => {}),
 }));
 vi.mock("sonner", () => ({
   toast: {
@@ -172,16 +190,6 @@ vi.mock("@/common/hooks/use-translations", () => ({
     // The app-locale number formatter reads `i18n.language`.
     i18n: { language: "en" },
   }),
-}));
-vi.mock("../stripe-config", () => ({
-  stripePlanConfig: {
-    clientId: "test-client",
-    premium: { monthly: "price_premium" },
-    growth: { monthly: "price_growth" },
-    organization: { monthly: "price_org" },
-    monthly: "price_monthly",
-    yearly: "price_yearly",
-  },
 }));
 
 function setUserLimits(
@@ -351,11 +359,39 @@ describe("Manage Billing - Success Flow", () => {
   });
 });
 
-describe("Upgrade Refetch Flow", () => {
-  it("should refetch subscription and user limits after successful upgrade", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn().mockResolvedValue({});
+const GROWTH_MONTHLY = "price_1SyPdaEqsEqs2tLViLPUDoVi";
+const UPGRADE_PREVIEW = {
+  previewPlanChange: {
+    __typename: "PlanChangePreview",
+    kind: "UPGRADE",
+    refusal: null,
+    effect: "IMMEDIATE",
+    currentPriceId: "price_1RrSOGEqsEqs2tLVFnyB34qG",
+    targetPriceId: GROWTH_MONTHLY,
+    currency: "usd",
+    amountDueToday: 4250,
+    creditApplied: 750,
+    nextAmount: 9999,
+    nextChargeAt: "2026-11-03T12:00:00Z",
+    effectiveAt: "2026-10-17T12:00:00Z",
+    prorationDate: 1792238400,
+    alternativePriceId: null,
+    limitChanges: [],
+    paymentMethod: {
+      __typename: "PaymentMethodSummary",
+      brand: "visa",
+      last4: "4242",
+    },
+  },
+};
+
+describe("Plan change through the sheet", () => {
+  let refetchSubscription: ReturnType<typeof vi.fn>;
+  let refetchUserLimits: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    refetchSubscription = vi.fn();
+    refetchUserLimits = vi.fn().mockResolvedValue({});
     setUserLimits("PREMIUM", {
       aiCfoTokensUsed: 50,
       aiCfoTokensMax: 100,
@@ -363,243 +399,235 @@ describe("Upgrade Refetch Flow", () => {
       ledgersMax: 5,
       collaboratorsPerLedgerMax: 5,
     });
-    // Override to include mockRefetchUserLimits
     mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
+      ...mockUseUserLimits(),
+      refetch: refetchUserLimits,
     });
     mockUseQuery.mockReturnValue({
       data: mockActiveSubscriptionData,
       loading: false,
       error: null,
-      refetch: mockRefetchSubscription,
+      refetch: refetchSubscription,
     });
+    mockPreviewState.value = {
+      data: UPGRADE_PREVIEW,
+      loading: false,
+      error: undefined,
+    };
+  });
 
-    mockUpgradeSubscription.mockResolvedValue({
-      data: {
-        upgradeSubscription: {
-          success: true,
-          message: "Subscription upgraded successfully.",
-          newTier: "GROWTH",
-        },
+  async function confirmGrowthMonthly() {
+    const user = userEvent.setup();
+    render(<SubscriptionSection />);
+    // The plan row opens on yearly; a same-cycle upgrade is on monthly.
+    await user.click(
+      screen.getByRole("button", { name: "userSettings.monthly" }),
+    );
+    await user.click(screen.getAllByText("aiAgent.upgradeCta")[0]);
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod", priceId: GROWTH_MONTHLY },
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: GROWTH_MONTHLY,
+        prorationDate: 1792238400,
       },
     });
+    return user;
+  }
 
-    render(<SubscriptionSection />);
-
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalled();
+  it("charges at the previewed proration time and says so once it applies", async () => {
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
     });
 
+    await confirmGrowthMonthly();
+
+    // The plan and limits refresh through useChangePlan's refetchQueries
+    // (use-plan-change.test.ts), not a second refetch from the page.
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Subscription upgraded successfully.",
+        "userSettings.subscriptionUpgraded",
+        undefined,
       );
     });
-
-    await waitFor(() => {
-      expect(mockRefetchSubscription).toHaveBeenCalled();
-      expect(mockRefetchUserLimits).toHaveBeenCalled();
-    });
   });
 
-  it("should not refetch when upgrade fails", async () => {
+  it("opens on a deep link's plan and offers the way back once the change lands", async () => {
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "ACTIVE", newTier: "GROWTH" } },
+    });
     const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn();
-    setUserLimits("PREMIUM", {
+    render(
+      <SubscriptionSection
+        initialTarget={{
+          tier: "growth",
+          cycle: "monthly",
+          surface: "ledgers_limit",
+        }}
+        returnTo="/ledger/alice/books"
+      />,
+    );
+
+    expect(
+      screen.getByText("userSettings.planChangeTitle"),
+    ).toBeInTheDocument();
+    expect(mockRunPreview).toHaveBeenCalledWith({
+      variables: { clientId: "beancount-web-prod", priceId: GROWTH_MONTHLY },
+    });
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangePayAndSwitch",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "userSettings.subscriptionUpgraded",
+        {
+          action: {
+            label: "userSettings.backToWork",
+            onClick: expect.any(Function),
+          },
+        },
+      ),
+    );
+  });
+
+  it("schedules a downgrade for the period end, warning about ledgers over the lower limit", async () => {
+    const user = userEvent.setup();
+    mockPreviewState.value = {
+      data: {
+        previewPlanChange: {
+          ...UPGRADE_PREVIEW.previewPlanChange,
+          kind: "DOWNGRADE",
+          effect: "SCHEDULED",
+          targetPriceId: stripePlanConfig.premium.yearly,
+          amountDueToday: 0,
+          creditApplied: 0,
+          prorationDate: null,
+          effectiveAt: "2026-11-03T12:00:00Z",
+          nextChargeAt: "2026-11-03T12:00:00Z",
+          limitChanges: [
+            { limit: "maxLedgers", from: 20, to: 5 },
+            { limit: "maxCollaboratorsPerLedger", from: 10, to: 5 },
+            { limit: "aiCfoTokensMax", from: 2_000_000, to: 500_000 },
+            { limit: "maxDirectives", from: -1, to: -1 },
+          ],
+        },
+      },
+      loading: false,
+      error: undefined,
+    };
+    mockChangePlan.mockResolvedValue({
+      data: {
+        changePlan: {
+          status: "SCHEDULED",
+          effectiveAt: "2026-11-03T12:00:00Z",
+        },
+      },
+    });
+    setUserLimits("GROWTH", {
       aiCfoTokensUsed: 50,
       aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
-    });
-    mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: mockRefetchSubscription,
+      ledgersUsed: 12,
+      ledgersMax: 20,
+      collaboratorsPerLedgerMax: 10,
     });
 
-    mockUpgradeSubscription.mockResolvedValue({
+    render(
+      <SubscriptionSection
+        initialTarget={{
+          tier: "premium",
+          cycle: "yearly",
+          surface: "deep_link",
+        }}
+      />,
+    );
+
+    const sheet = within(screen.getByTestId("plan-change-scheduled"));
+    expect(
+      sheet.getByText("userSettings.planChangeOverLimit"),
+    ).toBeInTheDocument();
+    await user.click(
+      sheet.getByRole("button", {
+        name: "userSettings.planChangeScheduleDowngrade",
+      }),
+    );
+
+    expect(mockChangePlan).toHaveBeenCalledWith({
+      variables: {
+        clientId: "beancount-web-prod",
+        priceId: stripePlanConfig.premium.yearly,
+        prorationDate: null,
+      },
+    });
+    await waitFor(() =>
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "userSettings.planChangeScheduled",
+      ),
+    );
+  });
+
+  it("sends a payment the bank must approve to Stripe's page instead of calling it done", async () => {
+    mockChangePlan.mockResolvedValue({
       data: {
-        upgradeSubscription: {
-          success: false,
-          message: "Payment declined",
-          newTier: null,
+        changePlan: {
+          status: "REQUIRES_ACTION",
+          hostedInvoiceUrl: "https://invoice.stripe.com/i/in_1",
         },
       },
     });
 
-    render(<SubscriptionSection />);
+    await confirmGrowthMonthly();
 
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Payment declined");
-    });
-
-    expect(mockRefetchSubscription).not.toHaveBeenCalled();
-    expect(mockRefetchUserLimits).not.toHaveBeenCalled();
+    expect(
+      await screen.findByRole("link", {
+        name: "userSettings.planChangeApprovePayment",
+      }),
+    ).toHaveAttribute("href", "https://invoice.stripe.com/i/in_1");
+    expect(refetchUserLimits).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
-  it("should show info toast and not refetch when 3DS auth is required", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn();
-
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
+  it("says nothing changed when the bank declines, and offers another card", async () => {
+    mockChangePlan.mockResolvedValue({
+      data: { changePlan: { status: "FAILED" } },
     });
-    mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: mockRefetchSubscription,
+    mockCreateStripePortalSession.mockResolvedValue({
+      data: { createStripePortalSession: { success: true, sessionUrl: null } },
     });
 
-    mockUpgradeSubscription.mockResolvedValue({
-      data: {
-        upgradeSubscription: {
-          success: false,
-          message: null,
-          clientSecret: "pi_secret_abc",
-          newTier: null,
-        },
-      },
-    });
+    const user = await confirmGrowthMonthly();
 
-    render(<SubscriptionSection />);
-
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockUpgradeSubscription).toHaveBeenCalled();
-    });
-
-    expect(mockRefetchSubscription).not.toHaveBeenCalled();
-    expect(mockRefetchUserLimits).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("userSettings.planChangeFailed"),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", {
+        name: "userSettings.planChangeUseAnotherCard",
+      }),
+    );
+    await waitFor(() =>
+      expect(mockCreateStripePortalSession).toHaveBeenCalled(),
+    );
+    expect(refetchUserLimits).not.toHaveBeenCalled();
   });
 
-  it("should not refetch when upgrade throws an error", async () => {
-    const user = userEvent.setup();
-    const mockRefetchSubscription = vi.fn();
-    const mockRefetchUserLimits = vi.fn();
-    setUserLimits("PREMIUM", {
-      aiCfoTokensUsed: 50,
-      aiCfoTokensMax: 100,
-      ledgersUsed: 2,
-      ledgersMax: 5,
-      collaboratorsPerLedgerMax: 5,
-    });
-    mockUseUserLimits.mockReturnValue({
-      tier: "PREMIUM",
-      limits: {
-        aiCfoTokensUsed: 50,
-        aiCfoTokensMax: 100,
-        ledgersUsed: 2,
-        ledgersMax: 5,
-        collaboratorsPerLedgerMax: 5,
-      },
-      isLoading: false,
-      error: null,
-      refetch: mockRefetchUserLimits,
-      isAtLedgerLimit: false,
-      isAtAiCfoLimit: false,
-      isPremium: true,
-      isFree: false,
-      isGrowth: false,
-      isOrganization: false,
-      isEnterprise: false,
-      isPaidTier: true,
-    });
-    mockUseQuery.mockReturnValue({
-      data: mockActiveSubscriptionData,
-      loading: false,
-      error: null,
-      refetch: mockRefetchSubscription,
-    });
+  it("shows a network failure and changes nothing", async () => {
+    mockChangePlan.mockRejectedValue(new Error("Network failure"));
 
-    mockUpgradeSubscription.mockRejectedValue(new Error("Network failure"));
+    await confirmGrowthMonthly();
 
-    render(<SubscriptionSection />);
-
-    const upgradeButtons = screen.getAllByText("aiAgent.upgradeCta");
-    await user.click(upgradeButtons[0]);
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("common.errors.generic");
-    });
-
-    expect(mockRefetchSubscription).not.toHaveBeenCalled();
-    expect(mockRefetchUserLimits).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith("common.errors.generic"),
+    );
+    expect(refetchUserLimits).not.toHaveBeenCalled();
   });
 });

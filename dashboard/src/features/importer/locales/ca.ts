@@ -138,9 +138,15 @@ const caImporter: Record<string, TranslationEntry> = {
     message: "El tipus de fitxer actual requereix anàlisi amb IA",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Actualitzar a premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Actualitzar a {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Actualitzar el pla",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "Analitzeu fitxers PDF, OFX i imatges automàticament amb IA",
@@ -170,6 +176,15 @@ const caImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "No s'ha pogut analitzar el fitxer",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "El fitxer no és text UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Aquest CSV conté caràcters que no són UTF-8 vàlid, de manera que importar-lo canviaria el text dels beneficiaris i les descripcions. Torneu-lo a desar com a CSV UTF-8 des del banc o del full de càlcul i pengeu aquest fitxer.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -311,6 +326,30 @@ const caImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Moneda per a totes les transaccions",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} fila ({rows}) és en {symbol} ({currencies}), però aquesta importació la registraria en {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} files ({rows}) són en {symbol} ({currencies}), però aquesta importació les registraria en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} files ({rows}) són en {symbol} ({currencies}), però aquesta importació les registraria en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Una importació registra una sola moneda. Tria la moneda d’aquestes files, o desmarca-les i importa-les per separat. No s’ha importat res.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Assignar comptes de destí",
@@ -464,6 +503,12 @@ const caImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_many": {
     message: "S'han categoritzat correctament {count} transaccions",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Cap suggeriment no era prou fiable per omplir un compte de destinació.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "La categorització amb IA ha fallat",

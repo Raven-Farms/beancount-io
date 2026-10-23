@@ -32,38 +32,71 @@ export interface WriteValidation {
   readonly errorsBefore: number;
   readonly errorsAfter: number;
   readonly newErrors: BeanCheckError[];
+  /**
+   * `false` when bean-check could not run before or after the write, so the
+   * counts above say nothing; `checkError` says why (w23/031).
+   */
+  readonly checked?: false;
+  readonly checkError?: string;
 }
 
-/** Reduce ledger-service errors to the actionable shape. */
+/**
+ * Reduce ledger-service errors to the actionable shape: what bean-check fails
+ * on. The engine's warnings (a one-posting entry, closing an account with a
+ * balance) are not errors and do not count as one (w21/188).
+ */
 export function toBeanCheckErrors(
   errors: readonly {
     message: string;
     source?: { filename: string; lineno: number } | null;
     code?: string | null;
+    severity?: string | null;
   }[],
 ): BeanCheckError[] {
-  return (errors ?? []).map((error) => ({
-    message: error.message,
-    ...(error.source
-      ? { source: `${error.source.filename}:${error.source.lineno}` }
-      : {}),
-    ...(error.code ? { code: error.code } : {}),
-  }));
+  return (errors ?? [])
+    .filter((error) => error.severity !== "warning")
+    .map((error) => ({
+      message: error.message,
+      ...(error.source
+        ? { source: `${error.source.filename}:${error.source.lineno}` }
+        : {}),
+      ...(error.code ? { code: error.code } : {}),
+    }));
 }
 
-/** Errors in `after` that were not already in `before`, by message+source. */
+/**
+ * The engine ends an interpolation or lot-match error with the entry's date
+ * and narration, `(2026-08-30, "Groceries")`, so editing either one rewrote
+ * an existing error's message.
+ */
+function withoutEntryTag(message: string): string {
+  return message.replace(/ \(\d{4}-\d{2}-\d{2}, ".*"\)$/s, "");
+}
+
+/**
+ * Errors in `after` that `before` did not have, matched by message and file
+ * but not line: a write that inserts or removes lines moves every error below
+ * it without introducing one, and keying on `file:line` refused a valid append
+ * over the moved error (w23/034). Each `before` error excuses one `after`
+ * error, so a second copy of a known message still counts as new. This is the
+ * ledger service's `newLedgerErrors` rule (w21/m1), restated because packages
+ * share no code.
+ */
 export function diffBeanCheckErrors(
   before: readonly BeanCheckError[],
   after: readonly BeanCheckError[],
 ): BeanCheckError[] {
-  return after.filter(
-    (candidate) =>
-      !before.some(
-        (existing) =>
-          existing.message === candidate.message &&
-          existing.source === candidate.source,
-      ),
-  );
+  const key = (error: BeanCheckError) =>
+    `${withoutEntryTag(error.message)}\u0000${error.source?.replace(/:\d+$/, "") ?? ""}`;
+  const left = new Map<string, number>();
+  for (const error of before) {
+    left.set(key(error), (left.get(key(error)) ?? 0) + 1);
+  }
+  return after.filter((error) => {
+    const count = left.get(key(error)) ?? 0;
+    if (count > 0) left.set(key(error), count - 1);
+    return count === 0;
+  });
 }
 
 export function toWriteValidation(

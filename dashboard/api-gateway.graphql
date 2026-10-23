@@ -114,6 +114,10 @@ type Query {
 
   """Returns your subscription status. Requires a full signed-in session."""
   subscriptionStatus: CustomerSubscriptionStatus!
+  """
+  Previews switching your plan to a price: the kind of change, when it takes effect, and what is charged today. Requires a full signed-in session.
+  """
+  previewPlanChange(priceId: String!, clientId: String!): PlanChangePreview!
 
   """List all public keys for the current user"""
   listPublicKeys(page: Float, limit: Float): [PublicKey!]!
@@ -645,6 +649,136 @@ type Subscription {
   canceledAt: DateTimeISO
   cancelAtPeriodEnd: Boolean!
   items: [SubscriptionItem!]!
+  """The card renewals and plan changes charge, when known."""
+  paymentMethod: PaymentMethodSummary
+
+  """
+  The change scheduled for the end of the paid period; cancelScheduledPlanChange undoes it.
+  """
+  scheduledChange: ScheduledPlanChange
+
+  """
+  With past_due: when Stripe next retries the failed renewal. The plan is kept until it stops retrying.
+  """
+  nextPaymentAttempt: DateTimeISO
+}
+
+"""
+A plan change that takes effect at the end of the paid period. Nothing is charged until then.
+"""
+type ScheduledPlanChange {
+  priceId: String!
+  effectiveAt: DateTimeISO!
+}
+
+type PaymentMethodSummary {
+  brand: String!
+  last4: String!
+}
+
+"""
+What choosing a price would do, before anything changes. Amounts are in the currency's minor unit (cents).
+"""
+type PlanChangePreview {
+  kind: PlanChangeKind
+  refusal: PlanChangeRefusal
+  effect: PlanChangeEffect
+  currentPriceId: String
+  targetPriceId: String!
+  currency: String!
+  amountDueToday: Int!
+  creditApplied: Int!
+  nextAmount: Int!
+  nextChargeAt: DateTimeISO
+  effectiveAt: DateTimeISO
+
+  """
+  Unix seconds. Pass it to changePlan so the charge matches this preview.
+  """
+  prorationDate: Int
+
+  """For SPLIT: the higher tier on the current billing cycle, applied now."""
+  alternativePriceId: String
+  limitChanges: [PlanLimitChange!]!
+  paymentMethod: PaymentMethodSummary
+
+  """The scheduled change this choice would replace."""
+  replacesScheduledChange: ScheduledPlanChange
+
+  """Whether this choice withdraws a pending cancellation."""
+  withdrawsCancellation: Boolean!
+}
+
+enum PlanChangeKind {
+  NEW
+  UPGRADE
+  TO_YEARLY
+  DOWNGRADE
+  TO_MONTHLY
+  SPLIT
+}
+
+enum PlanChangeRefusal {
+  CURRENT_PLAN
+  SAME_TIER_AND_CYCLE
+  MULTIPLE_SUBSCRIPTIONS
+  NO_SUBSCRIPTION
+  SCHEDULED_CHANGE
+  PAST_DUE
+}
+
+enum PlanChangeEffect {
+  CHECKOUT
+  IMMEDIATE
+  SCHEDULED
+}
+
+type PlanLimitChange {
+  limit: String!
+
+  """-1 means unlimited."""
+  from: Int!
+
+  """-1 means unlimited."""
+  to: Int!
+}
+
+"""Why a subscriber cancels, when they say."""
+enum CancellationReason {
+  TOO_EXPENSIVE
+  MISSING_FEATURES
+  UNUSED
+  SWITCHED_SERVICE
+  OTHER
+}
+
+enum PlanChangeStatus {
+  ACTIVE
+  SCHEDULED
+  REQUIRES_ACTION
+  FAILED
+  REFUSED
+}
+
+type PlanChangeResult {
+  status: PlanChangeStatus!
+  kind: PlanChangeKind
+  refusal: PlanChangeRefusal
+  message: String
+
+  """With REQUIRES_ACTION: confirm the payment with Stripe.js."""
+  clientSecret: String
+
+  """Stripe's hosted page to pay or authenticate this change's invoice."""
+  hostedInvoiceUrl: String
+  subscriptionId: String
+  newTier: String
+  currentPeriodEnd: DateTimeISO
+
+  """
+  With SCHEDULED: when the new price takes over. Nothing is charged until then.
+  """
+  effectiveAt: DateTimeISO
 }
 
 """
@@ -1337,6 +1471,21 @@ type Mutation {
   unstarLedger(ledgerId: String!): StarLedgerResponse!
 
   """
+  Applies an upgrade or a switch to yearly at the previewed proration time, and schedules a downgrade or a switch to monthly for the end of the paid period. Requires a full signed-in session.
+  """
+  changePlan(
+    """The prorationDate from previewPlanChange."""
+    prorationDate: Int
+    priceId: String!
+    clientId: String!
+  ): PlanChangeResult!
+
+  """
+  Cancels the plan change scheduled for the end of the paid period; the current plan continues unchanged. Requires a full signed-in session.
+  """
+  cancelScheduledPlanChange(clientId: String!): SubscriptionActionResult!
+
+  """
   Creates a Stripe-hosted checkout session. Requires a full signed-in session.
   """
   createSubscriptionSession(priceId: String!, clientId: String!): SubscriptionSessionResult!
@@ -1349,7 +1498,12 @@ type Mutation {
   """
   Schedules your subscription to cancel. Requires a full signed-in session.
   """
-  cancelSubscription(clientId: String!, subscriptionId: String!): SubscriptionActionResult!
+  cancelSubscription(
+    """The subscriber's optional reason, recorded with Stripe."""
+    reason: CancellationReason
+    clientId: String!
+    subscriptionId: String!
+  ): SubscriptionActionResult!
 
   """Resumes your subscription. Requires a full signed-in session."""
   resumeSubscription(clientId: String!, subscriptionId: String!): SubscriptionActionResult!

@@ -66,8 +66,11 @@ export function createCacheHelper(cache: Cache): CacheHelper {
     try {
       const value = await cache.get<T>(key);
       return value ?? undefined;
-    } catch (error) {
-      cacheLogger.warn("Cache get failed; treating as miss", { key, error });
+    } catch {
+      cacheLogger.warn("Cache operation failed", {
+        operation: "get",
+        errorCategory: "CACHE_FAILURE",
+      });
       return undefined;
     }
   }
@@ -75,16 +78,22 @@ export function createCacheHelper(cache: Cache): CacheHelper {
   async function set<T>(key: string, value: T, ttlMs: number): Promise<void> {
     try {
       await cache.set(key, value, ttlMs);
-    } catch (error) {
-      cacheLogger.warn("Cache set failed; value not cached", { key, error });
+    } catch {
+      cacheLogger.warn("Cache operation failed", {
+        operation: "set",
+        errorCategory: "CACHE_FAILURE",
+      });
     }
   }
 
   async function del(key: string): Promise<void> {
     try {
       await cache.del(key);
-    } catch (error) {
-      cacheLogger.warn("Cache del failed", { key, error });
+    } catch {
+      cacheLogger.warn("Cache operation failed", {
+        operation: "del",
+        errorCategory: "CACHE_FAILURE",
+      });
     }
   }
 
@@ -117,7 +126,10 @@ export function createCacheHelper(cache: Cache): CacheHelper {
       const value = await cache.get<T>(key);
       return value ?? undefined;
     } catch (error) {
-      cacheLogger.error("Cache get failed (strict)", { key, error });
+      cacheLogger.error("Cache operation failed", {
+        operation: "getStrict",
+        errorCategory: "CACHE_FAILURE",
+      });
       throw error;
     }
   }
@@ -130,7 +142,10 @@ export function createCacheHelper(cache: Cache): CacheHelper {
     try {
       await cache.set(key, value, ttlMs);
     } catch (error) {
-      cacheLogger.error("Cache set failed (strict)", { key, error });
+      cacheLogger.error("Cache operation failed", {
+        operation: "setStrict",
+        errorCategory: "CACHE_FAILURE",
+      });
       throw error;
     }
   }
@@ -139,7 +154,10 @@ export function createCacheHelper(cache: Cache): CacheHelper {
     try {
       await cache.del(key);
     } catch (error) {
-      cacheLogger.error("Cache del failed (strict)", { key, error });
+      cacheLogger.error("Cache operation failed", {
+        operation: "delStrict",
+        errorCategory: "CACHE_FAILURE",
+      });
       throw error;
     }
   }

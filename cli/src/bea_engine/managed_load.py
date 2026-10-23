@@ -379,7 +379,7 @@ def _load_with_sources(
 
     keep_load_cache_private()
     _record_plugin_configs(loader)
-    _book_past_arithmetic_failures()
+    _book_past_unbookable()
 
     at = time.time() if now is None else now
     want_offline = _env_flag(OFFLINE_ENV) if offline is None else offline
@@ -571,7 +571,16 @@ def _managed_cache_file(entry: Path) -> Path | None:
 
     if not loader.PICKLE_CACHE_FILENAME:
         return None
-    return Path(f"{pickle_cache_of(entry)}.managed")
+    path = Path(f"{pickle_cache_of(entry)}.managed")
+    if os.getenv("BEANCOUNT_DISABLE_LOAD_CACHE") is not None:
+        # Mirror the loader's delete_cache_function: bypass the cache and
+        # remove the stale file, so the next read cannot serve it (w5/776).
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return None
+    return path
 
 
 def _managed_fingerprint(
@@ -793,7 +802,7 @@ def is_plugin_exit(error: Any) -> bool:
     return bool((getattr(error, "source", None) or {}).get(PLUGIN_EXIT_KEY))
 
 
-#: How every booking failure `_book_past_arithmetic_failures` reports begins;
+#: How every booking failure `_book_past_unbookable` reports begins;
 #: bean-check raises on the same transaction, so `check` reports these itself.
 CANNOT_BOOK = "Beancount cannot book this transaction: "
 
@@ -810,9 +819,23 @@ TOO_WIDE_TO_INFER = (
     "explicit amount, or use a number of at most 28 significant digits."
 )
 
+#: Units elided beside a zero rate, refused at input and reported on read.
+ELIDED_UNITS_ZERO_COST = (
+    "holds no units beside a zero per-unit cost ({…}), and booking cannot infer units from a zero cost. "
+    "Give the posting its units, or a nonzero cost."
+)
+ELIDED_UNITS_ZERO_TOTAL = (
+    "holds no units beside a zero total cost ({{…}}), and booking cannot infer units from a zero total. "
+    "Give the posting its units, or a nonzero total."
+)
+ELIDED_UNITS_ZERO_PRICE = (
+    "holds no units beside a zero price (@ …), and booking cannot infer units from a zero price. "
+    "Give the posting its units, or a nonzero price."
+)
+
 
 def is_booking_failure(error: Any) -> bool:
-    """Whether a loader error is a transaction `_book_past_arithmetic_failures` reported."""
+    """Whether a loader error is a transaction `_book_past_unbookable` reported."""
     message = getattr(error, "message", None)
     return isinstance(message, str) and message.startswith(CANNOT_BOOK)
 
@@ -832,8 +855,44 @@ def zero_units_at_total_cost(posting: Any) -> bool:
     )
 
 
-def _book_past_arithmetic_failures() -> None:
-    """Have booking report a transaction its decimal arithmetic fails on, at that transaction (w5/538).
+def elided_units_zero_rate_tail(posting: Any) -> str | None:
+    """The booking-failure tail when a posting elides its units beside a zero cost or price.
+
+    Units present — even zero — book, or fail with their own error, and a
+    nonzero rate infers; None when the posting is neither unbookable shape
+    (w5/732).
+    """
+    from beancount.core.number import MISSING
+    from beancount.core.position import CostSpec
+
+    units = posting.units
+    if units is not None and units is not MISSING and units.number is not MISSING:
+        return None
+    cost = posting.cost
+    if isinstance(cost, CostSpec):
+        # A total cost fills both numbers (`{{0 USD}}` parses per-unit zero
+        # too), so the total is asked first.
+        if cost.number_total == 0:
+            return ELIDED_UNITS_ZERO_TOTAL
+        if cost.number_per == 0:
+            return ELIDED_UNITS_ZERO_COST
+    price = posting.price
+    if price is not None and getattr(price, "number", MISSING) == 0:
+        return ELIDED_UNITS_ZERO_PRICE
+    return None
+
+
+def _culprit_zero_rate(posting_owner: Any) -> tuple[Any, str] | None:
+    """The first posting eliding its units beside a zero rate, with its tail, if any."""
+    for posting in posting_owner.postings:
+        tail = elided_units_zero_rate_tail(posting)
+        if tail is not None:
+            return posting, tail
+    return None
+
+
+def _book_past_unbookable() -> None:
+    """Have booking report a transaction it cannot book, at that transaction (w5/538).
 
     Beancount's booking raises instead of reporting when an amount it infers
     does not fit its 28-digit context, or a zero-unit posting divides a total
@@ -846,37 +905,120 @@ def _book_past_arithmetic_failures() -> None:
     failure anywhere else still raises as before. The error is upstream's own
     `InterpolationError`, so Beancount's load cache stays readable by
     upstream tools.
+
+    A units-elided posting beside a zero price asserts inside booking the
+    same way (w5/732); a type or assertion failure booking raises is only
+    reported when the culprit has that shape, so a genuine upstream bug
+    stays loud. A units-elided posting beside a zero cost instead survives
+    booking with MISSING units — booking reports it cannot infer them, then
+    the balance validation dies on them — so the balance check is wrapped
+    the same way: the entry becomes a booking failure at its line and
+    validation resumes after it.
     """
     from decimal import DecimalException
 
     from beancount.parser import booking_full
 
-    if getattr(booking_full._book, "_bea_books_past_arithmetic", False):
-        return
-    original: Any = booking_full._book
+    if getattr(booking_full._book, "_bea_books_past_unbookable", False):
+        pass
+    else:
+        original: Any = booking_full._book
 
-    def _book(entries: Any, options_map: Any, methods: Any, initial_balances: Any = None) -> Any:
-        booked: list[Any] = []
+        def _book(entries: Any, options_map: Any, methods: Any, initial_balances: Any = None) -> Any:
+            booked: list[Any] = []
+            errors: list[Any] = []
+            balances = initial_balances
+            while True:
+                try:
+                    done, found, balances = original(entries, options_map, methods, balances)
+                except (DecimalException, TypeError, AssertionError) as exc:
+                    state = _interrupted_booking(exc, original.__code__)
+                    index = None if state is None else next((n for n, e in enumerate(entries) if e is state[3]), None)
+                    if state is None or index is None:
+                        raise
+                    so_far, so_far_errors, balances, culprit = state
+                    if isinstance(exc, (TypeError, AssertionError)) and _culprit_zero_rate(culprit) is None:
+                        raise
+                    booked.extend(so_far)
+                    errors.extend(so_far_errors)
+                    errors.append(
+                        booking_full.InterpolationError(culprit.meta, _booking_failure(culprit, exc), culprit)
+                    )
+                    entries = entries[index + 1 :]
+                else:
+                    return [*booked, *done], [*errors, *found], balances
+
+        _book._bea_books_past_unbookable = True  # type: ignore[attr-defined]
+        booking_full._book = _book
+    _validate_past_unbookable()
+
+
+def _validate_past_unbookable() -> None:
+    """Have the balance validation report a transaction booking left uninferred, at that transaction (w5/732)."""
+    from beancount.ops import validation
+
+    if getattr(validation.validate_check_transaction_balances, "_bea_validates_past_unbookable", False):
+        return
+    original: Any = validation.validate_check_transaction_balances
+
+    def _validate_balances(entries: Any, options_map: Any) -> Any:
+        from beancount.parser import booking_full
+
         errors: list[Any] = []
-        balances = initial_balances
+        rest = list(entries)
         while True:
             try:
-                done, found, balances = original(entries, options_map, methods, balances)
-            except DecimalException as exc:
-                state = _interrupted_booking(exc, original.__code__)
-                index = None if state is None else next((n for n, e in enumerate(entries) if e is state[3]), None)
+                found = original(rest, options_map)
+            except TypeError as exc:
+                state = _interrupted_validation(exc, original.__code__)
+                index = None if state is None else next((n for n, e in enumerate(rest) if e is state[1]), None)
                 if state is None or index is None:
                     raise
-                so_far, so_far_errors, balances, culprit = state
-                booked.extend(so_far)
-                errors.extend(so_far_errors)
+                so_far, culprit = state
+                if _culprit_zero_rate(culprit) is None:
+                    raise
+                errors.extend(so_far)
                 errors.append(booking_full.InterpolationError(culprit.meta, _booking_failure(culprit, exc), culprit))
-                entries = entries[index + 1 :]
+                rest = rest[index + 1 :]
             else:
-                return [*booked, *done], [*errors, *found], balances
+                return [*errors, *found]
 
-    _book._bea_books_past_arithmetic = True  # type: ignore[attr-defined]
-    booking_full._book = _book
+    _validate_balances._bea_validates_past_unbookable = True  # type: ignore[attr-defined]
+    validation.validate_check_transaction_balances = _validate_balances
+    # `validate` iterates a list built at import time, not the module
+    # attribute, so the wrapper must take the original's seat there too.
+    for name in ("BASIC_VALIDATIONS", "VALIDATIONS"):
+        listed = getattr(validation, name, None)
+        if listed is not None:
+            listed[:] = [_validate_balances if function is original else function for function in listed]
+
+
+def _interrupted_validation(exc: BaseException, code: Any) -> tuple[list[Any], Any] | None:
+    """Upstream balance validation's progress when `exc` left it: errors so far, the raising entry."""
+    trace = exc.__traceback__
+    while trace is not None:
+        if trace.tb_frame.f_code is code:
+            local = trace.tb_frame.f_locals
+            try:
+                return local["errors"], local["entry"]
+            except KeyError:
+                return None
+        trace = trace.tb_next
+    return None
+
+
+def _without_unbookable(entries: list[Any], errors: list[Any]) -> list[Any]:
+    """Entries minus the transactions booking could not do, which validation still lists (w5/732).
+
+    A transaction `_book` reports never joins the booked entries, but one the
+    balance validation reports was already booked — with MISSING units that
+    every downstream read dies on. Each booking failure names its entry, so
+    those are dropped here, as the booking ones are.
+    """
+    dropped = {id(getattr(error, "entry", None)) for error in errors if is_booking_failure(error)}
+    if not dropped:
+        return entries
+    return [entry for entry in entries if id(entry) not in dropped]
 
 
 def _interrupted_booking(exc: BaseException, code: Any) -> tuple[list[Any], list[Any], Any, Any] | None:
@@ -900,6 +1042,10 @@ def _booking_failure(entry: Any, exc: BaseException) -> str:
     for posting in entry.postings:
         if zero_units_at_total_cost(posting):
             return f"{CANNOT_BOOK}{posting.account} {ZERO_UNITS_TOTAL_COST}"
+    for posting in entry.postings:
+        tail = elided_units_zero_rate_tail(posting)
+        if tail is not None:
+            return f"{CANNOT_BOOK}{posting.account} {tail}"
     if isinstance(exc, InvalidOperation):
         return f"{CANNOT_BOOK}{TOO_WIDE_TO_INFER}"
     return f"{CANNOT_BOOK}its decimal arithmetic failed ({type(exc).__name__}). Check its amounts, costs and prices."
@@ -931,6 +1077,12 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     still holds a decomposed payee, a BOM's syntax error and plugin errors
     without their configs; served here, an NFC literal stopped matching until
     a ledger file changed (w5/220). Only a cache this function wrote is trusted.
+
+    And a plugin whose output depends on today's date breaks the promise
+    without any file changing: `fava.plugins.amortize_over` books only the
+    parts dated on or before today, so a cache written yesterday hides
+    today's amortization row until a ledger file changes (w5/782). The mark
+    carries the load's local day, and a cache from an earlier day loads again.
     """
     from beancount import loader
 
@@ -940,7 +1092,7 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     # `os.path` probes: the cache is an optimisation, and `Path.is_file`
     # raised EACCES from an untraversable `load-cache` directory, failing
     # every read and write with a bare PermissionError (w5/312).
-    if os.path.isfile(cache) and (not _engine_wrote(cache) or _plugins_changed(cache)):
+    if os.path.isfile(cache) and (not _engine_wrote(cache) or _plugins_changed(cache) or _day_changed(cache)):
         _drop(cache)
     cached = os.path.exists(cache)
     entries, errors, options = loader.load_file(str(entry))
@@ -953,7 +1105,7 @@ def _load_fresh(entry: Path, snapshot: LedgerSnapshot) -> tuple[Any, Any, Any]:
     if _changed_since(snapshot) or _plugin_defined(errors):
         _drop(cache)
     _mark_engine_cache(cache, options)
-    return entries, errors, options
+    return _without_unbookable(entries, errors), errors, options
 
 
 def _drop(cache: Path) -> None:
@@ -1005,13 +1157,20 @@ def _mark_engine_cache(cache: Path, options: Any) -> None:
     on the ledger files alone, so after a local plugin was edited, removed or
     left the module path, `check` still said valid and every read served the
     old plugin's output (w5/326). The unpickler stops at the pickled load, so
-    the trailing record is invisible to every other reader of the file.
+    the trailing record is invisible to every other reader of the file. The
+    record also carries the load's local day, so a new day reloads a cache
+    whose plugin output may depend on today's date (w5/782).
     """
     if not os.path.isfile(cache) or _engine_wrote(cache):
         return
     names = sorted({str(name) for name, _config in options.get("plugin") or ()})
     paths = [str(directory) for directory in options.get("pythonpath") or ()]
-    record = {"names": names, "pythonpath": paths, "modules": _plugin_fingerprint(names, paths)}
+    record = {
+        "names": names,
+        "pythonpath": paths,
+        "modules": _plugin_fingerprint(names, paths),
+        "date": date.today().isoformat(),
+    }
     try:
         with cache.open("ab") as stream:
             stream.write(_PLUGIN_RECORD + json.dumps(record).encode("utf-8") + _ENGINE_CACHE_MARK)
@@ -1067,6 +1226,20 @@ def _plugins_changed(cache: Path) -> bool:
         return True
 
 
+def _day_changed(cache: Path) -> bool:
+    """Whether the cached load ran on an earlier local day than today.
+
+    A record that predates the day carries no date to compare; it loads again.
+    """
+    try:
+        record = _plugin_record(cache)
+    except (OSError, ValueError):
+        return True
+    if not isinstance(record, dict):
+        return True
+    return bool(record.get("date") != date.today().isoformat())
+
+
 def _plugin_defined(errors: Any) -> bool:
     """Whether a load error is a type a plugin defined, which no other reader of the cache can unpickle.
 
@@ -1114,6 +1287,17 @@ class _PendingSource:
     url: str
     alias: str
     includes: list[IncludeRef]
+
+
+def refused_includes(snapshot: LedgerSnapshot, origins: tuple[str, ...] | None = None) -> dict[str, str]:
+    """Each URL include the origin policy refuses, with why.
+
+    A refused include is no source, so the load's sources never list it; status
+    said there were no managed includes right below the refusal (w5/861).
+    """
+    refused: dict[str, str] = {}
+    _collect_managed(snapshot, _allowed_origins(origins), refused)
+    return refused
 
 
 def _collect_managed(
@@ -1534,13 +1718,27 @@ def export_portable(
             f"Cannot export: managed price source {names} is unavailable. "
             "Retry, or pass --allow-errors to export with its marker only."
         )
+    # A plugin that fails to import cannot be copied, and its active line would
+    # run whatever module an earlier snapshot left in the destination, changing
+    # the balances the copy reports (w5/929).
+    unimportable = [
+        match.group(1)
+        for error in loaded.errors
+        if (match := re.match(r'Error importing "([^"]+)"', str(getattr(error, "message", "")))) is not None
+    ]
+    if unimportable:
+        names = ", ".join(f'"{name}"' for name in dict.fromkeys(unimportable))
+        raise UsageError(
+            f"Cannot export: plugin {names} cannot be imported, so the snapshot's copy could not run it and an "
+            "older snapshot's module could stand in for it. Restore the module or remove its plugin line. "
+            "Nothing was written."
+        )
     target = expand_path(output or entry.parent / f"{entry.stem}-export", "--output")
     snapshot = LedgerSnapshot.capture(entry)
     # A refused URL include is no source, so the check above never saw it, and
     # the "self-contained" snapshot kept the URL for stock tools to fail on
     # (w5/479). Refused alike; `--allow-errors` comments it out as the load does.
-    refused: dict[str, str] = {}
-    _collect_managed(snapshot, _allowed_origins(origins), refused)
+    refused = refused_includes(snapshot, origins)
     if refused and not allow_errors:
         refusals = "; ".join(f'include "{url}" was refused: {why}' for url, why in refused.items())
         raise UsageError(
@@ -1673,6 +1871,27 @@ def export_portable(
                 f"{claimed_by} matches that path. Choose a directory outside the ledger's includes. "
                 "Nothing was written."
             )
+    # So may a directory the export creates: `-o txns/p.bean` under
+    # `include "txns/*.bean"` made a directory the glob then read as an
+    # include, and every later load failed on it (w5/814).
+    directories = {parent for dest in planned for parent in dest.parents if parent.is_relative_to(target)}
+    for directory in sorted(directories):
+        claimed_by = None if directory.exists() else claim(directory.resolve())
+        if claimed_by is not None:
+            raise UsageError(
+                f"Cannot export: the directory {directory} would become part of the ledger being exported — its "
+                f"include pattern {claimed_by} matches that path. Choose a directory outside the ledger's includes. "
+                "Nothing was written."
+            )
+    # An include that matches no file would resolve, in an existing output tree,
+    # to whatever an earlier snapshot left there: the deleted source's
+    # transactions came back and the copy passed `check` (w5/929).
+    missing = _unresolved_includes(snapshot)
+    if missing:
+        raise UsageError(
+            f"Cannot export: {'; '.join(missing)} — no such file, so the snapshot would load whatever an earlier "
+            "export left at that path instead. Restore the file or remove the include. Nothing was written."
+        )
     # And an export writes inside the directory it was given, or nowhere.
     for dest in planned:
         if not dest.resolve().is_relative_to(resolved_target):
@@ -1694,9 +1913,11 @@ def export_portable(
     # standing where another needs a directory (an included file named
     # `_shared` beside an include from outside the tree) is on no disk yet, so
     # the loop above passes it and the second write fails after the first.
-    files = set(planned)
+    # Folded like the equal destinations above: a file `_SHARED` is in the way
+    # of the `_shared/` directory on a case-insensitive volume (w5/867).
+    files = {_name_key(dest): dest for dest in planned}
     for dest in planned:
-        inside = next((parent for parent in dest.parents if parent in files), None)
+        inside = next((files[key] for parent in dest.parents if (key := _name_key(parent)) in files), None)
         if inside is not None:
             raise UsageError(
                 f"Cannot export into {target}: the export would write {inside} as a file and {dest} inside it. "
@@ -1738,28 +1959,44 @@ def export_portable(
             )
     written: list[str] = []
     at = time.time() if now is None else now
+    # Every file is staged before any lands, and they all land in one
+    # commit. Replaced one at a time, a stop between two files left the
+    # snapshot half-written with nothing said, and the retry demanded
+    # `--force` (w5/826); a stop or failure while staging now leaves the
+    # destination as it was, directories included.
+    created: list[Path] = []
+    staged: list[tuple[Path, Path, Path]] = []
     try:
-        root_mode = _permission_bits(entry)
-        for path, original in snapshot.contents.items():
-            if path in duplicates:
-                continue
-            dest = destinations[path]
-            _write_export(
-                dest,
-                _rewrite_export_includes(
+        with ExitStack() as copies:
+            root_mode = _permission_bits(entry)
+            for path, original in snapshot.contents.items():
+                if path in duplicates:
+                    continue
+                dest = destinations[path]
+                content = _rewrite_export_includes(
                     original, path, snapshot.patterns, destinations, by_target, repeats, duplicates, refused
-                ),
-                _permission_bits(path),
-            )
-            written.append(str(dest))
-        for dest, document in attachments.items():
-            _write_export(dest, Path(document).read_bytes(), _permission_bits(Path(document)))
-            written.append(str(dest))
-        for source in loaded.sources:
-            dest = feed_files[source.url]
-            _write_export(dest, _export_feed_text(source, at).encode("utf-8"), root_mode)
-            written.append(str(dest))
-    except OSError as exc:
+                )
+                staged.append((dest, *_stage_export(dest, content, _permission_bits(path), created, copies)))
+            for dest, document in attachments.items():
+                content = Path(document).read_bytes()
+                staged.append((dest, *_stage_export(dest, content, _permission_bits(Path(document)), created, copies)))
+            for source in loaded.sources:
+                dest = feed_files[source.url]
+                content = _export_feed_text(source, at).encode("utf-8")
+                staged.append((dest, *_stage_export(dest, content, root_mode, created, copies)))
+            from bea_engine import stopping
+
+            with stopping.committing():
+                for dest, copy, final in staged:
+                    os.replace(copy, final)
+                    written.append(str(dest))
+    except BaseException as exc:
+        if not written:
+            for directory in reversed(created):
+                with contextlib.suppress(OSError):
+                    directory.rmdir()
+        if not isinstance(exc, OSError):
+            raise
         # The checks above cannot see everything (a full disk, a directory
         # locked mid-run), so a failed write still says how far it got.
         done = (
@@ -1888,71 +2125,199 @@ def _export_attachments(
     return attachments
 
 
+def _unresolved_includes(snapshot: LedgerSnapshot) -> list[str]:
+    """Each local include in the captured graph that matches no file, as `file:line include "target"`."""
+    from bea_engine.ledger.text import iter_includes
+
+    empty = {pattern for pattern, matches in snapshot.patterns.items() if not matches}
+    if not empty:
+        return []
+    found = []
+    for path, content in snapshot.contents.items():
+        for span in iter_includes(content):
+            if "://" not in span.target and str(path.parent / span.target) in empty:
+                found.append(f'{path}:{span.line} include "{span.target}"')
+    return found
+
+
 def _export_plugin_modules(loaded: LoadedLedger, snapshot: LedgerSnapshot, target: Path) -> dict[Path, Path]:
     """Where each plugin module that lives beside the ledger goes in the export.
 
-    `option "insert_pythonpath"` puts the root's directory on the module path,
-    so `plugin "myplug"` may name a `myplug.py` — or a package — sitting next
-    to `main.bean`. The export copied the ledger text and not the module, so
-    it reported success for a snapshot stock `bean-check` could not load
-    (w5/094). Such a module travels to the same relative place, where the
-    copied option finds it again; a plugin installed elsewhere is not the
-    export's to carry. Keyed by destination like the document attachments,
-    so the same collision and overwrite rules apply.
+    `option "insert_pythonpath"` puts the setting file's directory on the
+    module path, so `plugin "myplug"` may name a `myplug.py` — or a package —
+    sitting next to any ledger file that sets it, not only the root. The
+    export copied the ledger text and not the module, so it reported success
+    for a snapshot stock `bean-check` could not load (w5/094). Beancount
+    merges those directories into `options["pythonpath"]`, while the merged
+    `insert_pythonpath` flag stays the root's own; every listed directory is
+    searched, first hit wins as the load resolves it, and a module travels to
+    the same relative place, where the copied option finds it again. A module
+    outside the ledger tree cannot travel, so the export refuses naming it;
+    a plugin installed elsewhere is not the export's to carry. Keyed by
+    destination like the document attachments, so the same collision and
+    overwrite rules apply.
     """
-    if not loaded.options.get("insert_pythonpath"):
+    from bea_engine.protocol import UsageError
+
+    homes = list(dict.fromkeys(Path(entry).resolve() for entry in loaded.options.get("pythonpath") or ()))
+    if not homes:
         return {}
-    home = snapshot.root.parent
+    home = snapshot.root.parent.resolve()
     modules: dict[Path, Path] = {}
     plugins = [str(name) for name, _config in loaded.options.get("plugin") or []]
-    for top in sorted({name.split(".", 1)[0] for name in plugins} | _sibling_imports(home, plugins)):
-        module, package = home / f"{top}.py", home / top
-        if package.is_dir():
-            sources = [path for path in sorted(package.rglob("*.py")) if "__pycache__" not in path.parts]
-        elif module.is_file():
-            sources = [module]
-        else:
+    wanted = {name.split(".", 1)[0] for name in plugins} | _sibling_imports(homes, loaded)
+    for top in sorted(wanted):
+        holder = next(
+            (directory for directory in homes if (directory / f"{top}.py").is_file() or (directory / top).is_dir()),
+            None,
+        )
+        if holder is None:
             continue
+        package = holder / top
+        sources = _package_files(package, top) if package.is_dir() else [holder / f"{top}.py"]
         for source in sources:
-            modules[target / source.relative_to(home)] = source
+            # The copy keeps the spelling the import finds; the resolved file
+            # decides containment and what bytes travel.
+            try:
+                source.resolve().relative_to(home)
+                modules[target / source.relative_to(home)] = source
+            except ValueError:
+                raise UsageError(
+                    f"Cannot export: plugin module {top!r} loads from {source}, outside the ledger tree, "
+                    "so the snapshot could not load it. Keep the module beside the root ledger so it "
+                    "travels with the export. Nothing was written."
+                ) from None
     return modules
 
 
-def _sibling_imports(home: Path, plugins: list[str]) -> set[str]:
-    """Top-level modules beside the root that the local plugins import.
+def _package_files(package: Path, top: str) -> list[Path]:
+    """Every file a local plugin package carries, its resources as well as its modules.
+
+    Only the `.py` files travelled, so a package reading its own
+    `settings.json` through `importlib.resources` exported with exit 0 and the
+    snapshot failed to load (w5/868). Bytecode caches are rebuilt where the
+    snapshot loads. What cannot travel as a plain file is refused, not
+    dropped: a linked directory, a pipe or device, a file this user cannot read.
+    """
+    from bea_engine.protocol import UsageError
+
+    def refuse(path: Path, reason: str) -> UsageError:
+        return UsageError(
+            f"Cannot export: plugin package {top!r} holds {path}, {reason}, so the snapshot's copy of the "
+            "package would be incomplete. Replace or remove it. Nothing was written."
+        )
+
+    def unlistable(error: OSError) -> None:
+        # `os.walk` skipped a directory it could not list, so its resources
+        # were left out of a snapshot reported as complete (w5/879).
+        raise refuse(Path(str(error.filename)), "a directory this user cannot list")
+
+    files: list[Path] = []
+    for directory, subdirectories, names in os.walk(package, onerror=unlistable):
+        subdirectories[:] = sorted(name for name in subdirectories if name != "__pycache__")
+        for name in subdirectories:
+            if os.path.islink(os.path.join(directory, name)):
+                raise refuse(Path(directory, name), "a linked directory the export does not follow")
+        for name in sorted(names):
+            path = Path(directory, name)
+            if path.suffix in {".pyc", ".pyo"}:
+                continue
+            try:
+                status = path.stat()
+            except OSError:
+                raise refuse(path, "a link to nothing") from None
+            if not stat.S_ISREG(status.st_mode):
+                raise refuse(path, "which is not a regular file")
+            if not os.access(path, os.R_OK):
+                raise refuse(path, "which this user cannot read")
+            files.append(path)
+    return files
+
+
+def _sibling_imports(homes: list[Path], loaded: LoadedLedger) -> set[str]:
+    """Top-level modules under the ledger's module path that the local plugins import.
 
     A plugin importing `helper.py` from its own directory exported without
     it, and the snapshot failed with `No module named 'helper'` (w5/327).
-    Importing each plugin as the load does (a cached load ran none of them)
+    Importing each plugin as the load does (a cached load ran none of them,
+    with every `insert_pythonpath` directory on the path in load order)
     leaves its imports in `sys.modules`; those whose file sits at the top of
-    the root's directory travel too.
+    one of those directories travel too.
+
+    An import inside the plugin function, or a resource opened by package
+    name, happens only when the function runs, which a cached load skipped.
+    So each local plugin function runs once more here on a copy of the
+    entries. A package without `__init__.py` has no `__file__`; its `__path__`
+    locations say where it lives (w5/880).
     """
     import importlib
 
+    bases = [directory.resolve() for directory in homes]
+
+    def local(module: Any) -> bool:
+        return any(_below_any(location, bases) for location in _module_locations(module))
+
+    plugins = [(str(name), config) for name, config in loaded.options.get("plugin") or []]
     saved = list(sys.path)
-    sys.path.insert(0, str(home))
+    for directory in reversed(homes):
+        sys.path.insert(0, str(directory))
     try:
-        for name in plugins:
+        for name, config in plugins:
             try:
-                importlib.import_module(name)
+                module = importlib.import_module(name)
             except Exception:  # noqa: BLE001 - the load reports a plugin that cannot import
                 continue
+            if not local(module):
+                continue
+            for function_name in getattr(module, "__plugins__", ()):
+                function = getattr(module, function_name, None)
+                if not callable(function):
+                    continue
+                try:
+                    arguments = (list(loaded.entries), dict(loaded.options))
+                    function(*arguments) if config is None else function(*arguments, config)
+                except Exception:  # noqa: BLE001 - a plugin that fails is the load's to report
+                    continue
     finally:
         sys.path[:] = saved
-    base = home.resolve()
     tops: set[str] = set()
     for name, module in list(sys.modules.items()):
-        location = getattr(module, "__file__", None)
-        if not location:
-            continue
-        try:
-            relative = Path(location).resolve().relative_to(base)
-        except (OSError, ValueError):
-            continue
         top = name.split(".", 1)[0]
-        if relative.parts[0] in (f"{top}.py", top):
-            tops.add(top)
+        for location in _module_locations(module):
+            relative = _relative_to_any(location, bases)
+            if relative is not None:
+                if relative.parts and relative.parts[0] in (f"{top}.py", top):
+                    tops.add(top)
+                break
     return tops
+
+
+def _module_locations(module: Any) -> list[str]:
+    """Where a module lives: its file, or every directory of a namespace package."""
+    location = getattr(module, "__file__", None)
+    if location:
+        return [str(location)]
+    try:
+        return [str(path) for path in getattr(module, "__path__", ())]
+    except TypeError:
+        return []
+
+
+def _relative_to_any(location: str, bases: list[Path]) -> Path | None:
+    try:
+        absolute = Path(location).resolve()
+    except OSError:
+        return None
+    for base in bases:
+        try:
+            return absolute.relative_to(base)
+        except ValueError:
+            continue
+    return None
+
+
+def _below_any(location: str, bases: list[Path]) -> bool:
+    return _relative_to_any(location, bases) is not None
 
 
 def _free_feed_directory(target: Path, taken: set[Path]) -> Path:
@@ -2000,38 +2365,39 @@ def _permission_bits(path: Path) -> int:
     return stat.S_IMODE(path.stat().st_mode)
 
 
-def _write_export(dest: Path, content: bytes, mode: int) -> None:
-    """Write one exported file no more readable than its source (w5/316).
+def _stage_export(dest: Path, content: bytes, mode: int, created: list[Path], copies: ExitStack) -> tuple[Path, Path]:
+    """Stage one exported file beside `dest`, no more readable than its source (w5/316).
 
     `write_bytes` and `copyfile` applied the umask: a `0600` ledger, its
     includes and its receipts came out `0644` beside the private originals,
-    under directories at `0755`. New directories are created `0700`; the file
-    is created private and then given its source's bits, so it is never
-    briefly open to others.
+    under directories at `0755`. New directories are created `0700` and
+    appended to `created`; the file is created private and then given its
+    source's bits, so it is never briefly open to others. Returns the staged
+    copy and the path it replaces; `copies` removes the copy unless it was
+    moved into place.
     """
+    from bea_engine import stopping
+
+    stopping.check()
     missing = [parent for parent in [dest.parent, *dest.parent.parents] if not parent.exists()]
     for parent in reversed(missing):
         parent.mkdir(mode=0o700)
+        created.append(parent)
     # Staged beside it and renamed into place: written in place, a write that
     # failed partway (a full disk, a size limit) left a truncated copy under
     # "Nothing was written", and the retry was refused as an overwrite
     # (w5/409). A destination link is followed, as before.
     final = dest.resolve() if dest.is_symlink() else dest
     staged = final.with_name(f".bea-{secrets.token_hex(8)}.tmp")
-    from bea_engine import stopping
-
-    with stopping.staged(staged):
-        fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        try:
-            with os.fdopen(fd, "wb") as stream:
-                os.fchmod(stream.fileno(), mode)
-                stream.write(content)
-                stream.flush()
-                os.fsync(stream.fileno())
-            with stopping.committing():
-                os.replace(staged, final)
-        finally:
-            staged.unlink(missing_ok=True)
+    copies.callback(staged.unlink, missing_ok=True)
+    copies.enter_context(stopping.staged(staged))
+    fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as stream:
+        os.fchmod(stream.fileno(), mode)
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+    return staged, final
 
 
 def _rewrite_export_includes(

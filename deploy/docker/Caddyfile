@@ -9,10 +9,10 @@
 	handle /.well-known/* {
 		reverse_proxy backend-v2:4104
 	}
-	# Sign in with Google returns to the dashboard host (the OAuth redirect URI
-	# is DASHBOARD_URL/api-gateway/auth/google/callback), and the login page
-	# asks this host which sign-in methods exist.
-	handle /api-gateway/auth/* {
+	# The OAuth issuer is this host (DASHBOARD_URL), so the mobile app finds the
+	# GraphQL endpoint and /api-gateway/oauth/* here: one front door, not only
+	# the API domain.
+	handle /api-gateway/* {
 		reverse_proxy backend-v2:4104
 	}
 	handle {

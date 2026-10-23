@@ -112,13 +112,68 @@ describe("chart-utils", () => {
     it("reads single-unit inventory maps without scanning currency names", () => {
       expect(
         decodeQueryChartValue({ UNIV2ETHUSDC: "0.15" }, "Inventory"),
-      ).toEqual({ amount: 0.15, unit: "UNIV2ETHUSDC" });
+      ).toEqual({ amount: 0.15, text: "0.15", unit: "UNIV2ETHUSDC" });
       expect(
         decodeQueryChartValue({ UNIV2ETHUSDC: "-7.27" }, "Inventory"),
-      ).toEqual({ amount: -7.27, unit: "UNIV2ETHUSDC" });
+      ).toEqual({ amount: -7.27, text: "-7.27", unit: "UNIV2ETHUSDC" });
       expect(
         decodeQueryChartValue({ USD: "1", EUR: "2" }, "Inventory"),
       ).toBeNull();
+    });
+  });
+
+  /** Tooltips say the source decimal, not the plotted float (w4/254). */
+  describe("tooltip source precision", () => {
+    const tooltipFor = (dtype: string, rows: unknown[][]) => {
+      const chart = parseQueryChart({
+        types: [
+          { name: "label", dtype: "str" },
+          { name: "amount", dtype },
+        ],
+        rows,
+      } as never)!;
+      const tooltip = chart.option.tooltip as {
+        valueFormatter: (value: number, dataIndex: number) => string;
+      };
+      const series = (chart.option.series as Array<{ data: number[] }>)[0]!;
+      return (index: number) =>
+        tooltip.valueFormatter(series.data[index]!, index);
+    };
+
+    it.each([
+      ["12345678901234567890.123456789"],
+      ["0.000000000000000000000001"],
+      ["-98765432109876543210.5"],
+      ["0"],
+      ["4.00995"],
+    ])("keeps Decimal %s exactly", (text) => {
+      expect(tooltipFor("Decimal", [["qa", text]])(0)).toBe(text);
+    });
+
+    it("keeps an int beyond the float range exactly", () => {
+      expect(tooltipFor("int", [["qa", "123456789012345678901"]])(0)).toBe(
+        "123456789012345678901",
+      );
+    });
+
+    it("keeps Amount and Inventory text with the unit", () => {
+      expect(
+        tooltipFor("Amount", [
+          ["qa", { number: "12345678901234567890.12", currency: "USD" }],
+        ])(0),
+      ).toBe("12345678901234567890.12 USD");
+      expect(
+        tooltipFor("Inventory", [["qa", { BTC: "0.123456789012345678" }]])(0),
+      ).toBe("0.123456789012345678 BTC");
+    });
+
+    it("aligns repeated category labels by row", () => {
+      const tooltip = tooltipFor("Decimal", [
+        ["same", "1.10"],
+        ["same", "2.20"],
+      ]);
+      expect(tooltip(0)).toBe("1.10");
+      expect(tooltip(1)).toBe("2.20");
     });
   });
 

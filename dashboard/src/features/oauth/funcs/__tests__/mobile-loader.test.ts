@@ -31,7 +31,11 @@ describe("mobileOauthConsentLoader", () => {
     await expect(
       mobileOauthConsentLoader(input(ada, "signup")),
     ).resolves.toEqual({
-      initialState: { step: "choose_account", email: "ada@example.test" },
+      initialState: {
+        step: "choose_account",
+        email: "ada@example.test",
+        alternative: "register",
+      },
     });
   });
 });

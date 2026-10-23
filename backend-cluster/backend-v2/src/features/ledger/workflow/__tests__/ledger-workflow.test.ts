@@ -3,7 +3,9 @@ import { LedgerWorkflow } from "../ledger-workflow";
 import {
   InternalServerError,
   BadUserInputError,
+  ForbiddenError,
   OperationNotAllowedError,
+  ServiceUnavailableError,
 } from "@/shared/errors";
 import { Ledger } from "@/features/ledger/api/resolvers/ledger-resolver.types";
 import { LedgerTemplate } from "../ledger-workflow.types";
@@ -43,6 +45,7 @@ interface MockFavaApiClient {
     getLedgerOptions: jest.Mock;
     getLedgerFavaOptions: jest.Mock;
     getLedgerSourceFiles: jest.Mock;
+    checkLedgerFiles: jest.Mock;
   };
 }
 
@@ -152,6 +155,11 @@ describe("LedgerWorkflow", () => {
         getLedgerOptions: jest.fn(),
         getLedgerFavaOptions: jest.fn(),
         getLedgerSourceFiles: jest.fn(),
+        // The ledger service's repository-free bean-check (w23/048): clean
+        // unless a test says otherwise.
+        checkLedgerFiles: jest
+          .fn()
+          .mockResolvedValue({ data: { success: true, data: [] } }),
       },
     };
 
@@ -347,7 +355,7 @@ describe("LedgerWorkflow", () => {
     });
 
     it("should create ledger and return correct data", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
@@ -385,7 +393,7 @@ describe("LedgerWorkflow", () => {
     });
 
     it("should create a ledger from the selected sample template", async () => {
-      mockFavaApiClient.ledgers.listLedgers.mockResolvedValue({
+      mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
         data: { success: true, data: [] },
       });
       mockFavaApiClient.ledgers.createLedger.mockResolvedValue({
@@ -417,6 +425,350 @@ describe("LedgerWorkflow", () => {
       expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledWith(
         expect.objectContaining({ files: ledgerWithMultipleFilesTemplate }),
       );
+    });
+
+    describe("setup and idempotent creation (w3/m53/t003)", () => {
+      const createdLedger = {
+        data: {
+          success: true,
+          data: {
+            id: 1,
+            name: "setup-ledger",
+            full_name: "testuser/setup-ledger",
+            description: null,
+            private: true,
+            empty: true,
+            size: 0,
+            created_at: "2024-01-01T00:00:00Z",
+            updated_at: "2024-01-01T00:00:00Z",
+          },
+        },
+      };
+
+      const workflowWithStore = () => {
+        const records = new Map<string, string>();
+        const store = {
+          getStrict: jest.fn(async (key: string) => records.get(key)),
+          setStrict: jest.fn(async (key: string, value: string) => {
+            records.set(key, value);
+          }),
+          delStrict: jest.fn(async (key: string) => {
+            records.delete(key);
+          }),
+        };
+        const config = { gitea: { hostName: "gitea", httpPort: 3000 } };
+        const withStore = new LedgerWorkflow(
+          favaClientFactory as never,
+          giteaClientFactory as never,
+          plaidClient as never,
+          stripe as never,
+          ledgerDataService as never,
+          models as never,
+          db as never,
+          config as never,
+          authorization as never,
+          store as never,
+        );
+        return { withStore, records };
+      };
+
+      beforeEach(() => {
+        mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValue({
+          data: { success: true, data: [] },
+        });
+        mockFavaApiClient.ledgers.createLedger.mockResolvedValue(createdLedger);
+      });
+
+      it("creates files from a setup specification", async () => {
+        const { withStore } = workflowWithStore();
+        await withStore.createLedger({
+          identity: IDENTITY,
+          input: {
+            name: "setup-ledger",
+            setup: {
+              preset: "personal@1",
+              operatingCurrency: "EUR",
+              historyStart: "2026-02-01",
+              accounts: [
+                {
+                  name: "Assets:Cash",
+                  openingState: "known",
+                  amount: "100",
+                },
+              ],
+            },
+          },
+        });
+        const files = mockFavaApiClient.ledgers.createLedger.mock.calls[0][0]
+          .files as Record<string, string>;
+        expect(files["main.bean"]).toContain(
+          'option "operating_currency" "EUR"',
+        );
+        expect(files["main.bean"]).toContain(
+          "2026-02-01 balance Assets:Cash 100 EUR",
+        );
+      });
+
+      it("refuses setup combined with template and creates nothing", async () => {
+        const { withStore } = workflowWithStore();
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: {
+              name: "setup-ledger",
+              template: LedgerTemplate.SAMPLE,
+              setup: { preset: "personal@1" },
+            },
+          }),
+        ).rejects.toMatchObject({
+          message:
+            "Validation failed for setup: setup and template are mutually exclusive",
+          metadata: { field: "setup" },
+        });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      it("returns the original ledger for a repeated requestId", async () => {
+        const { withStore } = workflowWithStore();
+        const input = {
+          name: "setup-ledger",
+          requestId: "req-1",
+          setup: { preset: "blank@1" as const },
+        };
+        const first = await withStore.createLedger({
+          identity: IDENTITY,
+          input,
+        });
+        const second = await withStore.createLedger({
+          identity: IDENTITY,
+          input,
+        });
+        expect(second).toEqual(first);
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+      });
+
+      it("refuses a reused requestId with a changed request, naming requestId as the field (w21/438)", async () => {
+        const { withStore } = workflowWithStore();
+        await withStore.createLedger({
+          identity: IDENTITY,
+          input: {
+            name: "setup-ledger",
+            requestId: "req-1",
+            setup: { preset: "blank@1" as const },
+          },
+        });
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: {
+              name: "setup-ledger",
+              requestId: "req-1",
+              setup: { preset: "blank@1" as const, title: "Changed" },
+            },
+          }),
+        ).rejects.toMatchObject({
+          message:
+            "Validation failed for requestId: requestId was already used with a different creation request",
+          metadata: { field: "requestId" },
+        });
+      });
+
+      it("refuses an empty or oversized requestId and a too-long setup title, as REST and MCP do (w21/203)", async () => {
+        const { withStore } = workflowWithStore();
+        for (const requestId of ["", "r".repeat(201)]) {
+          await expect(
+            withStore.createLedger({
+              identity: IDENTITY,
+              input: { name: "setup-ledger", requestId },
+            }),
+          ).rejects.toMatchObject({
+            message:
+              "Validation failed for requestId: requestId must be 1-200 characters",
+            metadata: { field: "requestId" },
+          });
+        }
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: {
+              name: "setup-ledger",
+              setup: { preset: "blank@1", title: "t".repeat(201) },
+            },
+          }),
+        ).rejects.toThrow("Title must be at most 200 characters");
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      it("refuses the same requestId with a different request", async () => {
+        const { withStore } = workflowWithStore();
+        await withStore.createLedger({
+          identity: IDENTITY,
+          input: { name: "setup-ledger", requestId: "req-2" },
+        });
+        await expect(
+          withStore.createLedger({
+            identity: IDENTITY,
+            input: { name: "other-ledger", requestId: "req-2" },
+          }),
+        ).rejects.toThrow("requestId");
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+      });
+
+      it("reports in-progress for a repeated requestId whose first attempt has not finished", async () => {
+        const { withStore, records } = workflowWithStore();
+        const input = { name: "setup-ledger", requestId: "req-3" };
+        // Seed the in-progress record the first attempt writes inside the lock.
+        const hash = JSON.stringify({
+          name: "setup-ledger",
+          description: null,
+          private: null,
+          template: null,
+          setup: null,
+        });
+        records.set(
+          `ledger:create_request:user:${USER_ID}:id:req-3`,
+          JSON.stringify({ requestHash: hash, status: "in-progress" }),
+        );
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).rejects.toThrow("still in progress");
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      // w23/008: a refused or failed attempt used to leave its record
+      // "in-progress" for 24 hours, so the retry answered CONFLICT forever.
+      it("lets the same requestId retry after the plan limit refused it", async () => {
+        const { withStore, records } = workflowWithStore();
+        const input = { name: "setup-ledger", requestId: "req-limit" };
+        // At the free plan's limit for the first attempt only.
+        mockFavaApiClient.ledgers.listUserLedgers.mockResolvedValueOnce({
+          data: {
+            success: true,
+            data: Array.from({ length: 50 }, (_, i) => ({ id: i })),
+          },
+        });
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).rejects.toMatchObject({ category: "RESOURCE_LIMIT_REACHED" });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+        expect(records.size).toBe(0);
+
+        const ledger = await withStore.createLedger({
+          identity: IDENTITY,
+          input,
+        });
+        expect(ledger).toBeDefined();
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+        // The success is recorded, so a further repeat replays it.
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).resolves.toEqual(ledger);
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(1);
+      });
+
+      it("lets the same requestId retry after an upstream failure", async () => {
+        const { withStore, records } = workflowWithStore();
+        const input = { name: "setup-ledger", requestId: "req-outage" };
+        mockFavaApiClient.ledgers.createLedger.mockRejectedValueOnce(
+          new Error("upstream unavailable"),
+        );
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).rejects.toThrow();
+        expect(records.size).toBe(0);
+        await expect(
+          withStore.createLedger({ identity: IDENTITY, input }),
+        ).resolves.toBeDefined();
+        expect(mockFavaApiClient.ledgers.createLedger).toHaveBeenCalledTimes(2);
+      });
+
+      it("tells an in-progress repeat how to retry, not how to edit an entry", async () => {
+        const { withStore, records } = workflowWithStore();
+        records.set(
+          `ledger:create_request:user:${USER_ID}:id:req-busy`,
+          JSON.stringify({
+            requestHash: JSON.stringify({
+              name: "setup-ledger",
+              description: null,
+              private: null,
+              template: null,
+              setup: null,
+            }),
+            status: "in-progress",
+          }),
+        );
+        const error = await withStore
+          .createLedger({
+            identity: IDENTITY,
+            input: { name: "setup-ledger", requestId: "req-busy" },
+          })
+          .catch((caught: unknown) => caught);
+        expect(error).toMatchObject({
+          category: "CONFLICT",
+          metadata: { hint: expect.stringContaining("same requestId") },
+        });
+      });
+
+      it("previews a setup without creating anything", async () => {
+        const preview = await workflow.previewLedgerSetup({
+          identity: IDENTITY,
+          setup: { preset: "personal@1", operatingCurrency: "EUR" },
+        });
+        expect(preview.preset).toBe("personal@1");
+        expect(preview.operatingCurrency).toBe("EUR");
+        expect(preview.accounts).toContain("Assets:Cash");
+        expect(preview.files["main.bean"]).toContain("Assets:Cash");
+        expect(preview.validation).toEqual({ ok: true, errors: [] });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
+
+      // w23/048: ADR021 has the files validated before the ledger service
+      // creates anything; the preview reports the same verdict.
+      it("checks the setup's files and refuses to create a ledger that would not load", async () => {
+        mockFavaApiClient.reports.checkLedgerFiles.mockResolvedValue({
+          data: {
+            success: true,
+            data: [
+              {
+                message: "Duplicate open directive for Equity:OpeningBalances",
+                source: { filename: "main.bean", lineno: 9 },
+                severity: "error",
+              },
+            ],
+          },
+        });
+        const setup = { preset: "personal@1" as const };
+        const preview = await workflow.previewLedgerSetup({
+          identity: IDENTITY,
+          setup,
+        });
+        expect(preview.validation).toEqual({
+          ok: false,
+          errors: [
+            {
+              message: "Duplicate open directive for Equity:OpeningBalances",
+              source: "main.bean:9",
+            },
+          ],
+        });
+        const [{ files }] =
+          mockFavaApiClient.reports.checkLedgerFiles.mock.calls[0];
+        expect(Buffer.from(files[0].content, "base64").toString("utf8")).toBe(
+          preview.files["main.bean"],
+        );
+        await expect(
+          workflow.createLedger({
+            identity: IDENTITY,
+            input: { name: "household", setup },
+          }),
+        ).rejects.toMatchObject({
+          category: "VALIDATION_FAILED",
+          message: expect.stringContaining(
+            "would not load: Duplicate open directive for Equity:OpeningBalances (main.bean:9)",
+          ),
+        });
+        expect(mockFavaApiClient.ledgers.createLedger).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -1589,7 +1941,11 @@ describe("LedgerWorkflow", () => {
       const result = await workflow.renameLedgerFile({
         identity: IDENTITY,
         ledgerId,
-        input: { oldPath: "old.bean", newPath: "new.bean", updateIncludes: true },
+        input: {
+          oldPath: "old.bean",
+          newPath: "new.bean",
+          updateIncludes: true,
+        },
       });
 
       expect(result.updatedIncludes).toEqual(["main.bean"]);
@@ -1924,6 +2280,66 @@ describe("LedgerWorkflow", () => {
 
       expect(result.success).toBe(false);
       expect(result.isStarred).toBe(true);
+    });
+  });
+
+  // w23/009: REST and MCP read the caller's star state through this.
+  describe("getLedgerMetadata", () => {
+    const ledgerId = "testuser/test-ledger";
+    const starring = jest.fn();
+    beforeEach(() => {
+      starring.mockReset().mockResolvedValue({ status: 204 });
+      giteaClientFactory.getUserApiClient.mockResolvedValue({
+        user: { userCurrentCheckStarring: starring },
+      });
+      mockFavaApiClient.ledgers.getLedger.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            id: 1,
+            name: "test-ledger",
+            full_name: ledgerId,
+            private: false,
+            empty: false,
+          },
+        },
+      });
+    });
+
+    it("adds the caller's star state to the ledger", async () => {
+      const result = await workflow.getLedgerMetadata({
+        ledgerId,
+        identity: IDENTITY,
+      });
+      expect(result).toMatchObject({ id: ledgerId, isStarred: true });
+    });
+
+    it("leaves star state out for an anonymous reader without checking it", async () => {
+      const result = await workflow.getLedgerMetadata({ ledgerId });
+      expect(result.id).toBe(ledgerId);
+      expect(result).not.toHaveProperty("isStarred");
+      expect(starring).not.toHaveBeenCalled();
+    });
+
+    it("still returns the metadata when the star check alone is refused", async () => {
+      authorization.authorizeOrThrow
+        .mockResolvedValueOnce({ allowed: true })
+        .mockRejectedValueOnce(new ForbiddenError("no social read"));
+      const result = await workflow.getLedgerMetadata({
+        ledgerId,
+        identity: IDENTITY,
+      });
+      expect(result.id).toBe(ledgerId);
+      expect(result).not.toHaveProperty("isStarred");
+    });
+
+    it("does not hide an authorization outage", async () => {
+      authorization.authorizeOrThrow
+        .mockResolvedValueOnce({ allowed: true })
+        .mockRejectedValueOnce(new ServiceUnavailableError("Authorization"));
+      await expect(
+        workflow.getLedgerMetadata({ ledgerId, identity: IDENTITY }),
+      ).rejects.toThrow(ServiceUnavailableError);
     });
   });
 

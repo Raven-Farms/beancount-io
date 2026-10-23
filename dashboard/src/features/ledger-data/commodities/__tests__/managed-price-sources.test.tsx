@@ -1,10 +1,16 @@
+import {
+  ApolloClient,
+  ApolloLink,
+  InMemoryCache,
+  Observable,
+} from "@apollo/client";
+import { ApolloProvider } from "@apollo/client/react";
 import { MockedProvider } from "@apollo/client/testing/react";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import {
-  GetLedgerCommoditiesDocument,
   GetLedgerManagedPricesDocument,
   RefreshLedgerManagedPricesDocument,
 } from "@/graphql/definitions";
@@ -102,28 +108,37 @@ describe("ManagedPriceSources", () => {
   });
 
   it("refreshes, shows the pending state, and renders the refreshed status", async () => {
-    renderPanel([
-      statusMock([source()]),
-      {
-        request: {
-          query: RefreshLedgerManagedPricesDocument,
-          variables: { ledgerId: LEDGER },
-        },
-        delay: 20,
-        result: {
-          data: {
-            refreshLedgerManagedPrices: [source({ freshness: "recent" })],
-          },
-        },
-      },
-      {
-        request: {
-          query: GetLedgerCommoditiesDocument,
-          variables: { ledgerId: LEDGER },
-        },
-        result: { data: { getLedgerCommodities: [] } },
-      },
-    ]);
+    // The refresh is held until the test releases it, so its pending state is
+    // observed however long the click takes (w4/332 made the refresh settle
+    // on its acknowledgement alone, which a fixed delay could outrun).
+    let release: (() => void) | undefined;
+    const client = new ApolloClient({
+      cache: new InMemoryCache(),
+      link: new ApolloLink(
+        (operation) =>
+          new Observable((observer) => {
+            const reply = (data: object) => {
+              observer.next({ data });
+              observer.complete();
+            };
+            if (operation.operationName === "RefreshLedgerManagedPrices") {
+              release = () =>
+                reply({
+                  refreshLedgerManagedPrices: [source({ freshness: "recent" })],
+                });
+            } else if (operation.operationName === "GetLedgerManagedPrices") {
+              reply({ getLedgerManagedPrices: [source()] });
+            } else {
+              reply({ getLedgerCommodities: [] });
+            }
+          }),
+      ),
+    });
+    render(
+      <ApolloProvider client={client}>
+        <ManagedPriceSources ledgerId={LEDGER} canWrite />
+      </ApolloProvider>,
+    );
     const button = await screen.findByRole("button", {
       name: "page.commodities.refreshPrices",
     });
@@ -131,6 +146,7 @@ describe("ManagedPriceSources", () => {
     expect(
       screen.getByRole("button", { name: "page.commodities.refreshingPrices" }),
     ).toBeDisabled();
+    act(() => release!());
     expect(
       await screen.findByText("page.commodities.freshness.recent"),
     ).toBeInTheDocument();
@@ -140,6 +156,7 @@ describe("ManagedPriceSources", () => {
       }),
     ).toBeEnabled();
     expect(toast.error).not.toHaveBeenCalled();
+    client.stop();
   });
 
   it("tells the user when a refresh fails and keeps the last status", async () => {

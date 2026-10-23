@@ -22,6 +22,14 @@ let baselineErrors: {
 const committed: { files: { path: string; content: string }[] }[] = [];
 // Paths the handler read; a refused amount must not read any file.
 const reads: string[] = [];
+// Repository files besides main.bean, and the paths the include closure
+// leaves out (w23/062); by default everything the write touches is loaded.
+const mockFiles = new Map<string, string>();
+let unincluded = new Set<string>();
+// The ranges each committed write asked to locate (w23/060), and whether the
+// scripted locator fails or finds nothing.
+const located: { file: string; startLine: number; lineCount: number }[][] = [];
+let locator: "lines" | "throws" | "misses" = "lines";
 
 jest.mock("@/server/auth", () => ({
   authMiddleware: async (_ctx: unknown, next: () => Promise<void>) => next(),
@@ -30,9 +38,10 @@ jest.mock("@/server/auth", () => ({
     repos: {
       repoGetContents: async (_owner: string, _repo: string, path: string) => {
         reads.push(path);
-        if (path !== "main.bean")
+        const content = path === "main.bean" ? MAIN : mockFiles.get(path);
+        if (content === undefined)
           throw Object.assign(new Error("404"), { status: 404 });
-        return { data: { content: b64(MAIN), sha: "sha-main" } };
+        return { data: { content: b64(content), sha: `sha-${path}` } };
       },
       repoChangeFiles: async (
         _owner: string,
@@ -83,6 +92,36 @@ jest.mock("../service-context", () => ({
       }) => {
         const main = overlays.find((overlay) => overlay.path === "main.bean");
         return errorsOf(main ? fromB64(main.content) : MAIN);
+      },
+      projectedSourceFiles: async ({
+        overlays,
+      }: {
+        overlays: { path: string }[];
+      }) =>
+        ["main.bean", ...overlays.map((overlay) => overlay.path)].filter(
+          (path) => !unincluded.has(path),
+        ),
+      // A stand-in for the engine's entry IDs: the dated line a range starts
+      // on, so a test sees which line each entry was located at.
+      projectedEntryIds: async ({
+        overlays,
+        ranges,
+      }: {
+        overlays: { path: string; content: string }[];
+        ranges: { file: string; startLine: number; lineCount: number }[];
+      }) => {
+        located.push(ranges);
+        if (locator === "throws") throw new Error("parse failed");
+        return ranges.map(({ file, startLine, lineCount }, index) => {
+          if (locator === "misses" && index === 1) return null;
+          const overlay = overlays.find((candidate) => candidate.path === file);
+          const lines = fromB64(overlay?.content ?? "").split("\n");
+          return (
+            lines
+              .slice(startLine, startLine + lineCount)
+              .find((line) => /^\d{4}-/.test(line)) ?? null
+          );
+        });
       },
     },
   }),
@@ -192,5 +231,471 @@ describe("bulk entries refuse amounts that are not decimals (w3/641)", () => {
 
     expect(response.status).toBe(200);
     expect(committed).toHaveLength(1);
+  });
+
+  // w23/043: accepted by the decimal check, unreadable to Beancount as typed.
+  it("writes a leading-dot amount with its zero", async () => {
+    const response = await post([transaction(".5", "-.5")]);
+    expect(response.status).toBe(200);
+    const written = fromB64(committed[0]!.files[0]!.content);
+    expect(written).toMatch(/Assets:Cash +0\.5 USD/);
+    expect(written).toMatch(/Equity:Opening +-0\.5 USD/);
+  });
+});
+
+// w23/033: tags, links, flags, accounts, currencies, meta keys and dates were
+// written raw, so a newline in one smuggled whole directives into the ledger.
+describe("bulk entries refuse tokens that would not lex as written", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+    reads.length = 0;
+  });
+
+  const post = (entries: unknown[]) =>
+    fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ entries }),
+    });
+  const transaction = (overrides: Record<string, unknown> = {}) => ({
+    type: "transaction",
+    item: {
+      date: "2026-03-20",
+      flag: "*",
+      payee: "qa-tag",
+      narration: "qa",
+      postings: [
+        { account: "Assets:Cash", units: { number: "-0.01", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: "0.01", currency: "USD" },
+        },
+      ],
+      ...overrides,
+    },
+  });
+  const posting = (overrides: Record<string, unknown>) => ({
+    postings: [
+      {
+        account: "Assets:Cash",
+        units: { number: "-0.01", currency: "USD" },
+        ...overrides,
+      },
+      { account: "Equity:Opening", units: { number: "0.01", currency: "USD" } },
+    ],
+  });
+  const INJECTED = '\n2026-03-20 note Assets:Cash "qa-injected"\n2026-03-20 *';
+
+  it.each([
+    ["tags[0]", { tags: [`qa${INJECTED}`] }],
+    ["links[0]", { links: ["two words"] }],
+    ["flag", { flag: `*${INJECTED}` }],
+    ["date", { date: "2026-03-20 open Assets:Evil\n2026-03-20" }],
+    ["meta.bad key", { meta: { "bad key": "x" } }],
+    ["postings[0].account", posting({ account: `Assets:Cash${INJECTED}` })],
+    ["postings[0].flag", posting({ flag: "! x" })],
+    [
+      "postings[0].units.currency",
+      posting({ units: { number: "-0.01", currency: "USD\n2026" } }),
+    ],
+  ])("refuses %s before reading anything", async (field, overrides) => {
+    const response = await post([transaction(overrides)]);
+    const body = (await response.json()) as Record<string, any>;
+    expect(response.status).toBe(400);
+    expect(body.error).toMatch(
+      new RegExp(
+        `^entry 0: ${field.replace(/[[\].]/g, "\\$&")} .* is not a valid `,
+      ),
+    );
+    expect(reads).toEqual([]);
+    expect(committed).toEqual([]);
+  });
+
+  it.each([
+    [
+      "open",
+      {
+        date: "2026-03-20",
+        account: "Assets:Cash",
+        currencies: ["USD", "EUR GBP"],
+      },
+      "currencies[1]",
+    ],
+    [
+      "note",
+      { date: "2026-03-20", account: "Assets:Cash\nx", comment: "c" },
+      "account",
+    ],
+    ["commodity", { date: "2026-03-20", currency: "usd" }, "currency"],
+  ])("refuses a bad token in a %s", async (type, item, field) => {
+    const response = await post([{ type, item }]);
+    const body = (await response.json()) as Record<string, any>;
+    expect(response.status).toBe(400);
+    expect(body.error).toContain(`entry 0: ${field} `);
+    expect(committed).toEqual([]);
+  });
+
+  it("still writes Unicode accounts, and tags, links and meta", async () => {
+    const response = await post([
+      transaction({
+        tags: ["trip-2026"],
+        links: ["inv/2026.03"],
+        meta: { "receipt-id": "A1" },
+        postings: [
+          {
+            account: "Assets:Café",
+            units: { number: "-0.01", currency: "USD" },
+          },
+          { account: "资产:现金", units: { number: "0.01", currency: "USD" } },
+        ],
+      }),
+    ]);
+    expect(response.status).toBe(200);
+    expect(committed).toHaveLength(1);
+    const written = fromB64(committed[0]!.files[0]!.content);
+    expect(written).toContain(
+      '2026-03-20 * "qa-tag" "qa" #trip-2026 ^inv/2026.03',
+    );
+    expect(written).toContain("资产:现金");
+  });
+
+  // w21/649: a ZWNJ is part of the Persian word; both engines read it.
+  it("opens an account whose name holds a ZWNJ", async () => {
+    const response = await post([
+      {
+        type: "open",
+        item: { date: "2026-03-20", account: "Assets:Bank:خانه\u200cها" },
+      },
+    ]);
+    expect(response.status).toBe(200);
+    expect(fromB64(committed[0]!.files[0]!.content)).toContain(
+      "2026-03-20 open Assets:Bank:خانه\u200cها",
+    );
+  });
+
+  // w21/653: the engines' lexers read tags as ASCII, so `#旅行` was dropped
+  // (and `#café` read as `#caf`); the validator names the field instead.
+  it("refuses a non-ASCII tag with the validator's message", async () => {
+    const response = await post([transaction({ tags: ["旅行"] })]);
+    const body = (await response.json()) as Record<string, any>;
+    expect(response.status).toBe(400);
+    expect(body.error).toContain('entry 0: tags[0] "旅行" is not a valid tag');
+    expect(committed).toEqual([]);
+  });
+});
+
+// w23/058: a receipt insert stored its file before the entry was checked, so
+// a refused entry left an orphan. A dry run answers first, committing nothing.
+describe("bulk entries dry run", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+  });
+
+  const post = (body: Record<string, unknown>) =>
+    fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const txn = (second: string) => ({
+    type: "transaction",
+    item: {
+      date: "2026-08-30",
+      flag: "*",
+      narration: "receipt",
+      postings: [
+        { account: "Assets:Cash", units: { number: "-2.00", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: second, currency: "USD" },
+        },
+      ],
+    },
+  });
+
+  it("accepts a valid entry and commits nothing", async () => {
+    const response = await post({ entries: [txn("2.00")], dryRun: true });
+    expect(response.status).toBe(200);
+    expect(committed).toEqual([]);
+  });
+
+  it("refuses an unbalanced entry exactly as the write would", async () => {
+    const response = await post({ entries: [txn("1.00")], dryRun: true });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { code: string }).code).toBe(
+      "UNBALANCED",
+    );
+    expect(committed).toEqual([]);
+  });
+
+  // w21/647: a balanced exchange at a price was refused as UNBALANCED.
+  it("balances a priced posting by its weight", async () => {
+    const exchange = (price: string) => ({
+      type: "transaction",
+      item: {
+        date: "2026-08-30",
+        flag: "*",
+        narration: "exchange",
+        postings: [
+          {
+            account: "Assets:Cash",
+            units: { number: "-110.00", currency: "USD" },
+          },
+          {
+            account: "Equity:Opening",
+            units: { number: "100.00", currency: "EUR" },
+            price: { number: price, currency: "USD" },
+          },
+        ],
+      },
+    });
+    expect(
+      (await post({ entries: [exchange("1.10")], dryRun: true })).status,
+    ).toBe(200);
+    const refused = await post({ entries: [exchange("1.20")], dryRun: true });
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe(
+      "UNBALANCED",
+    );
+  });
+
+  it("checks against an empty file when the routed target does not exist yet", async () => {
+    const response = await post({
+      entries: [{ ...txn("2.00"), filename: "txns/2026.bean" }],
+      dryRun: true,
+    });
+    expect(response.status).toBe(200);
+    expect(committed).toEqual([]);
+  });
+
+  it("still commits without dryRun", async () => {
+    expect((await post({ entries: [txn("2.00")] })).status).toBe(200);
+    expect(committed).toHaveLength(1);
+  });
+});
+
+// w23/060: the write returned no hashes, so an agent could not verify or undo
+// the entry it had just added without guessing through a listing.
+describe("bulk entries return the hashes they wrote", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+    located.length = 0;
+    locator = "lines";
+  });
+
+  const post = async (entries: unknown[]) => {
+    const response = await fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ entries }),
+    });
+    expect(response.status).toBe(200);
+    return (
+      (await response.json()) as { data: { entry_hashes: (string | null)[] } }
+    ).data.entry_hashes;
+  };
+  const txn = (date: string, narration: string) => ({
+    type: "transaction",
+    item: {
+      date,
+      flag: "*",
+      narration,
+      postings: [
+        { account: "Assets:Cash", units: { number: "-2.00", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: "2.00", currency: "USD" },
+        },
+      ],
+    },
+  });
+  const entries = [
+    txn("2026-08-30", "first"),
+    {
+      type: "balance",
+      item: {
+        date: "2026-08-31",
+        account: "Assets:Cash",
+        amount: { number: "-2.00", currency: "USD" },
+      },
+    },
+    txn("2026-09-01", "third"),
+  ];
+
+  it("locates every entry on its own lines and answers in request order", async () => {
+    const hashes = await post(entries);
+
+    expect(hashes).toHaveLength(3);
+    expect(hashes[0]).toMatch(/^2026-08-30 \* "first"/);
+    expect(hashes[1]).toMatch(/^2026-08-31 balance Assets:Cash/);
+    expect(hashes[2]).toMatch(/^2026-09-01 \* "third"/);
+    // Each range ends before the next begins, inside the committed text.
+    const [ranges] = located;
+    ranges.slice(1).forEach((range, index) => {
+      const previous = ranges[index];
+      expect(previous.startLine + previous.lineCount).toBeLessThanOrEqual(
+        range.startLine,
+      );
+    });
+    expect(committed).toHaveLength(1);
+  });
+
+  it("keeps the commit and answers no hashes when they cannot be resolved", async () => {
+    locator = "throws";
+    expect(await post(entries)).toEqual([]);
+    locator = "misses";
+    expect(await post(entries)).toEqual([]);
+    expect(committed).toHaveLength(2);
+  });
+});
+
+// w23/062: a routed write to a file nothing includes committed entries that
+// no report loaded, and said "No new bean-check errors" about them.
+describe("bulk entries include a routed file the ledger does not load", () => {
+  let server: http.Server;
+  let url: string;
+
+  beforeAll(async () => {
+    const app = new Koa();
+    const router = new Router();
+    setEntriesHandler(router);
+    app.use(restErrorMiddleware());
+    app.use(bodyParser());
+    app.use(router.routes());
+    server = http.createServer(app.callback());
+    url = await listen(server);
+  });
+
+  afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+
+  beforeEach(() => {
+    baselineErrors = [];
+    committed.length = 0;
+    mockFiles.clear();
+    mockFiles.set("txns/2027.bean", "");
+    unincluded = new Set(["txns/2027.bean"]);
+  });
+
+  afterEach(() => {
+    mockFiles.clear();
+    unincluded = new Set();
+  });
+
+  const post = (body: Record<string, unknown>) =>
+    fetch(`${url}/entries/alice/books/bulk`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const routed = (filename: string) => ({
+    type: "transaction",
+    filename,
+    item: {
+      date: "2027-01-03",
+      flag: "*",
+      narration: "new year",
+      postings: [
+        { account: "Assets:Cash", units: { number: "-5.00", currency: "USD" } },
+        {
+          account: "Equity:Opening",
+          units: { number: "5.00", currency: "USD" },
+        },
+      ],
+    },
+  });
+
+  it("adds the entry point's include in the same commit and names it", async () => {
+    const response = await post({ entries: [routed("txns/2027.bean")] });
+
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { data: { included_files: string[] } }).data
+        .included_files,
+    ).toEqual(["txns/2027.bean"]);
+    expect(committed).toHaveLength(1);
+    const files = Object.fromEntries(
+      committed[0]!.files.map((file) => [file.path, fromB64(file.content)]),
+    );
+    expect(Object.keys(files).sort()).toEqual(["main.bean", "txns/2027.bean"]);
+    expect(files["main.bean"]).toBe(`${MAIN}include "txns/2027.bean"\n`);
+    expect(files["txns/2027.bean"]).toContain('2027-01-03 * "new year"');
+  });
+
+  it("includes a file a dry run would create, committing nothing", async () => {
+    mockFiles.clear();
+    const response = await post({
+      entries: [routed("txns/2027.bean")],
+      dryRun: true,
+    });
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { data: { included_files: string[] } }).data
+        .included_files,
+    ).toEqual(["txns/2027.bean"]);
+    expect(committed).toEqual([]);
+  });
+
+  it("leaves the entry point alone when the file is already loaded", async () => {
+    unincluded = new Set();
+    const response = await post({ entries: [routed("txns/2027.bean")] });
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { data: { included_files: string[] } }).data
+        .included_files,
+    ).toEqual([]);
+    expect(committed[0]!.files.map((file) => file.path)).toEqual([
+      "txns/2027.bean",
+    ]);
   });
 });

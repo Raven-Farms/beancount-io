@@ -23,8 +23,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RETURNED_INTERVALS = 100;
 const DEFAULT_FISCAL_YEAR_END: FiscalYearEnd = { month: 12, day: 31 };
 
+/**
+ * `Date.UTC` without its remap of years 0–99 to 1900–1999, which made a real
+ * `0099-08` selection unresolvable (w4/283). Out-of-range months and days
+ * roll over as they do there.
+ */
+function utcInstant(year: number, monthIndex: number, day: number): Date {
+  const value = new Date(0);
+  value.setUTCFullYear(year, monthIndex, day);
+  return value;
+}
+
 function utcDate(year: number, month: number, day: number): Date | null {
-  const value = new Date(Date.UTC(year, month - 1, day));
+  const value = utcInstant(year, month - 1, day);
   return value.getUTCFullYear() === year &&
     value.getUTCMonth() === month - 1 &&
     value.getUTCDate() === day
@@ -37,18 +48,14 @@ function addDays(value: Date, days: number): Date {
 }
 
 function addMonths(value: Date, months: number): Date {
-  return new Date(
-    Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + months, 1),
-  );
+  return utcInstant(value.getUTCFullYear(), value.getUTCMonth() + months, 1);
 }
 
 function addYears(value: Date, years: number): Date {
-  return new Date(
-    Date.UTC(
-      value.getUTCFullYear() + years,
-      value.getUTCMonth(),
-      value.getUTCDate(),
-    ),
+  return utcInstant(
+    value.getUTCFullYear() + years,
+    value.getUTCMonth(),
+    value.getUTCDate(),
   );
 }
 
@@ -82,7 +89,7 @@ function fiscalPeriod(
 
   let start = addDays(fiscalEnd, 1);
   if (monthOfYear === 2 && fiscalYearEnd.day === 28) {
-    start = new Date(Date.UTC(start.getUTCFullYear(), 2, 1));
+    start = utcInstant(start.getUTCFullYear(), 2, 1);
   }
 
   if (quarter === undefined) {

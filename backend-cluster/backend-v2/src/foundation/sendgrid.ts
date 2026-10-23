@@ -1,5 +1,9 @@
 import sendgrid, { MailDataRequired } from "@sendgrid/mail";
 import { logger } from "@/shared/logger";
+import { ServiceUnavailableError } from "@/shared/errors";
+
+const emailLogger = logger.child({ module: "sendgrid" });
+const PROVIDER_TIMEOUT_MS = 10_000;
 
 export type SendGridOpts = {
   apiKey: string;
@@ -35,6 +39,7 @@ export class SendGrid implements ISendGrid {
   constructor(opts: SendGridOpts) {
     this.opts = opts;
     sendgrid.setApiKey(opts.apiKey);
+    sendgrid.setTimeout(PROVIDER_TIMEOUT_MS);
   }
 
   public async sendMail(data: Mail): Promise<void> {
@@ -52,10 +57,13 @@ export class SendGrid implements ISendGrid {
       try {
         await sendgrid.send(mailData);
         return;
-      } catch (e) {
-        logger.error(`failed to SendGrid.sendMail: ${e}`);
+      } catch {
+        emailLogger.error("Email delivery failed", {
+          operation: "sendMail",
+          errorCategory: "MAIL_PROVIDER_FAILURE",
+        });
         if (i === 1) {
-          throw e;
+          throw new ServiceUnavailableError("Email delivery", 5);
         }
       }
     }
@@ -73,10 +81,13 @@ export class SendGrid implements ISendGrid {
       try {
         await sendgrid.send(mailData);
         return;
-      } catch (e) {
-        logger.error(`failed to SendGrid.sendTemplate: ${e}`);
+      } catch {
+        emailLogger.error("Email delivery failed", {
+          operation: "sendTemplate",
+          errorCategory: "MAIL_PROVIDER_FAILURE",
+        });
         if (i === 1) {
-          throw e;
+          throw new ServiceUnavailableError("Email delivery", 5);
         }
       }
     }
@@ -88,27 +99,22 @@ export class ConsoleSendGrid implements ISendGrid {
 
   constructor(opts: SendGridOpts) {
     this.opts = opts;
-    logger.debug("ConsoleSendGrid initialized for development environment");
+    emailLogger.debug(
+      "ConsoleSendGrid initialized for development environment",
+    );
   }
 
   public async sendMail(data: Mail): Promise<void> {
-    logger.debug("ConsoleSendGrid.sendMail called with data:", {
-      to: data.to,
-      from: data.from || this.opts.defaultFrom || "noreply@mail.beancount.io",
-      subject: data.subject,
-      html: data.html,
-      text: data.text,
-      templateId: data.templateId,
-      dynamicTemplateData: data.dynamicTemplateData,
+    emailLogger.debug("Email delivery suppressed in development", {
+      operation: "sendMail",
+      recipientCount: Array.isArray(data.to) ? data.to.length : 1,
     });
   }
 
   public async sendTemplate(params: TemplateMailParams): Promise<void> {
-    logger.debug("ConsoleSendGrid.sendTemplate called with data:", {
-      to: params.to,
-      from: params.from || this.opts.defaultFrom || "noreply@mail.beancount.io",
-      templateId: params.templateId,
-      dynamicTemplateData: params.dynamicTemplateData,
+    emailLogger.debug("Email delivery suppressed in development", {
+      operation: "sendTemplate",
+      recipientCount: Array.isArray(params.to) ? params.to.length : 1,
     });
   }
 }

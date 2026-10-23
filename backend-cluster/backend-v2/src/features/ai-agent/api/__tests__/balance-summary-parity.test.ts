@@ -204,7 +204,10 @@ describe("balance-sheet summary of a cancelling transfer (w6/006)", () => {
   it("reports USD rows when the request names an EUR nothing carries", async () => {
     const f = await fixture(transfer("USD"));
     try {
-      expect(await f.read({ conversion: "EUR" })).toEqual(summary("USD"));
+      // Nothing carries EUR, so nothing was converted (w23/050).
+      expect(await f.read({ conversion: "EUR" })).toEqual(
+        summary("USD", "units"),
+      );
     } finally {
       await f.close();
     }
@@ -256,12 +259,15 @@ describe("balance-sheet summary of a cancelling transfer (w6/006)", () => {
         ...summary("EUR"),
         assets: 40,
         netWorth: 40,
+        // What EUR leaves out is stated rather than dropped (w23/050).
+        otherCurrencies: { USD: 900 },
         byAccount: [{ account: "Assets:Bank:Checking", balance: 40 }],
       });
       expect(await f.read({ conversion: "units" })).toMatchObject({
         currency: "USD",
         assets: 900,
         netWorth: 900,
+        otherCurrencies: { EUR: 40 },
       });
     } finally {
       await f.close();

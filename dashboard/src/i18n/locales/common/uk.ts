@@ -405,6 +405,11 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Завантажити",
     description: "Auto-generated from code usage",
   },
+  "common.downloadFailed": {
+    message: "Не вдалося завантажити файл. Спробуйте ще раз.",
+    description:
+      "Error shown when the browser could not generate a file download",
+  },
   "common.moreActions": {
     message: "Більше дій",
     description: "Label for dropdown menu with additional actions",
@@ -744,6 +749,12 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Рахунків не знайдено",
     description: "Message when no accounts match search",
   },
+  "component.suggestions.unavailable": {
+    message:
+      "Не вдалося завантажити підказки. Ви все одно можете ввести значення.",
+    description:
+      "Notice under a form field when its suggestions failed to load; the field still accepts typed text",
+  },
   "component.sourceFileCombobox.placeholder": {
     message: "Пошук файлів...",
     description: "Placeholder for ledger file search",
@@ -1074,6 +1085,25 @@ const ukCommon: Record<string, TranslationEntry> = {
     message: "Ви все переглянули",
     description:
       "Description under the What's new heading when every release has been read",
+  },
+  "common.failedRenewal": {
+    message:
+      "Не вдалося списати оплату за {plan} з {card}. Оновіть картку до {date}, щоб зберегти {plan}.",
+    description:
+      "Banner while a renewal payment is past due: the card, the plan and the next retry date",
+  },
+  "common.failedRenewalUpdate": {
+    message: "Оновити спосіб оплати",
+    description: "Button that opens the billing portal to fix a failed renewal",
+  },
+  "common.failedRenewalYourCard": {
+    message: "вашої картки",
+    description: "Stands in for the card name when it is unknown",
+  },
+  "common.failedRenewalDismiss": {
+    message: "Сховати поки що",
+    description:
+      "Accessible name of the button that hides the failed-renewal banner for this session",
   },
 };
 

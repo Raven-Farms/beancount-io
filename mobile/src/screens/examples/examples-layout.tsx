@@ -21,6 +21,7 @@ import { useTranslations } from "@/common/hooks/use-translations";
 import { useToast } from "@/common/hooks";
 import { useTheme } from "@/common/theme";
 import { useNativeSignIn } from "@/screens/welcome/use-native-sign-in";
+import { signInFailureMessageKey } from "@/screens/welcome/failure-message";
 import {
   useExampleCatalog,
   type ExampleAvailability,
@@ -35,7 +36,8 @@ const ExamplesContext = createContext<{
   exit: () => void;
   signInLabel: string;
   signInPending: boolean;
-  signInFailed: boolean;
+  /** The failed sign-in's message, in the user's language; null when none. */
+  signInFailure: string | null;
 } | null>(null);
 
 export function useExamples() {
@@ -54,10 +56,10 @@ function ExamplesSession({ visit }: { visit: GuestVisit }) {
     onStart: beginGuestSignIn,
     onSettled: endGuestSignIn,
   });
-  const failureMessage = t("signInFailed");
+  const failureMessage = failure ? t(signInFailureMessageKey(failure)) : null;
   useEffect(() => {
-    if (failure) showToast({ message: failureMessage, type: "error" });
-  }, [failure, failureMessage, showToast]);
+    if (failureMessage) showToast({ message: failureMessage, type: "error" });
+  }, [failureMessage, showToast]);
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state === "active") void refresh();
@@ -77,7 +79,12 @@ function ExamplesSession({ visit }: { visit: GuestVisit }) {
   const select = useCallback((ledgerId: ExampleId) => {
     const current = guestVisitVar();
     if (!current) return;
-    updateGuestVisit({ ledgerId, resumeFailure: undefined });
+    // A journal link's filters were for the example it named (w21/525).
+    updateGuestVisit({
+      ledgerId,
+      resumeFailure: undefined,
+      filters: undefined,
+    });
     router.replace(exampleRoutes[current.view]);
   }, []);
 
@@ -92,7 +99,7 @@ function ExamplesSession({ visit }: { visit: GuestVisit }) {
         exit,
         signInLabel: t(session ? "home" : "signIn"),
         signInPending: pendingFlow !== null,
-        signInFailed: failure !== null,
+        signInFailure: failureMessage,
       }}
     >
       <ExampleLedgerProvider visit={visit} requestSignIn={requestSignIn}>

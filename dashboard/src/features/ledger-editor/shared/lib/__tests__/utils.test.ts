@@ -10,6 +10,7 @@ import {
   getFileLanguage,
   getFilename,
   getMimeTypeFromExtension,
+  downloadableContent,
   getDownloadMimeType,
   getFileType,
   downloadFile,
@@ -693,6 +694,16 @@ describe("Files Utility", () => {
     });
   });
 
+  describe("downloadableContent (w4/260)", () => {
+    it("returns real content, empty bytes for size 0, null otherwise", () => {
+      expect(downloadableContent({ content: "YQ==", size: 1 })).toBe("YQ==");
+      expect(downloadableContent({ content: null, size: 0 })).toBe("");
+      expect(downloadableContent({ content: "", size: 0 })).toBe("");
+      expect(downloadableContent({ content: null, size: 12 })).toBeNull();
+      expect(downloadableContent({ content: null, size: null })).toBeNull();
+    });
+  });
+
   describe("downloadFile", () => {
     let mockLink: HTMLAnchorElement;
     let appendChildSpy: ReturnType<typeof vi.fn>;
@@ -770,9 +781,34 @@ describe("Files Utility", () => {
       },
     );
 
-    it("should do nothing when base64Content is empty", () => {
-      downloadFile("file.txt", "");
-      expect(createElementSpy).not.toHaveBeenCalled();
+    it("downloads an empty text file as zero bytes (w4/260)", async () => {
+      const blobs: Blob[] = [];
+      const create = vi
+        .spyOn(URL, "createObjectURL")
+        .mockImplementation((blob) => {
+          blobs.push(blob as Blob);
+          return "blob:empty";
+        });
+      const revoke = vi
+        .spyOn(URL, "revokeObjectURL")
+        .mockImplementation(() => undefined);
+      try {
+        downloadFile("empty.txt", "");
+        expect(mockLink.download).toBe("empty.txt");
+        expect(clickSpy).toHaveBeenCalled();
+        expect(blobs).toHaveLength(1);
+        expect(blobs[0]!.size).toBe(0);
+      } finally {
+        create.mockRestore();
+        revoke.mockRestore();
+      }
+    });
+
+    it("downloads an empty binary file as an empty data URL", () => {
+      downloadFile("empty.bin", "");
+      expect(createElementSpy).toHaveBeenCalledWith("a");
+      expect(mockLink.href).toBe("data:application/octet-stream;base64,");
+      expect(mockLink.download).toBe("empty.bin");
     });
 
     it("should create a download link for image files with correct href", () => {

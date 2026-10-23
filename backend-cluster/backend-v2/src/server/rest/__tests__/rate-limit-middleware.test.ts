@@ -10,6 +10,7 @@ import {
   MCP_TRANSPORT_OP_ID,
   OP_BUDGETS,
   clearRouteRateLimitPolicies,
+  clearRateLimitShadows,
   setRouteRateLimitPolicy,
 } from "@/server/api/rate-limit";
 import { mcpRateLimitPolicy } from "@/features/ai-agent/api/mcp-rate-policy";
@@ -42,6 +43,7 @@ function mcpContext(body: unknown): RouterContext {
 }
 
 beforeEach(() => {
+  clearRateLimitShadows();
   counter.mockReset();
   counter.mockResolvedValue({ count: 1, resetInMs: 60_000 });
   // Installed by mounting the route in production (w2/014); the middleware
@@ -61,7 +63,7 @@ describe("the MCP transport budget", () => {
       mcpContext({ jsonrpc: "2.0", method: "initialize", id: 1 }),
       next,
     );
-    expect(counter).toHaveBeenCalledTimes(1);
+    expect(counter).toHaveBeenCalledTimes(2);
     expect(counter.mock.calls[0][0]).toContain(MCP_HANDSHAKE_OP_ID);
     expect(next).toHaveBeenCalled();
   });
@@ -80,16 +82,17 @@ describe("the MCP transport budget", () => {
       mcpContext({ jsonrpc: "2.0", method: "tools/call", id: 2 }),
       async () => {},
     );
-    expect(counter).toHaveBeenCalledTimes(1);
+    expect(counter).toHaveBeenCalledTimes(2);
   });
 
   /** The acceptance criterion, run rather than argued. */
   it("lets a 200-read session through without a 429", async () => {
     const budget = OP_BUDGETS[MCP_TRANSPORT_OP_ID];
-    let charged = 0;
-    counter.mockImplementation(async () => {
-      charged += 1;
-      return { count: charged, resetInMs: 60_000 };
+    const counts = new Map<string, number>();
+    counter.mockImplementation(async (key: string) => {
+      const count = (counts.get(key) ?? 0) + 1;
+      counts.set(key, count);
+      return { count, resetInMs: 60_000 };
     });
 
     const middleware = restRateLimitMiddleware();
@@ -99,7 +102,6 @@ describe("the MCP transport budget", () => {
       mcpContext({ jsonrpc: "2.0", method: "initialize", id: 0 }),
       async () => {},
     );
-    charged = 0;
     for (let call = 0; call < 200; call += 1) {
       await expect(
         middleware(
@@ -108,8 +110,13 @@ describe("the MCP transport budget", () => {
         ),
       ).resolves.not.toThrow();
     }
-    expect(charged).toBe(200);
-    expect(charged).toBeLessThanOrEqual(budget.max);
+    const workCounts = [...counts.entries()].filter(
+      ([key]) =>
+        key.includes(MCP_TRANSPORT_OP_ID) && !key.includes("#handshake"),
+    );
+    expect(workCounts).toHaveLength(2);
+    expect(workCounts.map(([, count]) => count)).toEqual([200, 200]);
+    expect(workCounts.every(([, count]) => count <= budget.max)).toBe(true);
   });
 
   it("still refuses a caller past the transport budget", async () => {
@@ -123,5 +130,21 @@ describe("the MCP transport budget", () => {
         async () => {},
       ),
     ).rejects.toBeInstanceOf(RateLimitedError);
+  });
+
+  it("sets Retry-After when its own authenticated admission refuses before the handler", async () => {
+    counter.mockResolvedValue({
+      count: OP_BUDGETS[MCP_TRANSPORT_OP_ID].max + 1,
+      resetInMs: 30_000,
+    });
+    const ctx = mcpContext({ jsonrpc: "2.0", method: "tools/call", id: 1 });
+    const next = jest.fn(async () => {});
+
+    await expect(restRateLimitMiddleware()(ctx, next)).rejects.toMatchObject({
+      metadata: { retryAfter: 60 },
+    });
+
+    expect(ctx.set).toHaveBeenCalledWith("Retry-After", "60");
+    expect(next).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { AddBudgetDialog } from "../add-budget-dialog";
 
 vi.mock("@apollo/client/react", () => ({
+  useApolloClient: () => ({ refetchQueries: async () => [] }),
   useMutation: vi.fn(),
   useQuery: vi.fn(),
 }));
@@ -52,13 +53,13 @@ vi.mock("@/common/components/ui/date-picker", () => ({
     value,
     onChange,
   }: {
-    value: Date;
-    onChange: (d: Date | undefined) => void;
+    value: string | undefined;
+    onChange: (d: string | undefined) => void;
   }) => (
     <input
       data-testid="date-picker"
-      value={value?.toISOString()}
-      onChange={(e) => onChange(new Date(e.target.value))}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
       readOnly
     />
   ),
@@ -206,6 +207,44 @@ describe("AddBudgetDialog", () => {
     await waitFor(() => {
       expect(screen.getByText("Invalid account")).toBeInTheDocument();
     });
+  });
+
+  it("returns focus to Add Budget after a refused keyboard submission (w4/m42)", async () => {
+    const user = userEvent.setup();
+    let refuse: () => void = () => {};
+    mockUseMutation.mockReturnValue([
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            refuse = () =>
+              resolve({
+                data: {
+                  bulkEntries: { success: false, message: "Invalid account" },
+                },
+              });
+          }),
+      ),
+      { loading: false },
+    ] as unknown as ReturnType<typeof useMutation>);
+
+    render(<AddBudgetDialog {...defaultProps} />);
+    await user.type(
+      screen.getByTestId("account-combobox"),
+      "Expenses:Groceries",
+    );
+    await user.type(screen.getByRole("spinbutton", { name: /amount/i }), "500");
+    const add = screen.getByRole("button", { name: /add budget/i });
+    await waitFor(() => expect(add).not.toBeDisabled());
+
+    add.focus();
+    await user.keyboard("{Enter}");
+    // The locked button cannot hold focus; the dialog keeps it meanwhile.
+    await waitFor(() => expect(add).toBeDisabled());
+    expect(screen.getByRole("dialog")).toHaveFocus();
+
+    refuse();
+    expect(await screen.findByText("Invalid account")).toBeInTheDocument();
+    expect(add).toHaveFocus();
   });
 
   it("calls onSuccess and closes when mutation succeeds", async () => {

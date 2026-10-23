@@ -1,4 +1,5 @@
 import { LedgerRepoService } from "../ledger-repo-service";
+import { FavaApiError } from "@/foundation/fava";
 import { authorizeLedger } from "@/features/ledger/utils/authorize-ledger";
 import type { Identity } from "@/server/api/identity";
 
@@ -59,6 +60,63 @@ describe("LedgerRepoService", () => {
       });
 
       expect(result).toBeNull();
+    });
+
+    // w23/047: an unknown branch read "Ledger resource not found".
+    it("names the branch the ledger does not have", async () => {
+      mockRepoGetAllCommits.mockRejectedValue(
+        new FavaApiError("Not Found", 404, {
+          success: false,
+          error: "The target couldn't be found.",
+        } as never),
+      );
+
+      await expect(
+        service.getLatestCommit({
+          ledgerId: LEDGER_ID,
+          identity: IDENTITY,
+          branchName: "master",
+        }),
+      ).rejects.toMatchObject({
+        category: "NOT_FOUND",
+        message: "Branch with ID 'master' not found",
+      });
+    });
+
+    it("keeps any other ledger failure as the ledger's", async () => {
+      mockRepoGetAllCommits.mockRejectedValue(
+        new FavaApiError("down", 503, {
+          success: false,
+          error: "down",
+        } as never),
+      );
+
+      await expect(
+        service.getLatestCommit({ ledgerId: LEDGER_ID, identity: IDENTITY }),
+      ).rejects.toMatchObject({ category: "SERVICE_UNAVAILABLE" });
+    });
+
+    // w21/314: only the commit's own fields are read.
+    it("asks Gitea for one commit without stats, verification or files", async () => {
+      mockRepoGetAllCommits.mockResolvedValue({
+        data: { success: true, data: [] },
+      });
+
+      await service.getLatestCommit({
+        ledgerId: LEDGER_ID,
+        identity: IDENTITY,
+      });
+
+      expect(mockRepoGetAllCommits).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          limit: 1,
+          stat: false,
+          verification: false,
+          files: false,
+        }),
+      );
     });
 
     it("maps commit fields to LatestCommitResult", async () => {
@@ -150,7 +208,13 @@ describe("LedgerRepoService", () => {
       expect(mockRepoGetAllCommits).toHaveBeenCalledWith(
         "testowner",
         "testledger",
-        { sha: "main", limit: 1 },
+        {
+          sha: "main",
+          limit: 1,
+          stat: false,
+          verification: false,
+          files: false,
+        },
       );
     });
 
@@ -168,7 +232,13 @@ describe("LedgerRepoService", () => {
       expect(mockRepoGetAllCommits).toHaveBeenCalledWith(
         "testowner",
         "testledger",
-        { sha: "develop", limit: 1 },
+        {
+          sha: "develop",
+          limit: 1,
+          stat: false,
+          verification: false,
+          files: false,
+        },
       );
     });
 
@@ -208,9 +278,22 @@ describe("LedgerRepoService", () => {
         data: {
           success: true,
           data: [
-            { path: "z.bean", name: "z.bean", type: "file" },
-            { path: "sub", name: "sub", type: "dir" },
-            { path: "a.bean", name: "a.bean", type: "file" },
+            {
+              path: "z.bean",
+              name: "z.bean",
+              type: "file",
+              size: 9,
+              sha: "sz",
+            },
+            { path: "sub", name: "sub", type: "dir", size: 0, sha: "ss" },
+            {
+              path: "a.bean",
+              name: "a.bean",
+              type: "file",
+              size: 4,
+              sha: "sa",
+              last_commit_sha: "c1",
+            },
           ],
         },
       });
@@ -220,16 +303,41 @@ describe("LedgerRepoService", () => {
         identity: IDENTITY,
       });
 
+      // w21/200: size, sha and the last commit travel with the listing.
       expect(result).toEqual([
-        { path: "sub", name: "sub", type: "dir" },
-        { path: "a.bean", name: "a.bean", type: "file" },
-        { path: "z.bean", name: "z.bean", type: "file" },
+        {
+          path: "sub",
+          name: "sub",
+          type: "dir",
+          size: 0,
+          sha: "ss",
+          lastCommitSha: null,
+        },
+        {
+          path: "a.bean",
+          name: "a.bean",
+          type: "file",
+          size: 4,
+          sha: "sa",
+          lastCommitSha: "c1",
+        },
+        {
+          path: "z.bean",
+          name: "z.bean",
+          type: "file",
+          size: 9,
+          sha: "sz",
+          lastCommitSha: null,
+        },
       ]);
     });
 
     it("passes dirPath through to the fava call", async () => {
       mockGetLedgerDirContent.mockResolvedValue({
-        data: { success: true, data: [] },
+        data: {
+          success: true,
+          data: [{ path: "subdir/a.bean", name: "a.bean", type: "file" }],
+        },
       });
       await service.listDirContent({
         ledgerId: LEDGER_ID,

@@ -172,7 +172,7 @@ describe("missing account route", () => {
         [...document.head.querySelectorAll("title")].map(
           (title) => title.textContent,
         ),
-      ).toEqual(["Page Not Found"]);
+      ).toEqual(["Page Not Found — /ledger/alice/books/account/Assets%3ACash"]);
       expect(
         document.head.querySelector('meta[name="robots"]'),
       ).toHaveAttribute("content", "noindex, follow");

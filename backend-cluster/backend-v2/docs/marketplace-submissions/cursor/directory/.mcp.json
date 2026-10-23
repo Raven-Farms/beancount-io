@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "beancount": {
+      "url": "https://beancount.io/api-gateway/mcp"
+    }
+  }
+}

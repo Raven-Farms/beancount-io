@@ -17,8 +17,16 @@ describe("below-fold test identifiers", () => {
     const source = read(
       "screens/reports-screen/components/category-breakdown.tsx",
     );
-    expect(count(source, "testID={`category-row-${node.account}`}")).toBe(4);
-    expect(count(source, "accessibilityLabel={node.name}")).toBe(2);
+    expect(count(source, "testID={`category-row-${node.account}`}")).toBe(2);
+    // Child rows, where a parent's own-postings row is told apart (w21/174).
+    expect(
+      count(
+        source,
+        'testID={`category-row-${node.account}${node.own ? "-own" : ""}`}',
+      ),
+    ).toBe(2);
+    expect(count(source, "accessibilityLabel={node.name}")).toBe(1);
+    expect(count(source, "accessibilityLabel={name}")).toBe(1);
   });
 
   it("identifies Home budget rows by account and currency", () => {

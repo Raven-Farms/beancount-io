@@ -116,6 +116,10 @@ async function fixture(
     failCommit: false,
     unbalanced: false,
     wouldBreak: false,
+    /** bcio `account_file` routing template, when the ledger routes opens. */
+    accountFile: null as string | null,
+    /** Files the ledger included from the entry point for this write. */
+    includedFiles: [] as string[],
   };
   const errorCalls = { count: 0 };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
@@ -146,7 +150,13 @@ async function fixture(
       );
     }
     committed.push(...body.entries);
-    return envelope(null);
+    // The ledger answers each committed entry's hash (w23/060).
+    return envelope({
+      entry_hashes: body.entries.map(
+        (_entry: unknown, index: number) => `hash-${index}`,
+      ),
+      included_files: state.includedFiles,
+    });
   });
   const createFile = jest.fn();
   const fava = {
@@ -165,7 +175,10 @@ async function fixture(
       entries: { addBulkEntries: write },
       reports: {
         getLedgerBcioOptions: async () =>
-          envelope({ default_file: "main.bean" }),
+          envelope({
+            default_file: "main.bean",
+            account_file: state.accountFile,
+          }),
       },
       ledgers: {
         getLedgerFile: async () => envelope({ path: "main.bean" }),
@@ -255,7 +268,7 @@ async function fixture(
         const response = await graphql({
           schema,
           source:
-            'mutation($entries:[AddEntryInput!]!,$allowInvalid:Boolean) { bulkEntries(ledgerId:"alice/main",entries:$entries,allowInvalid:$allowInvalid) { success message } }',
+            'mutation($entries:[AddEntryInput!]!,$allowInvalid:Boolean) { bulkEntries(ledgerId:"alice/main",entries:$entries,allowInvalid:$allowInvalid) { success message entryHashes } }',
           variableValues: { entries: input, ...opts },
           contextValue: {
             identity: caller,
@@ -298,9 +311,14 @@ it.each([identity, { ...identity, ledgerScope: undefined }])(
     for (const surface of ["rest", "gql", "mcp"]) {
       const f = await fixture(caller);
       try {
-        // REST and GraphQL keep the `{success, message}` contract; MCP
-        // carries the write outcome (summary first, then wrote, entryHashes,
-        // validation) around the same committed batch.
+        // REST and GraphQL keep the `{success, message}` contract plus the
+        // committed entries' hashes (w23/060); MCP carries the write outcome
+        // (summary first, then wrote, entryHashes, validation) around the
+        // same committed batch.
+        const entryHashes = Array.from(
+          { length: 10 },
+          (_hash, index) => `hash-${index}`,
+        );
         const { success, result } = await f.call(surface);
         expect({ success, result }).toEqual({
           success: true,
@@ -313,14 +331,18 @@ it.each([identity, { ...identity, ledgerScope: undefined }])(
                   message: "Added 10 entries successfully",
                   files: ["main.bean"],
                   wrote: [{ path: "main.bean" }],
-                  entryHashes: [],
+                  entryHashes,
                   validation: {
                     errorsBefore: 0,
                     errorsAfter: 0,
                     newErrors: [],
                   },
                 }
-              : { success: true, message: "Added 10 entries successfully" },
+              : {
+                  success: true,
+                  message: "Added 10 entries successfully",
+                  entryHashes,
+                },
         });
         expect(f.write).toHaveBeenCalledTimes(1);
         expect(f.committed).toHaveLength(10);
@@ -376,7 +398,7 @@ it("reports an unbalanced write in the MCP validation envelope", async () => {
         message: "Added 1 entry successfully",
         files: ["main.bean"],
         wrote: [{ path: "main.bean" }],
-        entryHashes: [],
+        entryHashes: ["hash-0"],
         validation: {
           errorsBefore: 0,
           errorsAfter: 1,
@@ -869,6 +891,105 @@ describe.each(["rest", "gql", "mcp"])(
         ]);
         expect(result.success).toBe(true);
         expect(f.committed).toHaveLength(1);
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+/** w4/m38: years 0001–0099 are real dates, not 1900s, on every surface. */
+describe.each(["rest", "gql", "mcp"])(
+  "early-year entries via %s",
+  (surface) => {
+    const open = (date: string) => [
+      {
+        type: "open" as const,
+        entry: {
+          date,
+          account: "Assets:Qa-20261020:Date",
+          currencies: ["USD"],
+        },
+      },
+    ];
+
+    it.each([
+      ["0001-01-01", "accounts/0001.bean"],
+      ["0099-01-01", "accounts/0099.bean"],
+      ["0100-01-01", "accounts/0100.bean"],
+    ])("writes %s exactly once, routed to %s", async (date, filename) => {
+      const f = await fixture();
+      f.state.accountFile = "accounts/{year}.bean";
+      try {
+        expect((await f.call(surface, open(date))).success).toBe(true);
+        expect(f.write).toHaveBeenCalledTimes(1);
+        expect(f.committed).toEqual([
+          expect.objectContaining({
+            type: "open",
+            filename,
+            item: expect.objectContaining({ date }),
+          }),
+        ]);
+      } finally {
+        await f.close();
+      }
+    });
+
+    it("refuses year 0000 atomically, with the rest of its batch", async () => {
+      const f = await fixture();
+      try {
+        const result = await f.call(surface, [
+          ...open("0099-01-01"),
+          ...open("0000-01-01"),
+        ]);
+        expect(result.success).toBe(false);
+        expect(JSON.stringify(result)).toContain("0000-01-01");
+        expect(f.write).not.toHaveBeenCalled();
+        expect(f.committed).toEqual([]);
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+// w23/062: the ledger includes a routed file nothing loaded; every surface
+// says so, and MCP lists the entry point among the files written.
+describe.each(["rest", "gql", "mcp"])(
+  "a routed file the ledger includes via %s",
+  (surface) => {
+    it("names the include in the result", async () => {
+      const f = await fixture();
+      f.state.accountFile = "accounts/{year}.bean";
+      f.state.includedFiles = ["accounts/2028.bean"];
+      try {
+        const result = await f.call(surface, [
+          {
+            type: "open" as const,
+            entry: {
+              date: "2028-01-04",
+              account: "Assets:Qa-20261022:Routed",
+              currencies: ["USD"],
+            },
+          },
+        ]);
+        expect(result.success).toBe(true);
+        const note = "main.bean now includes accounts/2028.bean";
+        const data = result.result as {
+          message?: string;
+          summary?: string;
+          wrote?: { path: string }[];
+        };
+        expect(data.message).toBe(`Added 1 entry successfully; ${note}`);
+        if (surface === "mcp") {
+          expect(data.summary).toContain(
+            `Added 1 entry to accounts/2028.bean; ${note}`,
+          );
+          expect(data.wrote).toEqual([
+            { path: "accounts/2028.bean" },
+            { path: "main.bean" },
+          ]);
+        }
       } finally {
         await f.close();
       }

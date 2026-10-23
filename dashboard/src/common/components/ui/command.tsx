@@ -6,12 +6,49 @@ import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "@/common/lib/utils/utils.ts";
 import { Dialog, DialogContent } from "@/common/components/ui/dialog.tsx";
 
+/**
+ * cmdk 1.1.1 refreshes the input's aria-activedescendant only when the
+ * selected value changes, so a filter that leaves the already-selected item
+ * as the only row never announces it (dip/cmdk#413; w4/252). Keep the input
+ * pointing at the row cmdk itself renders as selected, whenever that row or
+ * its selection changes. cmdk's own attribute agrees once it catches up.
+ */
+function useActiveDescendantSync(root: React.RefObject<HTMLDivElement | null>) {
+  React.useEffect(() => {
+    const element = root.current;
+    if (!element || typeof MutationObserver === "undefined") return;
+    const sync = () => {
+      const input = element.querySelector<HTMLInputElement>("[cmdk-input]");
+      if (!input) return;
+      const selected = element.querySelector<HTMLElement>(
+        '[cmdk-item][aria-selected="true"]',
+      );
+      const id = selected?.id ?? null;
+      if (input.getAttribute("aria-activedescendant") === id) return;
+      if (id) input.setAttribute("aria-activedescendant", id);
+      else input.removeAttribute("aria-activedescendant");
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(element, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-selected", "aria-activedescendant", "id"],
+    });
+    return () => observer.disconnect();
+  }, [root]);
+}
+
 function Command({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof CommandPrimitive>) {
+  const root = React.useRef<HTMLDivElement | null>(null);
+  useActiveDescendantSync(root);
   return (
     <CommandPrimitive
+      ref={root}
       className={cn(
         "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
         className,
@@ -36,7 +73,7 @@ function CommandDialog({ children, ...props }: DialogProps) {
 function CommandInput({
   className,
   ...props
-}: React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
     <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
       {/* <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" /> */}
@@ -108,7 +145,7 @@ function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        "relative flex cursor-pointer gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "relative flex cursor-pointer gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground data-[selected=true]:forced-selected data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}

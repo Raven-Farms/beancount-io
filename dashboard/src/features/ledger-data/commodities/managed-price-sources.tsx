@@ -1,6 +1,8 @@
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
 import { RefreshCw, Rss } from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/common/components/ui/alert";
 import { Badge } from "@/common/components/ui/badge";
 import { Button } from "@/common/components/ui/button";
 import {
@@ -11,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/common/components/ui/card";
+import { usePendingAction } from "@/common/hooks/use-pending-action";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { formatDateTime } from "@/common/lib/format";
 import {
@@ -102,6 +105,7 @@ export function ManagedPriceSources({
   canWrite: boolean;
 }) {
   const { t } = useTranslations();
+  const client = useApolloClient();
   const { data } = useQuery(GetLedgerManagedPricesDocument, {
     variables: { ledgerId },
     skip: !ledgerId,
@@ -120,13 +124,32 @@ export function ManagedPriceSources({
           data: { getLedgerManagedPrices: result.refreshLedgerManagedPrices },
         });
       },
-      // A new revision changes the prices the charts plot, not just the status.
-      refetchQueries: [
-        { query: GetLedgerCommoditiesDocument, variables: { ledgerId } },
-      ],
-      awaitRefetchQueries: true,
     },
   );
+  // A new revision changes the prices the charts plot, not just the status.
+  // Reading them again is a separate step: awaited inside the refresh, a
+  // failed read reported the acknowledged refresh as failed (w4/332). The
+  // charts keep what they show, and Reload charts repeats only that read.
+  const [chartsReloadFailed, setChartsReloadFailed] = useState(false);
+  const { run: runReload, pending: reloading } = usePendingAction();
+  const refreshButton = useRef<HTMLButtonElement>(null);
+  const reloadCharts = () =>
+    client
+      .query({
+        query: GetLedgerCommoditiesDocument,
+        variables: { ledgerId },
+        fetchPolicy: "network-only",
+      })
+      .then(
+        () => {
+          setChartsReloadFailed(false);
+          return true;
+        },
+        () => {
+          setChartsReloadFailed(true);
+          return false;
+        },
+      );
 
   const sources = data?.getLedgerManagedPrices ?? [];
   if (sources.length === 0) return null;
@@ -136,8 +159,18 @@ export function ManagedPriceSources({
       await refresh();
     } catch {
       toast.error(t("page.commodities.refreshPricesFailed"));
+      return;
     }
+    await reloadCharts();
   };
+
+  // Reload charts leaves with its alert; hand focus to the card's action.
+  const onReloadCharts = () =>
+    runReload(async () => {
+      const landed = await reloadCharts();
+      if (landed) refreshButton.current?.focus();
+      return landed;
+    });
 
   return (
     <Card>
@@ -152,6 +185,7 @@ export function ManagedPriceSources({
         {canWrite && (
           <CardAction>
             <Button
+              ref={refreshButton}
               variant="outline"
               size="sm"
               onClick={onRefresh}
@@ -165,7 +199,23 @@ export function ManagedPriceSources({
           </CardAction>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        {chartsReloadFailed && (
+          <Alert>
+            <AlertDescription className="flex flex-wrap items-center gap-2">
+              <span>{t("page.commodities.chartsReloadFailed")}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReloadCharts}
+                disabled={reloading}
+              >
+                <RefreshCw className={reloading ? "animate-spin" : undefined} />
+                {t("page.commodities.reloadCharts")}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <ul className="divide-y">
           {sources.map((source) => (
             <ManagedPriceSourceRow key={source.url} source={source} />

@@ -68,12 +68,17 @@ describe("shortNumber", () => {
 
   it("handles very small positive numbers", () => {
     expect(shortNumber(0.1)).toBe("0.1");
-    expect(shortNumber(0.01)).toBe("0.0");
+    // Two significant digits below 1: one decimal read 0.01 as "0.0" and drew a
+    // BTC chart's axis as 0.0, 0.0, 0.0 (w21/236).
+    expect(shortNumber(0.01)).toBe("0.01");
+    expect(shortNumber(0.042)).toBe("0.042");
+    expect(shortNumber(0.25)).toBe("0.25");
+    expect(shortNumber(0.0005)).toBe("0.0005");
   });
 
   it("handles very small negative numbers", () => {
     expect(shortNumber(-0.1)).toBe("-0.1");
-    expect(shortNumber(-0.01)).toBe("-0.0");
+    expect(shortNumber(-0.01)).toBe("-0.01");
   });
 
   it("handles empty string", () => {
@@ -233,5 +238,69 @@ describe("formatUnits", () => {
 
   it("clamps a scale toFixed would reject", () => {
     expect(formatUnits(1.5, "XYZ", 99)).toBe("1.50000000000000000000 XYZ");
+  });
+});
+
+// w21/070: a JPY ledger read "円1,500.00" — currency-icons' 円 as a prefix and
+// cents on a currency with no minor unit.
+describe("money at its currency's minor unit", () => {
+  it("shows the yen and won whole, with the ¥ sign", () => {
+    expect(formatMoneyWithCurrency(1500, "JPY")).toBe("¥1,500");
+    expect(formatSignedMoneyWithCurrency(1500, "JPY", true)).toBe("+¥1,500");
+    expect(formatMoneyWithCurrency(50000, "KRW")).toBe("₩50,000");
+    expect(formatShortMoneyWithCurrency(1500, "JPY")).toBe("¥1.5K");
+  });
+
+  it("gives three-decimal dinars their third place", () => {
+    const kwd = formatSignedMoneyWithCurrency(-12.345, "KWD");
+    expect(kwd.startsWith("-")).toBe(true);
+    expect(kwd.endsWith("12.345")).toBe(true);
+  });
+
+  it("leaves two-decimal currencies and custom commodities alone", () => {
+    expect(formatMoneyWithCurrency(1234.5, "USD")).toBe("$1,234.50");
+    expect(formatMoneyWithCurrency(1234.5, "MUSD")).toBe("1,234.50 MUSD");
+    expect(formatMoneyWithCurrency(10, "CNY")).toBe("¥10.00");
+  });
+});
+
+// w21/125: a dust balance arrived as "5e-7" and read "0 BTC".
+describe("amountScale with exponent notation", () => {
+  const { amountScale } = require("../number-utils");
+  it("moves the point by the exponent", () => {
+    expect(amountScale("5e-7")).toBe(7);
+    expect(amountScale("1.5e-7")).toBe(8);
+    expect(amountScale("1.25E+2")).toBe(0);
+    expect(amountScale("0.0000005")).toBe(7);
+    expect(formatUnits(Number("5e-7"), "BTC", amountScale("5e-7"))).toBe(
+      "0.0000005 BTC",
+    );
+  });
+});
+
+// w21/177: compact amounts used English K/M/B in every language.
+describe("compact amounts in the app's language", () => {
+  it("abbreviates as each language does", () => {
+    expect(formatShortMoneyWithCurrency(1500, "USD", "de")).toBe("1,5 Tsd. $");
+    expect(formatShortMoneyWithCurrency(305e9, "USD", "de")).toBe("305 Mrd. $");
+    expect(formatShortMoneyWithCurrency(1500, "USD", "ru")).toBe("1,5 тыс. $");
+    expect(formatShortMoneyWithCurrency(-2.5e6, "USD", "fr")).toBe("-2,5 M $");
+    expect(formatShortMoneyWithCurrency(1500, "USD", "zh")).toBe("$1.5千");
+  });
+
+  it("leaves English as it was", () => {
+    expect(formatShortMoneyWithCurrency(1500, "USD")).toBe("$1.5K");
+    expect(formatShortMoneyWithCurrency(1500, "USD", "en")).toBe("$1.5K");
+    expect(formatShortMoneyWithCurrency(305e9, "USD", "en")).toBe("$305B");
+  });
+
+  it("labels a currency with no symbol by its code", () => {
+    expect(formatShortMoneyWithCurrency(1500, "MUSD", "de")).toBe(
+      "1,5 Tsd. MUSD",
+    );
+  });
+
+  it("falls back to English for an unknown language", () => {
+    expect(formatShortMoneyWithCurrency(1500, "USD", "xx")).toBe("$1.5K");
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  budgetGroupDirection,
   calculateBudgetForInterval,
   groupBudgetEntries,
   readSparseBalanceAmount,
@@ -32,6 +33,55 @@ function historyEntry(
 }
 
 describe("groupBudgetEntries", () => {
+  it("makes the later of two same-date directives current (w4/232)", () => {
+    // Newest first, as the journal returns them; the second write is a cadence change.
+    const groups = groupBudgetEntries(
+      [
+        budgetEntry(
+          "2026-10-20",
+          "Expenses:Food",
+          "weekly",
+          "50",
+          "USD",
+          "newer",
+        ),
+        budgetEntry(
+          "2026-10-20",
+          "Expenses:Food",
+          "monthly",
+          "123.45",
+          "USD",
+          "older",
+        ),
+        budgetEntry(
+          "2026-09-01",
+          "Expenses:Food",
+          "monthly",
+          "100",
+          "USD",
+          "first",
+        ),
+      ],
+      "2026-10-25",
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      interval: "weekly",
+      amount: "50 USD",
+      entry_hash: "newer",
+    });
+    expect(groups[0].budgetHistory.map((entry) => entry.entry_hash)).toEqual([
+      "first",
+      "older",
+      "newer",
+    ]);
+    // From 2026-10-20 on, the weekly 50 applies, never the older monthly target.
+    expect(
+      calculateBudgetForInterval("2026-10-25", "day", groups[0].budgetHistory),
+    ).toBeCloseTo(50 / 7);
+  });
+
   it("keeps one history per account and currency when cadence changes", () => {
     const groups = groupBudgetEntries([
       budgetEntry(
@@ -170,5 +220,40 @@ describe("readSparseBalanceAmount", () => {
 
   it("keeps malformed amounts distinct from sparse zeros", () => {
     expect(readSparseBalanceAmount({ USD: "not-a-number" }, "USD")).toBeNull();
+  });
+});
+
+// w21/475: a zeroed income target stores "0", whose sign says nothing, and the
+// chart ran on expense rules.
+describe("budgetGroupDirection", () => {
+  const group = (amounts: string[]) => ({
+    amount: amounts[amounts.length - 1]!,
+    budgetHistory: amounts.map((amount, index) =>
+      historyEntry(`2026-0${index + 1}-01`, "monthly", amount),
+    ),
+  });
+
+  it("is income for a negative target and expense for a positive one", () => {
+    expect(budgetGroupDirection(group(["-3000 USD"]))).toBe(-1);
+    expect(budgetGroupDirection(group(["300 USD"]))).toBe(1);
+  });
+
+  it("keeps an income target's direction after it is zeroed", () => {
+    expect(budgetGroupDirection(group(["-3000 USD", "0 USD"]))).toBe(-1);
+    expect(
+      budgetGroupDirection(group(["-3000 USD", "-3500 USD", "0 USD", "0 USD"])),
+    ).toBe(-1);
+  });
+
+  it("lets the newest entry with a sign decide", () => {
+    expect(budgetGroupDirection(group(["-3000 USD", "200 USD"]))).toBe(1);
+    expect(budgetGroupDirection(group(["200 USD", "-3000 USD", "0 USD"]))).toBe(
+      -1,
+    );
+  });
+
+  it("reads a budget that was only ever zero as an expense cap", () => {
+    expect(budgetGroupDirection(group(["0 USD"]))).toBe(1);
+    expect(budgetGroupDirection(group(["0 USD", "0 USD"]))).toBe(1);
   });
 });

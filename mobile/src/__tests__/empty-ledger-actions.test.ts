@@ -81,12 +81,19 @@ let ledgerId: string;
 let permissionLedgerId: string;
 let permissions: { push: boolean; admin: boolean };
 let permissionError: Error | undefined;
+// A permission read answered that access is gone. A refetch that merely
+// failed in transit keeps the cached grant (w21/151).
+const accessLost = () =>
+  Object.assign(new Error("Forbidden"), {
+    graphQLErrors: [{ extensions: { code: "FORBIDDEN" } }],
+  });
 let guest: any;
 let filters: ScopedTransactionFilters;
 let routes: any[];
 let journalRefetches: number;
 let homeRefetches: string[];
 let journalVariables: any;
+let fetchMoreOptions: any;
 const refetchJournal = async () => {
   journalRefetches += 1;
 };
@@ -157,6 +164,7 @@ function load(relative: string): any {
           Pressable: "Pressable",
           ActivityIndicator: "ActivityIndicator",
           SectionList,
+          Platform: { OS: "ios" },
           StyleSheet: {
             create: (styles: any) => styles,
             flatten: (styles: any) => Object.assign({}, ...[styles].flat()),
@@ -181,7 +189,9 @@ function load(relative: string): any {
             return {
               ...journal,
               refetch: refetchJournal,
-              fetchMore: async () => {},
+              fetchMore: async (options: any) => {
+                fetchMoreOptions = options;
+              },
               networkStatus: 7,
             };
           },
@@ -227,6 +237,14 @@ function load(relative: string): any {
         return { ThemedRefreshControl: "RefreshControl" };
       if (id === "@/components/valuation-sheet")
         return { ValuationSheet: "ValuationSheet" };
+      if (id.endsWith("/use-today"))
+        return {
+          useToday: () => {
+            const now = new Date();
+            const pad = (n: number) => String(n).padStart(2, "0");
+            return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+          },
+        };
       if (id.endsWith("/use-keyboard-height"))
         return { useKeyboardHeight: () => 0 };
       if (id === "./transactions-header")
@@ -249,6 +267,8 @@ function load(relative: string): any {
         return { useBalanceSheetBasis: () => homeRead("basis") };
       if (id.endsWith("/use-ledger-prices"))
         return { useLedgerPrices: () => homeRead("prices") };
+      if (id.endsWith("/use-ledger-errors"))
+        return { useLedgerErrors: () => homeRead("errors") };
       const otherCards: Record<string, string> = {
         "account-charts-card": "AccountChartsCard",
         "spending-card": "SpendingCard",
@@ -344,7 +364,9 @@ for (const [name, screen] of [
         render(screen);
         expect(journalRefetches).toBe(1);
         expect(homeRefetches.sort()).toEqual(
-          name === "Home" ? ["balances", "basis", "metadata", "prices"] : [],
+          name === "Home"
+            ? ["balances", "basis", "errors", "metadata", "prices"]
+            : [],
         );
         expect(AddTransactionCallback.hasFn()).toBe(false);
         await runAddTransactionCallback();
@@ -355,15 +377,14 @@ for (const [name, screen] of [
     for (const access of [
       "reader",
       "guest",
-      "failed permission query",
+      "lost access",
       "stale other ledger permissions",
     ] as const) {
       it(`does not offer write controls for ${access}`, () => {
         if (access === "reader") permissions = { push: false, admin: false };
         if (access === "guest")
           guest = { transactionFilters: transactionFiltersVar };
-        if (access === "failed permission query")
-          permissionError = new Error("Offline");
+        if (access === "lost access") permissionError = accessLost();
         if (access === "stale other ledger permissions")
           permissionLedgerId = "user/previous";
         const tree = render(screen);
@@ -427,7 +448,7 @@ describe("Transactions narrowed empty results", () => {
     const searched = render(TransactionsScreen);
     expect(actions(searched).length).toBe(0);
     expect(text(searched).includes("transactionsNoSearchResults")).toBe(true);
-    expect(journalVariables.query.filter).toBe('"missing merchant"');
+    expect(journalVariables.query.filter).toBe('"missing\\s+merchant"');
   });
 
   it("keeps account-filter no-results separate from first-transaction onboarding", () => {
@@ -466,14 +487,111 @@ describe("Home holdings sheet", () => {
     expect(sheetAccess()).toBe(true);
   });
 
-  it("withholds it from readers, guests and unknown permissions", () => {
+  it("withholds it from readers, guests and a lost grant", () => {
     permissions = { push: false, admin: false };
     expect(sheetAccess()).toBe(false);
     permissions = { push: true, admin: false };
     guest = { transactionFilters: transactionFiltersVar };
     expect(sheetAccess()).toBe(false);
     guest = null;
-    permissionError = new Error("Offline");
+    permissionError = accessLost();
     expect(sheetAccess()).toBe(false);
+  });
+});
+
+// w21/081: a failed pull to refresh replaced the loaded list with the raw
+// Apollo message.
+describe("Transactions after a failed refresh", () => {
+  it("keeps the rows under the stale banner", () => {
+    journal.data!.getLedgerJournal = { data: [transaction], total: 1 };
+    journal.error = new Error("Network request failed");
+    const tree = render(TransactionsScreen);
+    expect(find(tree, "EntryRow").length).toBe(1);
+    expect(find(tree, "StaleDataBanner").length).toBe(1);
+    expect(text(tree).includes("transactionsLoadError")).toBe(false);
+    expect(text(tree).includes("Network request failed")).toBe(false);
+  });
+
+  it("still shows the failure with nothing loaded, without the raw error", () => {
+    journal = { loading: false, error: new Error("Network request failed") };
+    const tree = render(TransactionsScreen);
+    expect(find(tree, "EntryRow").length).toBe(0);
+    expect(text(tree).includes("transactionsLoadError")).toBe(true);
+    expect(text(tree).includes("Network request failed")).toBe(false);
+  });
+});
+
+// w21/114: a search typed on one ledger went on filtering the next one's
+// journal after a drawer switch.
+describe("Transactions search across a ledger switch", () => {
+  it("starts the other ledger with an empty box and the full journal", () => {
+    const tree = render(TransactionsScreen);
+    find(tree, "TransactionsHeader")[0].props.onSearchChange("farm");
+    const searched = render(TransactionsScreen);
+    expect(find(searched, "TransactionsHeader")[0].props.searchQuery).toBe(
+      "farm",
+    );
+    expect(journalVariables.query.filter).toBe('"farm"');
+
+    ledgerId = "user/other";
+    permissionLedgerId = ledgerId;
+    const switched = render(TransactionsScreen);
+    expect(find(switched, "TransactionsHeader")[0].props.searchQuery).toBe("");
+    expect(journalVariables.query.filter).toBe(undefined);
+  });
+});
+
+// w21/116: a load-more page requested before a ledger switch or filter change
+// was appended to the new list when it landed.
+describe("Transactions load-more across a list change", () => {
+  const latePage = {
+    fetchMoreResult: {
+      getLedgerJournal: {
+        data: [{ ...transaction, entry_hash: "entry-2" }],
+        total: 2,
+      },
+    },
+  };
+  const startLoadMore = async () => {
+    journal.data!.getLedgerJournal = { data: [transaction], total: 2 };
+    fetchMoreOptions = undefined;
+    const tree = render(TransactionsScreen);
+    await find(tree, "SectionList")[0].props.onEndReached();
+    expect(fetchMoreOptions === undefined).toBe(false);
+  };
+
+  it("drops a page that lands after the ledger changed", async () => {
+    await startLoadMore();
+    ledgerId = "user/other";
+    permissionLedgerId = ledgerId;
+    render(TransactionsScreen);
+    const prev = { getLedgerJournal: { data: [], total: 0 } };
+    expect(fetchMoreOptions.updateQuery(prev, latePage)).toBe(prev);
+  });
+
+  it("still appends a page for the list it was requested for", async () => {
+    await startLoadMore();
+    const prev = { getLedgerJournal: { data: [transaction], total: 2 } };
+    const next = fetchMoreOptions.updateQuery(prev, latePage);
+    expect(
+      next.getLedgerJournal.data.map((row: any) => row.entry_hash).join(","),
+    ).toBe("entry-1,entry-2");
+  });
+});
+
+describe("merchant detail load-more across a list change", () => {
+  it("drops a page requested for a list no longer shown", () => {
+    const source = fs.readFileSync(
+      path.join(
+        sourceRoot,
+        "screens",
+        "merchant-detail-screen",
+        "merchant-detail-screen.tsx",
+      ),
+      "utf8",
+    );
+    expect(
+      source.includes("if (listKeyRef.current !== requestedFor) return prev;"),
+    ).toBe(true);
   });
 });

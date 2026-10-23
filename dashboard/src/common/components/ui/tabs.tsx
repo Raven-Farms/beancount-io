@@ -63,9 +63,10 @@ function TabsTrigger({
         // a transparent border becomes a visible one, a background fill stops
         // distinguishing anything, and box-shadow is dropped entirely. That
         // left every tab looking identical. System colour keywords are honoured
-        // in that mode, so the selected tab claims Highlight and the rest sink
-        // into Canvas. The focus ring is a shadow, so focus gets its own
-        // outline here to stay separately visible.
+        // in that mode, so the selected tab claims Highlight, with a readable
+        // label (w4/m43), and the rest sink into Canvas. The focus ring is a
+        // shadow, so focus gets its own outline here to stay separately
+        // visible.
         "forced-colors:focus-visible:[outline-style:solid] forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-offset-2 forced-colors:focus-visible:outline-[CanvasText]",
         // Default variant styles (pill-style)
         variant === "default" &&
@@ -76,7 +77,7 @@ function TabsTrigger({
             "dark:data-[state=active]:text-foreground dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30",
             "transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1",
             "forced-colors:border-[Canvas]",
-            "forced-colors:data-[state=active]:border-[Highlight] forced-colors:data-[state=active]:bg-[Highlight] forced-colors:data-[state=active]:text-[HighlightText]",
+            "data-[state=active]:forced-selected",
           ),
         // Underline variant styles (GitHub-style)
         variant === "underline" &&

@@ -1,5 +1,5 @@
 import { leafName } from "../account-util";
-import { orderAccountsByRootPriority } from "../account-root";
+import { orderAccountsByRootPriority, type RootNames } from "../account-root";
 
 // Curated payee → domain map. Keys are lowercase; sorted longest-first at
 // runtime so "uber eats" wins over "uber" when both could match.
@@ -196,15 +196,59 @@ const COMMON_WORD_KEYS = new Set([
   "zoom",
 ]);
 
+/**
+ * Names a statement puts before `*` when the merchant follows it: payment
+ * processors, which are never the merchant, and marketplaces that also sell
+ * under their own name. "PAYPAL *NETFLIX" is Netflix, not PayPal (w21/270).
+ */
+const PAYMENT_PROCESSORS = new Set(["paypal", "square", "venmo", "stripe"]);
+const AGGREGATORS = new Set([
+  "google",
+  "uber",
+  "amazon",
+  "doordash",
+  "grubhub",
+  "apple",
+]);
+
+/**
+ * "PAYPAL *NETFLIX" → the merchant after the star. A processor with a merchant
+ * we do not recognise has no logo (its own would be the wrong company); an
+ * aggregator falls back to its own brand, read with the star as a space so
+ * "UBER *EATS" is "uber eats". Null when the text is not that shape.
+ */
+function resolveStarMerchant(
+  normalized: string,
+): { text: string; fallback: string | null } | { brand: string | null } | null {
+  const star = normalized.indexOf("*");
+  if (star <= 0) return null;
+  const head = normalized.slice(0, star).trim();
+  const tail = normalized.slice(star + 1).trim();
+  const isProcessor = PAYMENT_PROCESSORS.has(head);
+  if (!tail || (!isProcessor && !AGGREGATORS.has(head))) return null;
+  const byMerchant = matchBrand(tail);
+  if (byMerchant) return { brand: byMerchant };
+  // Read as "head tail" for a more specific key ("uber eats"); if nothing
+  // matches, the head's own brand stands. "apple" is a common word that matches
+  // only alone, so "APPLE *ICLOUD" (read "apple icloud") lost its logo (w21/407).
+  return isProcessor
+    ? { brand: null }
+    : { text: `${head} ${tail}`, fallback: BRAND_MAP[head] ?? null };
+}
+
 /** Drop what card processors add around a merchant name. */
 function stripTransactionNoise(lowered: string): string {
-  return lowered
-    .replace(/^(?:sq|tst|sp|pp)\s*\*\s*/u, "") // "SQ *", "TST*" prefixes
-    .split(/[*#]/u)[0] // "#1234" store numbers, "*AB12345" references
-    .split(/\s+/u)
-    .filter((word) => !/\d/u.test(word)) // store and terminal numbers
-    .join(" ")
-    .replace(/[\s.,;:!-]+$/u, "");
+  return (
+    lowered
+      .replace(/^(?:sq|tst|sp|pp)\s*\*\s*/u, "") // "SQ *", "TST*" prefixes
+      // "#1234" store numbers (three or more digits; "United #1 Plumbing" names
+      // a business) and "*AB12345" references.
+      .split(/\*|#(?=\s*\d{3})/u)[0]
+      .split(/\s+/u)
+      .filter((word) => !/\d/u.test(word)) // store and terminal numbers
+      .join(" ")
+      .replace(/[\s.,;:!-]+$/u, "")
+  );
 }
 
 /**
@@ -218,9 +262,27 @@ function stripTransactionNoise(lowered: string): string {
  *
  * @returns The brand's domain string (e.g. "starbucks.com") or null if unrecognised.
  */
+/**
+ * A letter, digit or combining mark of a script that separates its words with
+ * spaces. Han, Hiragana, Katakana and Thai do not, so an ASCII brand written
+ * against them ("Amazon购物", "Netflix会员", "Uberタクシー") still sits on a word
+ * boundary; counting them as word characters stopped those matching (w21/333).
+ * "Café Amazonía" stays no match: its neighbours are Latin letters.
+ */
+const WORD_CHAR =
+  /(?![\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}])[\p{L}\p{N}\p{M}]/u;
+
 export function matchBrand(text: string): string | null {
   if (!text) return null;
-  const normalized = text.toLowerCase().trim();
+  let normalized = text.toLowerCase().trim();
+
+  const starred = resolveStarMerchant(normalized);
+  if (starred && "brand" in starred) return starred.brand;
+  let fallback: string | null = null;
+  if (starred) {
+    normalized = starred.text;
+    fallback = starred.fallback;
+  }
 
   // Exact match is cheapest — try first, then without processor noise.
   if (BRAND_MAP[normalized]) return BRAND_MAP[normalized];
@@ -232,17 +294,19 @@ export function matchBrand(text: string): string | null {
     const idx = normalized.indexOf(key);
     if (idx === -1) continue;
 
-    // Require word boundary: char before and after must be non-alphanumeric.
+    // Require word boundary: char before and after must be no letter, digit
+    // or combining mark in any script. ASCII-only, an accent was a boundary
+    // and "Café Amazonía" got the Amazon logo (w21/172).
     const charBefore = normalized[idx - 1];
     const charAfter = normalized[idx + key.length];
-    const boundaryBefore = idx === 0 || !/[a-z0-9]/.test(charBefore);
+    const boundaryBefore = idx === 0 || !WORD_CHAR.test(charBefore);
     const boundaryAfter =
-      idx + key.length === normalized.length || !/[a-z0-9]/.test(charAfter);
+      idx + key.length === normalized.length || !WORD_CHAR.test(charAfter);
 
     if (boundaryBefore && boundaryAfter) return BRAND_MAP[key];
   }
 
-  return null;
+  return fallback;
 }
 
 /**
@@ -259,12 +323,13 @@ export function matchBrand(text: string): string | null {
 export function resolveBrandDomain(
   payee: string | undefined,
   accounts: string[],
+  roots: RootNames = {},
 ): string | null {
   if (payee) {
     const byPayee = matchBrand(payee);
     if (byPayee) return byPayee;
   }
-  for (const account of orderAccountsByRootPriority(accounts ?? [])) {
+  for (const account of orderAccountsByRootPriority(accounts ?? [], roots)) {
     const byAccount = matchBrand(leafName(account));
     if (byAccount) return byAccount;
   }
@@ -283,4 +348,26 @@ export function resolveBrandDomain(
 export function buildLogoUrl(domain: string, baseUrl: string): string | null {
   if (!domain || !baseUrl) return null;
   return `${baseUrl}?domain=${encodeURIComponent(domain)}`;
+}
+
+const sameServer = (left: string, right: string) =>
+  left.trim().replace(/\/+$/, "").toLowerCase() ===
+  right.trim().replace(/\/+$/, "").toLowerCase();
+
+/**
+ * The logo proxy to use for the selected server: the configured one only on
+ * the build's own server. On a server the user chose themselves the logo
+ * service would still learn every brand-matched payee in their private
+ * ledger, and their IP (w21/155), so rows fall back to glyphs there.
+ *
+ * @param selectedServer - The server the app talks to now.
+ * @param defaultServer - The build's default server.
+ * @param proxyUrl - The configured logo proxy endpoint.
+ */
+export function logoProxyForServer(
+  selectedServer: string,
+  defaultServer: string,
+  proxyUrl: string,
+): string {
+  return sameServer(selectedServer, defaultServer) ? proxyUrl : "";
 }

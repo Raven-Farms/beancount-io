@@ -10,6 +10,7 @@ import {
 import { AllowAnonymous, Authenticated } from "@/server/graphql/authenticated";
 import { IContext } from "@/server/graphql/context";
 import { ILedgerWorkflow } from "@/features/ledger/workflow/ledger-workflow";
+import type { LedgerSetup } from "@/features/ledger/setup/build-ledger";
 import {
   BcioOptions,
   FavaOptions,
@@ -19,6 +20,8 @@ import {
 import {
   Ledger,
   LedgerFileContent,
+  LedgerSetupInput,
+  LedgerSetupPreview,
   ListLedgersArgs,
   SearchLedgersArgs,
   GetLedgerFileArgs,
@@ -28,6 +31,21 @@ import {
 @Resolver(() => Ledger)
 export class LedgerQueryResolver {
   constructor(private readonly workflow: ILedgerWorkflow) {}
+
+  @Authenticated()
+  @Query(() => LedgerSetupPreview, {
+    description:
+      "Preview a ledger setup (ADR021) without creating anything: the files, account list, and validation result the specification would produce.",
+  })
+  async previewLedgerSetup(
+    @Arg("setup", () => LedgerSetupInput) setup: LedgerSetupInput,
+    @Ctx() ctx: IContext,
+  ): Promise<LedgerSetupPreview> {
+    return this.workflow.previewLedgerSetup({
+      identity: ctx.getCurrentIdentity(),
+      setup: setup as LedgerSetup,
+    });
+  }
 
   @Authenticated()
   @Query(() => [Ledger], {

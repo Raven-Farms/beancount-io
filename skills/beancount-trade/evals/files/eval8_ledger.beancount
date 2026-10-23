@@ -1,0 +1,19 @@
+;; fixture — beancount-trade eval8 (realized gains report)
+option "operating_currency" "USD"
+
+2025-01-01 open Assets:Brokerage USD,VTI
+2025-01-01 open Income:CapitalGains USD
+2025-01-01 open Equity:Opening-Balances
+
+2025-01-02 * "Cash in"
+  Assets:Brokerage  5000.00 USD
+  Equity:Opening-Balances
+
+2025-01-15 * "Buy VTI"
+  Assets:Brokerage  10 VTI {100.00 USD}
+  Assets:Brokerage -1000.00 USD
+
+2026-03-01 * "Sell VTI"
+  Assets:Brokerage  -5 VTI {100.00 USD, 2025-01-15} @ 150.00 USD
+  Assets:Brokerage   750.00 USD
+  Income:CapitalGains -250.00 USD

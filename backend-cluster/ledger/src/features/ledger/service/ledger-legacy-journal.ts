@@ -10,10 +10,13 @@
  * entry ID is emitted instead. Parity suites mask `entry_hash` accordingly.
  */
 import type { DirectiveJson } from "@rustledger/wasm";
+import type { JournalAmountPublic } from "@/foundation/ledger-api-types";
 import {
   getDirectiveSourceId,
+  makeAccountNameMatcher,
   type EntrySourceLocation,
 } from "@/foundation/rustledger";
+import { documentFilePath } from "@/foundation/rustledger/document-validation";
 import type { PostingCostJson, PostingJson } from "@rustledger/wasm";
 
 /** beancount class name for each rustledger directive tag. */
@@ -102,6 +105,7 @@ function renderPositionString(posting: PostingJson): string {
 export function serialiseV1Directive(
   directive: DirectiveJson,
   sourceLocation?: EntrySourceLocation,
+  balanceDiff?: JournalAmountPublic,
 ): LegacyEntry {
   const type = DIRECTIVE_CLASS[directive.type];
   const meta: Record<string, unknown> = {
@@ -140,7 +144,8 @@ export function serialiseV1Directive(
           currency: directive.amount.currency,
         },
         tolerance: directive.tolerance ?? null,
-        diff_amount: null,
+        // A failed assertion's difference, from the validator (w21/087).
+        diff_amount: balanceDiff ?? null,
       };
     case "open":
       return {
@@ -168,7 +173,7 @@ export function serialiseV1Directive(
       return {
         ...base,
         account: directive.account,
-        filename: directive.path,
+        filename: documentFilePath(directive),
         tags: directive.tags ? [...directive.tags] : [],
         links: directive.links ? [...directive.links] : [],
       };
@@ -236,6 +241,7 @@ export function runLegacyJournal(
   args: LegacyJournalArgs,
   entryIds: Map<DirectiveJson, string>,
   sourceLocations: Map<string, EntrySourceLocation>,
+  balanceDiffs?: ReadonlyMap<DirectiveJson, JournalAmountPublic>,
 ): LegacyEntry[] {
   const {
     first,
@@ -276,6 +282,10 @@ export function runLegacyJournal(
   }
 
   const searchLower = searchQuery ? searchQuery.toLowerCase() : "";
+  // Compiled once for the whole list, not per entry.
+  const accountMatcher = accountFilter
+    ? makeAccountNameMatcher(accountFilter)
+    : null;
   if (
     searchQuery ||
     accountFilter ||
@@ -305,18 +315,11 @@ export function runLegacyJournal(
         if (!searchableText.includes(searchLower)) return false;
       }
 
-      if (accountFilter) {
+      if (accountMatcher) {
         let accountMatch = false;
-        let regex: RegExp | null = null;
-        try {
-          regex = new RegExp(accountFilter, "i");
-        } catch {
-          regex = null;
-        }
-        const test = (account: string): boolean =>
-          regex
-            ? regex.test(account)
-            : account.toLowerCase().includes(accountFilter.toLowerCase());
+        // The main journal's rule (w21/328): a plain name is a whole run of
+        // components, not a substring; regex syntax keeps Fava's search.
+        const test = accountMatcher;
         if (entry.type === "transaction") {
           for (const posting of entry.postings) {
             if (test(posting.account)) {
@@ -394,6 +397,7 @@ export function runLegacyJournal(
     const serialised = serialiseV1Directive(
       directive,
       sourceLocations.get(getDirectiveSourceId(directive) ?? entryId ?? ""),
+      balanceDiffs?.get(directive),
     );
     if (!detailed) return serialised;
     const cleanedMeta = { ...(serialised.meta as Record<string, unknown>) };

@@ -1,0 +1,10 @@
+;; fixture — beancount-trade eval13 (staking receipts)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Crypto:Wallet ETH
+2026-01-01 open Income:Staking USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-05 * "Buy ETH"
+  Assets:Crypto:Wallet  2.000000 ETH {2800.00 USD}
+  Equity:Opening-Balances -5600.00 USD

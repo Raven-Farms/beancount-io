@@ -7,6 +7,7 @@ import {
   ConflictError,
   InternalServerError,
 } from "@/shared/errors";
+import { countOwnedLedgers } from "@/features/ledger/operations/owned-ledgers";
 import type Stripe from "stripe";
 import { lock, LOCK_KEYS } from "@/shared/lock";
 import { ReportStatus } from "@/features/auth/utils/report-status";
@@ -81,11 +82,26 @@ export interface IAccountService {
   ): Promise<UserSearchMatch[]>;
 }
 
+/** The ledger service's answer for a user that is already gone. */
+function isAlreadyPurged(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { status?: unknown }).status === 404
+  );
+}
+
 export class AccountService implements IAccountService {
   constructor(
     private readonly models: Pick<
       IModels,
-      "user" | "paidCustomer" | "jwt" | "emailToken" | "plaidItem"
+      | "user"
+      | "paidCustomer"
+      | "jwt"
+      | "oauthGrant"
+      | "emailToken"
+      | "plaidItem"
+      | "apiKey"
     >,
     private readonly db: DbExecutor,
     private readonly stripe: IStripeService,
@@ -114,7 +130,7 @@ export class AccountService implements IAccountService {
       return null;
     }
 
-    const [tier, paidCustomers] = await Promise.all([
+    const [tier, paidCustomers, ledgersUsed] = await Promise.all([
       getUserTier({
         stripe: this.stripe,
         userId,
@@ -122,22 +138,23 @@ export class AccountService implements IAccountService {
       // A paidCustomer row is created on checkout completion and persists after
       // cancellation, so its existence marks that the user has ever subscribed.
       this.models.paidCustomer.findByUserId(this.db, userId),
+      this.favaClientFactory.getApiContext(userId).then(({ favaApiClient }) =>
+        countOwnedLedgers(favaApiClient, user.ledger_username).catch(
+          // A profile still loads when the ledger service cannot list.
+          (error: unknown) => {
+            accountLogger.warn(
+              "Could not count owned ledgers for the profile",
+              {
+                errorType: error instanceof Error ? error.name : typeof error,
+              },
+            );
+            return 0;
+          },
+        ),
+      ),
     ]);
     const tierLimits = getTierLimits(tier);
     const hasEverSubscribed = paidCustomers.length > 0;
-
-    const { favaApiClient } =
-      await this.favaClientFactory.getApiContext(userId);
-    const listLedgersResponse = await favaApiClient.ledgers.listLedgers({
-      page: 1,
-      limit: 100,
-    });
-    const ledgersUsed =
-      listLedgersResponse.data?.success && listLedgersResponse.data?.data
-        ? listLedgersResponse.data.data.filter((ledger) =>
-            ledger.full_name?.startsWith(`${user.ledger_username}/`),
-          ).length
-        : 0;
 
     return {
       id: user.id,
@@ -307,6 +324,21 @@ export class AccountService implements IAccountService {
       throw new NotFoundError("User", userId);
     }
 
+    // The ledger purge goes first: it is the step most likely to fail, and
+    // Stripe and Plaid below cannot be undone. Run after them, a failed purge
+    // rolled the deletion back with the subscription already cancelled and
+    // the banks unlinked (w21/157). A user already purged (a retry after a
+    // lost response) answers 404, which is done, not a failure.
+    if (user.ledger_username) {
+      try {
+        await this.favaClientFactory
+          .getAdminClient()
+          .admin.deleteUser(user.ledger_username);
+      } catch (error) {
+        if (!isAlreadyPurged(error)) throw error;
+      }
+    }
+
     const paidCustomers = await this.models.paidCustomer.findByUserId(
       this.db,
       userId,
@@ -383,11 +415,13 @@ export class AccountService implements IAccountService {
       await this.models.plaidItem.deleteByUserId(tx, userId);
       await this.models.paidCustomer.deleteByUserId(tx, userId);
       await this.models.jwt.deleteByUserId(tx, userId);
+      // Sessions and OAuth grants alike: the provider would otherwise keep
+      // minting access tokens from a deleted account's refresh token (w0/054).
+      await this.models.oauthGrant.revokeAllForUser(tx, userId);
+      // API keys too: `api_keys` has no foreign key to cascade from, and a
+      // surviving key still resolved to the deleted identity (w21/156).
+      await this.models.apiKey.deleteByUserId(tx, userId);
       await this.models.user.deleteByUserId(tx, userId);
-      const favaAdminApiClient = this.favaClientFactory.getAdminClient();
-      if (user?.ledger_username) {
-        await favaAdminApiClient.admin.deleteUser(user.ledger_username);
-      }
     });
 
     // Delete Redis data (separate storage, outside transaction)

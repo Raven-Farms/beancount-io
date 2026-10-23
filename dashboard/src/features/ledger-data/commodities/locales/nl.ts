@@ -100,6 +100,17 @@ const nlCommodities: Record<string, TranslationEntry> = {
     message: "Prijzen konden niet worden vernieuwd",
     description: "Toast shown when refreshing managed prices fails",
   },
+  "page.commodities.chartsReloadFailed": {
+    message:
+      "De prijzen zijn vernieuwd, maar de grafieken konden niet opnieuw worden geladen.",
+    description:
+      "Shown on the managed price sources card when a refresh was acknowledged but reading the price charts again failed",
+  },
+  "page.commodities.reloadCharts": {
+    message: "Grafieken opnieuw laden",
+    description:
+      "Button that reads the price charts again after a failed reload, without refreshing the managed feeds",
+  },
 };
 
 export default nlCommodities;

@@ -24,7 +24,7 @@ Plaid bank linking, account reconciliation, cursor-based transaction sync, webho
 | plaid-webhook-event | `pwe_`  |
 
 - Access tokens are encrypted at rest with `encryptToken`/`decryptToken` from `utils/encryption.ts`. Never persist or log a raw Plaid token.
-- Verify webhook signatures before parsing/dispatching business behavior.
+- Verify webhook signatures before parsing/dispatching business behavior. A request that fails verification is refused with `401` and never stored: the pending queue holds only signed Plaid events (w0/052).
 - Keep cursor advancement, transaction persistence, and sync-log updates consistent under the existing distributed lock.
 - `PlaidSyncService` maps unsynced rows to `TransactionToCategorize` from `src/features/llm/types.ts`; keep LLM categorization policy outside the Plaid persistence/sync layer.
 

@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  AppState,
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   CameraView as ExpoCameraView,
@@ -9,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fontSizes, fontWeights } from "@/common/theme";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { CHROME, CONTROL_SIZE, SHUTTER_SIZE } from "./chrome";
+import { cameraPromptPending } from "./receipt-utils";
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: CHROME.background },
@@ -60,6 +68,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   deniedActions: { flexDirection: "row", gap: 12 },
+  deniedPrimary: { marginBottom: 12 },
   pill: {
     paddingHorizontal: 28,
     paddingVertical: 14,
@@ -91,18 +100,36 @@ export const CameraView = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslations();
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
   const cameraRef = useRef<ExpoCameraView>(null);
   const [flash, setFlash] = useState<"off" | "on">("off");
   const [capturing, setCapturing] = useState(false);
   const asked = useRef(false);
+  // The one automatic request has come back, so a refusal is on record.
+  const [prompted, setPrompted] = useState(false);
 
   useEffect(() => {
     if (!asked.current && permission && !permission.granted) {
       asked.current = true;
-      if (permission.canAskAgain) requestPermission();
+      if (permission.canAskAgain) {
+        void requestPermission()
+          .catch(() => undefined)
+          .finally(() => setPrompted(true));
+      } else {
+        setPrompted(true);
+      }
     }
   }, [permission, requestPermission]);
+
+  // The hook reads the permission once, on mount, and Android does not restart
+  // the app when access is granted in Settings: read it again on return, so
+  // the camera appears instead of the stale "Camera access is needed" (w21/283).
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void getPermission().catch(() => undefined);
+    });
+    return () => subscription.remove();
+  }, [getPermission]);
 
   const handleShutter = async () => {
     // takePictureAsync resolves well after the tap; without this guard a double
@@ -125,9 +152,9 @@ export const CameraView = ({
     }
   };
 
-  // Still resolving the permission on first mount — show the letterbox rather
-  // than flashing the denied copy.
-  if (!permission) {
+  // Still resolving the permission on first mount, or the system prompt is up
+  // over it — show the letterbox rather than the denied copy (w21/637).
+  if (!permission || cameraPromptPending(permission, prompted)) {
     return <View style={styles.container} />;
   }
 
@@ -135,10 +162,32 @@ export const CameraView = ({
     return (
       <View style={styles.container}>
         <View style={styles.denied}>
-          <Ionicons name="camera-outline" size={48} color={CHROME.icon} />
+          {/* Decorative: VoiceOver goes straight to the explanation (w21/639). */}
+          <Ionicons
+            name="camera-outline"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            size={48}
+            color={CHROME.icon}
+          />
           <Text style={styles.deniedText}>{t("receiptCameraPermission")}</Text>
+          {/* A receipt already in the library — a screenshot, an emailed
+              image — needs no camera (w21/017). */}
+          <Pressable
+            testID="receipt-denied-pick-library"
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.pill,
+              styles.deniedPrimary,
+              pressed && styles.pillPressed,
+            ]}
+            onPress={onPickFromLibrary}
+          >
+            <Text style={styles.pillText}>{t("receiptChooseLibrary")}</Text>
+          </Pressable>
           <View style={styles.deniedActions}>
             <Pressable
+              accessibilityRole="button"
               style={({ pressed }) => [
                 styles.pill,
                 pressed && styles.pillPressed,
@@ -152,13 +201,18 @@ export const CameraView = ({
                 styles.pill,
                 pressed && styles.pillPressed,
               ]}
+              accessibilityRole="button"
               onPress={() =>
                 permission.canAskAgain
                   ? requestPermission()
                   : Linking.openSettings()
               }
             >
-              <Text style={styles.pillText}>{t("receiptOpenSettings")}</Text>
+              <Text style={styles.pillText}>
+                {permission.canAskAgain
+                  ? t("receiptAllowCamera")
+                  : t("receiptOpenSettings")}
+              </Text>
             </Pressable>
           </View>
         </View>

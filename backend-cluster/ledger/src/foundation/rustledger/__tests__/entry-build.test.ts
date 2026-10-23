@@ -301,6 +301,54 @@ describe("entryInputToText — Fava-exact serialization parity", () => {
     );
   });
 
+  // w23/033: the type and text values were quoted without escaping, so a
+  // quote in either ended the string and the rest was written as source.
+  it("escapes quotes and backslashes in a custom type and text value", () => {
+    const out = entryInputToText({
+      type: "custom",
+      entry: {
+        date: "2024-03-04",
+        type: 'say "hi"',
+        values: [{ kind: "text", value: 'a\\b"\n2024-03-04 open Assets:Evil' }],
+      },
+    });
+    expect(out).toBe(
+      '2024-03-04 custom "say \\"hi\\"" "a\\\\b\\"\n2024-03-04 open Assets:Evil"\n\n',
+    );
+  });
+
+  // w23/053: the caller's meta values are strings; read as numbers or dates
+  // they lost leading zeros and changed type.
+  it("quotes every caller meta value, number- and date-shaped ones included", () => {
+    const out = entryInputToText({
+      type: "transaction",
+      entry: {
+        date: "2026-03-22",
+        flag: "*",
+        narration: "meta probe",
+        postings: [
+          { account: "Assets:Cash", units: { number: "-1", currency: "USD" } },
+          { account: "Expenses:Food" },
+        ],
+        meta: {
+          invoice: "00123",
+          zip: "02134",
+          ref: "1.50",
+          due: "2026-01-31",
+          neg: "-0",
+        },
+      },
+    });
+    for (const line of [
+      '  invoice: "00123"',
+      '  zip: "02134"',
+      '  ref: "1.50"',
+      '  due: "2026-01-31"',
+      '  neg: "-0"',
+    ])
+      expect(out).toContain(line);
+  });
+
   it("renders a custom directive that carries no values", () => {
     expect(
       entryInputToText({
@@ -402,6 +450,26 @@ describe("entryInputToText — Fava-exact serialization parity", () => {
       },
     });
     expect(budget).toContain("0.00000001 USD");
+  });
+
+  // w23/043: the decimal check accepts `.5`, which Beancount cannot read.
+  it.each([
+    [".5", "0.5"],
+    ["-.5", "-0.5"],
+    ["+.50", "+0.50"],
+    [".5e1", "5"],
+    ["5.", "5."],
+    ["+5", "+5"],
+  ])("writes the amount %p as %p", (number, written) => {
+    const out = entryInputToText({
+      type: "balance",
+      entry: {
+        date: "2024-01-01",
+        account: "Assets:Cash",
+        amount: { number, currency: "USD" },
+      },
+    });
+    expect(out).toContain(` ${written} USD`);
   });
 
   it("preserves ordinary decimal scale without rewriting through BigNumber", () => {

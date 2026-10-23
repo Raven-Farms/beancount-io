@@ -48,10 +48,11 @@ def _bea(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _follow(tmp_path: Path, hint: str, *leading: str) -> subprocess.CompletedProcess[str]:
-    """Run the command the hint names, exactly as it spells it."""
-    command = shlex.split(hint.removeprefix("Run bea ").split(" to list ")[0])
-    return _bea(tmp_path, *leading, "-f", "main.bean", *command)
+def _follow(tmp_path: Path, hint: str) -> subprocess.CompletedProcess[str]:
+    """Run the command the hint names, exactly as it spells it: ledger and mode included (w5/838)."""
+    command = shlex.split(hint.removeprefix("Run ").split(" to list ")[0])
+    assert command[0] == "bea"
+    return _bea(tmp_path, *command[1:])
 
 
 @pytest.mark.parametrize("query", MISTAKES.values(), ids=MISTAKES.keys())
@@ -61,10 +62,10 @@ def test_json_error_hint_names_a_command_that_runs(tmp_path: Path, query: str) -
     failed = _bea(tmp_path, "--json", "-f", "main.bean", "query", query)
     assert failed.returncode == 2, failed.stderr
     details = json.loads(failed.stderr)["error"]["details"]
-    assert details[-1] == HINT
+    assert details[-1] == HINT.replace("Run bea ", "Run bea --json ")
     assert "interactive shell" not in failed.stderr
 
-    followed = _follow(tmp_path, details[-1], "--json")
+    followed = _follow(tmp_path, details[-1])
     assert followed.returncode == 0, followed.stderr
     assert "postings" in json.loads(followed.stdout)["data"]["text"]
 

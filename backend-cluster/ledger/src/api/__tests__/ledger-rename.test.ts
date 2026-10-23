@@ -192,6 +192,14 @@ describe("ledger rename collision identity through the real handler and Gitea HT
     code: null,
     details: null,
   });
+  // The host answered the name with a repository of another name: an old-name
+  // redirect, so the name is reserved — no ledger is called that (w23/061).
+  const reserved = (redirectsTo: string) => ({
+    success: false,
+    error: `'${TARGET}' is the former name of alice/${redirectsTo}: links to it redirect there, so the name stays reserved. Choose a different name.`,
+    code: "LEDGER_NAME_RESERVED",
+    details: { name: TARGET, redirects_to: `alice/${redirectsTo}` },
+  });
 
   it.each([71, Number.MAX_SAFE_INTEGER])(
     "renames back through an actual old-name redirect to repository %s",
@@ -227,7 +235,7 @@ describe("ledger rename collision identity through the real handler and Gitea HT
     repos.set(TARGET, repository(CURRENT, 72));
     expect(await request({ name: TARGET })).toEqual({
       status: 400,
-      body: conflict(),
+      body: reserved(CURRENT),
     });
     expect(mutations()).toEqual([]);
     expect(repos.get(CURRENT)).toEqual(repository(CURRENT));
@@ -250,7 +258,7 @@ describe("ledger rename collision identity through the real handler and Gitea HT
       repos.set(TARGET, invalid);
       expect(await request({ name: TARGET })).toEqual({
         status: 400,
-        body: conflict(),
+        body: reserved(CURRENT),
       });
       expect(mutations()).toEqual([]);
     },
@@ -375,12 +383,31 @@ describe("ledger rename collision identity through the real handler and Gitea HT
     },
   );
 
-  it("retains create's duplicate refusal even for an old-name alias", async () => {
+  // w23/061: create over a former name said a ledger by that name existed,
+  // though no listing showed one.
+  it("refuses create over an old-name alias as reserved, not as an existing ledger", async () => {
     redirects.set(TARGET, CURRENT);
+    expect(
+      await request({ name: TARGET, files: { "main.bean": FILE } }, "POST"),
+    ).toEqual({ status: 400, body: reserved(CURRENT) });
+    expect(mutations()).toEqual([]);
+  });
+  it("still refuses create over a ledger that has the name", async () => {
+    repos.set(TARGET, repository(TARGET, 72));
     expect(
       await request({ name: TARGET, files: { "main.bean": FILE } }, "POST"),
     ).toEqual({ status: 400, body: conflict() });
     expect(mutations()).toEqual([]);
+  });
+  it("refuses a rename onto another ledger's former name as reserved", async () => {
+    repos.set("other", repository("other", 72));
+    redirects.set(TARGET, "other");
+    expect(await request({ name: TARGET })).toEqual({
+      status: 400,
+      body: reserved("other"),
+    });
+    expect(mutations()).toEqual([]);
+    expect(repos.get(CURRENT)).toEqual(repository(CURRENT));
   });
   it.each([403, 500])(
     "retains create's mapped duplicate-check HTTP %s",

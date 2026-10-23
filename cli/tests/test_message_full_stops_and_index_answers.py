@@ -7,6 +7,7 @@ column 1 (char 0)`, `'version'`) for an index that answered something else.
 
 from __future__ import annotations
 
+import json
 import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -118,3 +119,23 @@ def test_a_homebrew_page_without_a_version_is_unreadable(index: type[_Body], mon
 
     index.body = b'class Bea < Formula\n  version "0.9.1"\nend\n'
     assert update.check_latest("homebrew") == "0.9.1"
+
+
+@pytest.mark.parametrize("version", ["0.9banana", "0.9.0..", "0.9.0+", "0.9.0 beta", "v"])
+def test_a_malformed_version_string_is_unreadable_and_not_cached(index: type[_Body], version: str) -> None:
+    """A digit prefix with any suffix passed, and the explicit check cached it (w5/864)."""
+    index.body = json.dumps({"info": {"version": version}}).encode()
+
+    with pytest.raises(BeaError) as caught:
+        update.check_latest()
+
+    assert str(caught.value).endswith("for a newer release: the index sent an unreadable answer.")
+    assert update.read_cache("pypi") is None
+
+
+@pytest.mark.parametrize("version", ["0.9.0", "1.0.0rc1", "1.0.0.post2", "1.0.0.dev3", "1.0.0+local.1"])
+def test_every_pep_440_version_still_reads(index: type[_Body], version: str) -> None:
+    index.body = json.dumps({"info": {"version": version}}).encode()
+
+    assert update.check_latest() == version
+    assert update.read_cache("pypi") is not None

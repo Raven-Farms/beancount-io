@@ -1,14 +1,29 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useMemo } from "react";
+import { BudgetSkeleton } from "./home-skeletons";
+import { selectCardLoadState } from "@/common/apollo/card-load-state";
+import { CardLoadFailure } from "@/components/card-load-failure";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { ColorTheme } from "@/types/theme-props";
 import { fontSizes, space } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks/use-theme-style";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { formatMoneyWithCurrency } from "@/common/number-utils";
+import {
+  formatMoneyWithCurrency,
+  formatSignedMoneyWithCurrency,
+} from "@/common/number-utils";
 import { AmountText, DashboardCard } from "@/components";
-import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
 import { BudgetMeter } from "@/screens/budget-screen/components/budget-meter";
+import { useAccountCloseDates } from "@/common/hooks/use-account-close-dates";
+import { closedBefore } from "@/common/account-close-dates";
+import { useToday } from "@/common/hooks/use-today";
 import { useBudgetGroups } from "@/screens/budget-screen/hooks/use-budget-groups";
 import { useBudgetPanel } from "@/screens/home-screen/hooks/use-budget-panel";
 import {
@@ -48,6 +63,7 @@ const getStyles = (theme: ColorTheme) =>
     emptyText: {
       fontSize: fontSizes.md,
       color: theme.black80,
+      textAlign: LEADING_TEXT_ALIGN,
     },
   });
 
@@ -65,19 +81,46 @@ export function BudgetCard({
   refreshSignal = 0,
 }: BudgetCardProps): JSX.Element {
   const styles = useThemeStyle(getStyles);
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  // Keyed on the text size: iOS keeps a Text's old measurement when it
+  // changes with the app open (mobile/AGENTS.md; w21/015).
+  const { fontScale } = useWindowDimensions();
   const router = useRouter();
   const guest = useGuest();
 
-  const { groups, loading: groupsLoading } = useBudgetGroups(
-    ledgerId,
-    refreshSignal,
-  );
-  const { rows, loading: rowsLoading } = useBudgetPanel({
-    ledgerId,
+  const {
     groups,
+    loaded: groupsLoaded,
+    loading: groupsLoading,
+    error: groupsError,
+    refetch: refetchGroups,
+  } = useBudgetGroups(ledgerId, refreshSignal);
+  // A budget on an account that closed before today has nothing left to track:
+  // a former job's income target read "Below target" every month and outranked
+  // real overspends (w21/398).
+  const closeDates = useAccountCloseDates(ledgerId);
+  const today = useToday();
+  const liveGroups = useMemo(
+    () => groups.filter((g) => !closedBefore(g.account, today, closeDates)),
+    [groups, today, closeDates],
+  );
+  const {
+    rows,
+    loading: rowsLoading,
+    failed: rowsFailed,
+    retry: retryRows,
+  } = useBudgetPanel({
+    ledgerId,
+    groups: liveGroups,
     refreshSignal,
   });
+  // A failed read is not "no budgets" and not "$0.00 spent" (w21/080).
+  const groupsFailed =
+    selectCardLoadState({
+      loading: groupsLoading,
+      hasData: groupsLoaded,
+      error: groupsError,
+    }) === "failed";
 
   const openBudget = () => {
     if (guest) {
@@ -99,17 +142,24 @@ export function BudgetCard({
       onPress={openBudget}
       accessibilityRole="button"
       accessibilityLabel={row.account}
+      accessibilityHint={guest ? t("guestSignInHint") : undefined}
       // The label collapses this subtree, so the amounts and the meter would
       // otherwise reach assistive tech not at all. `accessibilityValue.text` is
       // spoken after the label and repeats nothing from it.
-      accessibilityValue={{ text: budgetPanelRowAccessibilityValue(row, t) }}
+      accessibilityValue={{
+        text: budgetPanelRowAccessibilityValue(row, t, locale),
+      }}
     >
       <View style={styles.rowHeader}>
-        <Text style={styles.account} numberOfLines={1}>
+        <Text
+          key={`account-${fontScale}`}
+          style={styles.account}
+          numberOfLines={1}
+        >
           {row.shortAccount}
         </Text>
         <AmountText style={styles.amounts}>
-          {`${formatMoneyWithCurrency(row.actual, row.currency)} / ${formatMoneyWithCurrency(row.budget, row.currency)}`}
+          {`${formatSignedMoneyWithCurrency(row.actual, row.currency, false, row.scale)} / ${formatMoneyWithCurrency(row.budget, row.currency, row.scale)}`}
         </AmountText>
       </View>
       <BudgetMeter percent={row.progressPercent} favorable={row.favorable} />
@@ -118,12 +168,13 @@ export function BudgetCard({
 
   const renderBody = () => {
     if (showSkeleton) {
-      return (
-        <>
-          <LoadingTile height={34} />
-          <LoadingTile height={34} />
-        </>
-      );
+      return <BudgetSkeleton />;
+    }
+    if (groupsFailed) {
+      return <CardLoadFailure onRetry={() => void refetchGroups()} />;
+    }
+    if (rowsFailed) {
+      return <CardLoadFailure onRetry={retryRows} />;
     }
     if (rows.length === 0) {
       // A brand-new feature people won't look for: the panel keeps a row that
@@ -134,8 +185,11 @@ export function BudgetCard({
             style={styles.emptyRow}
             onPress={openBudget}
             accessibilityRole="button"
+            accessibilityHint={guest ? t("guestSignInHint") : undefined}
           >
-            <Text style={styles.emptyText}>{t("budgetPanelEmpty")}</Text>
+            <Text key={`empty-${fontScale}`} style={styles.emptyText}>
+              {t(guest ? "budgetPanelEmptyGuest" : "budgetPanelEmpty")}
+            </Text>
           </TouchableOpacity>
         </FadeInView>
       );
@@ -144,7 +198,12 @@ export function BudgetCard({
   };
 
   return (
-    <DashboardCard title={t("budget")} onSeeAll={openBudget}>
+    // A guest has no Budget screen to see: the tap would only open sign-in,
+    // unlabelled (w21/293).
+    <DashboardCard
+      title={t("budget")}
+      onSeeAll={guest ? undefined : openBudget}
+    >
       {renderBody()}
     </DashboardCard>
   );

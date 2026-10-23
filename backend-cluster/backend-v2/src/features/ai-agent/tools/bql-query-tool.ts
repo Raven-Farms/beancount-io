@@ -4,7 +4,7 @@ import { logger } from "@/shared/logger";
 import type { ToolContext } from "./types";
 import { toolOutputSchema } from "./types";
 import { runToolSafely } from "../utils/run-tool";
-import { BQL_ROW_COUNT } from "./bql-result-metadata";
+import { BQL_ROW_COUNT, BQL_TRUNCATED } from "./bql-result-metadata";
 
 const toolLogger = logger.child({ module: "tool:bql-query" });
 
@@ -14,6 +14,7 @@ export const description =
   "Columns: date, year, month, flag, payee, narration, account, number, currency, cost, change, " +
   "balance, position, tags, links, meta. " +
   "An unaggregated query returns one row per posting, not per transaction, so LIMIT 5 can span 3 transactions; GROUP BY and DISTINCT return one row per group or value. LIMIT bounds the returned rows. " +
+  "Output past 1,000 lines or 100 KB is cut and ends with a truncation line; add LIMIT or a narrower WHERE to see the rest. " +
   "Reference: https://beancount.github.io/docs/beancount_query_language/";
 
 export const bqlQueryInputSchema = z.object({
@@ -45,10 +46,13 @@ export async function executeBqlQuery(
     },
   });
   if (!output.ok) return output;
-  return Object.defineProperty(
-    { ok: true as const, result: output.result.text ?? "" },
-    BQL_ROW_COUNT,
-    { value: output.result.rowCount },
+  const { text, truncated } = capBqlText(output.result.text ?? "");
+  return Object.defineProperties(
+    { ok: true as const, result: text },
+    {
+      [BQL_ROW_COUNT]: { value: output.result.rowCount },
+      [BQL_TRUNCATED]: { value: truncated },
+    },
   );
 }
 
@@ -63,6 +67,43 @@ export async function executeBqlQuery(
  * has seen everything.
  */
 export const MAX_STRUCTURED_BQL_ROWS = 1000;
+
+/**
+ * The most rendered text one `runBqlQuery` call hands back (w23/010).
+ *
+ * The structured tool caps rows; this one returned the shell's whole table,
+ * and one `JOURNAL` over a modest ledger was 5 MB — over a million tokens,
+ * which a host either refuses or cuts without telling the agent. Rendered
+ * cells can span lines, so lines are not rows; the line ceiling matches the
+ * structured row ceiling for ordinary tables, and the byte ceiling bounds wide
+ * rows such as `JOURNAL`'s. REST and GraphQL `queryShellText` keep the full
+ * text: this is a model-context limit, not a query limit.
+ */
+const MAX_BQL_TEXT_LINES = MAX_STRUCTURED_BQL_ROWS + 2;
+export const MAX_BQL_TEXT_BYTES = 100_000;
+
+/** The text cut at a line boundary under both ceilings, marked when cut. */
+export function capBqlText(text: string): { text: string; truncated: boolean } {
+  const fullBytes = Buffer.byteLength(text);
+  // A final newline ends the last line rather than starting another (w23/005).
+  const lines = (text.endsWith("\n") ? text.slice(0, -1) : text).split("\n");
+  if (lines.length <= MAX_BQL_TEXT_LINES && fullBytes <= MAX_BQL_TEXT_BYTES) {
+    return { text, truncated: false };
+  }
+  const kept: string[] = [];
+  let bytes = 0;
+  for (const line of lines.slice(0, MAX_BQL_TEXT_LINES)) {
+    const size = Buffer.byteLength(line) + 1;
+    if (bytes + size > MAX_BQL_TEXT_BYTES) break;
+    kept.push(line);
+    bytes += size;
+  }
+  const marker =
+    `[truncated: showing the first ${kept.length} of ${lines.length} lines ` +
+    `(${bytes} of ${fullBytes} bytes). Add LIMIT or a narrower WHERE to see ` +
+    `the rest, or use runBqlQueryStructured for typed rows.]`;
+  return { text: `${kept.join("\n")}\n${marker}\n`, truncated: true };
+}
 
 /** Preserve the typed shell representation used by REST and GraphQL. */
 export const structuredBqlOutputSchema = toolOutputSchema(

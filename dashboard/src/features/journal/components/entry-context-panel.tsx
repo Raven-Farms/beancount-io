@@ -49,6 +49,7 @@ import { useIsMobile } from "@/common/hooks/use-mobile";
 import { useFileNavigate } from "@/common/hooks/use-file-navigate";
 import { useWriteOutcome } from "@/common/hooks/use-write-outcome";
 import { useLedgerPermission } from "@/common/hooks/use-ledger-permission";
+import { usePendingAction } from "@/common/hooks/use-pending-action";
 import { restoreFocusOnDialogClose } from "@/common/lib/focus/restore-focus-on-dialog-close";
 import { readEntrySourceLocation } from "@/features/journal/lib/entry-source-location";
 
@@ -63,12 +64,23 @@ export interface EntryContextPanelProps {
   /** After a successful delete, before `onSuccess` (page navigates away). */
   onDeleted?: () => void;
   /**
+   * After a successful save, with the entry's identity as saved — a changed
+   * source gets a new hash. Awaited before the cache is cleared, so an owner
+   * addressing the entry by hash can move to the new one first (w4/251).
+   */
+  onSaved?: (entryHash: string) => void | Promise<void>;
+  /**
    * Fired immediately before navigating to the entry source file so the
    * owning dialog can skip opener focus restoration.
    */
   onSourceNavigate?: () => void;
   /** Told whenever the source editor gains or loses unsaved changes. */
   onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * Told while a save or delete is in flight, so an owner can hold its
+   * dismissal: the write's completion closes the draft it was sent from.
+   */
+  onPendingChange?: (pending: boolean) => void;
   /**
    * Asked before leaving for the source file; calls `proceed` when it may
    * go, so an owner can confirm discarding unsaved changes first.
@@ -114,8 +126,10 @@ function EntryContextMain({
   onGoToFile,
   canWrite,
   onDirtyChange,
+  onPendingChange,
 }: {
   onDirtyChange?: (dirty: boolean) => void;
+  onPendingChange?: (pending: boolean) => void;
   data: GetLedgerEntryContextQuery["getLedgerEntryContext"];
   entryHash: string;
   entry: JournalDirectiveType | null | undefined;
@@ -136,8 +150,11 @@ function EntryContextMain({
   const [hasChanges, setHasChanges] = useState(false);
   const [originalSource, setOriginalSource] = useState("");
   const [isContextOpen, setIsContextOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // One save at a time. While it is in flight the source is read-only: the
+  // request already holds its text, and an edit made now would be marked
+  // saved without ever being sent (w4/m49).
+  const { run: runSave, pending: isSaving } = usePendingAction();
+  const { run: runDelete, pending: isDeleting } = usePendingAction();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const isDark = useIsDarkTheme();
@@ -168,34 +185,44 @@ function EntryContextMain({
     onDirtyChange?.(editable && hasChanges);
   }, [editable, hasChanges, onDirtyChange]);
 
-  const handleSave = async () => {
-    if (!editable || !entryHash || !hasChanges || isSaving) return;
-    setIsSaving(true);
-    try {
-      await onSave(entryHash, sourceText, data.sha256sum);
-      setHasChanges(false);
+  const pending = isSaving || isDeleting;
+  const readOnly = !editable || pending;
+  // The cleanup also runs when a panel unmounts mid-write, so it never
+  // leaves its owner locked.
+  useEffect(() => {
+    if (!pending) return;
+    onPendingChange?.(true);
+    return () => onPendingChange?.(false);
+  }, [pending, onPendingChange]);
+
+  const handleSave = () => {
+    if (!editable || !entryHash || !hasChanges) return;
+    void runSave(async () => {
+      try {
+        await onSave(entryHash, sourceText, data.sha256sum);
+      } catch {
+        // Error handling is done in the parent handler
+        return false;
+      }
       setOriginalSource(sourceText);
-    } catch {
-      // Error handling is done in the parent handler
-    } finally {
-      setIsSaving(false);
-    }
+      return true;
+    });
   };
 
-  const handleConfirmDelete = async () => {
-    if (!editable || !entryHash || !data?.sha256sum || isDeleting) {
-      return;
-    }
-    setIsDeleting(true);
-    try {
-      await onDelete(entryHash, data.sha256sum);
+  const handleConfirmDelete = () => {
+    if (!editable || !entryHash || !data?.sha256sum) return;
+    const { sha256sum } = data;
+    void runDelete(async () => {
+      try {
+        await onDelete(entryHash, sha256sum);
+      } catch {
+        // Error handling is done in the parent handler; the confirmation stays
+        // open so the user can retry or cancel.
+        return false;
+      }
       setConfirmDeleteOpen(false);
-    } catch {
-      // Error handling is done in the parent handler; the confirmation stays
-      // open so the user can retry or cancel.
-    } finally {
-      setIsDeleting(false);
-    }
+      return true;
+    });
   };
 
   const deleteTargetLabel = location
@@ -369,7 +396,7 @@ function EntryContextMain({
               language="beancount"
               value={sourceText}
               onChange={(value) => {
-                if (!editable) return;
+                if (readOnly) return;
                 setSourceText(value || "");
               }}
               theme={isDark ? "vs-dark" : "light"}
@@ -381,7 +408,7 @@ function EntryContextMain({
                 scrollBeyondLastLine: false,
                 wordWrap: "on",
                 lineNumbers: "on",
-                readOnly: !editable,
+                readOnly,
               }}
             />
           </div>
@@ -399,15 +426,12 @@ function EntryContextMain({
             ref={deleteButtonRef}
             variant="destructive"
             onClick={() => setConfirmDeleteOpen(true)}
-            disabled={isDeleting || isSaving}
+            disabled={pending}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             {t("common.delete")}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving || isDeleting}
-          >
+          <Button onClick={handleSave} disabled={!hasChanges || pending}>
             {isSaving ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -475,7 +499,9 @@ export function EntryContextPanel({
   onDeleted,
   onSourceNavigate,
   onDirtyChange,
+  onPendingChange,
   confirmLeave,
+  onSaved,
 }: EntryContextPanelProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
@@ -511,7 +537,7 @@ export function EntryContextPanel({
     if (!canWrite) return;
     const before = writeOutcome.snapshot();
     try {
-      await updateEntrySourceSlice({
+      const { data: saved } = await updateEntrySourceSlice({
         variables: {
           ledgerId,
           input: {
@@ -526,6 +552,7 @@ export function EntryContextPanel({
       if (!(await writeOutcome.report(before))) {
         toast.success(t("journal.entrySavedSuccess"));
       }
+      await onSaved?.(saved?.updateLedgerEntrySourceSlice?.entryHash || hash);
       clearCache();
       onSuccess?.();
     } catch (saveError) {
@@ -591,10 +618,13 @@ export function EntryContextPanel({
                   type="button"
                   variant="outline"
                   size="sm"
+                  // A refused copy must say so before the reader chooses
+                  // Reload, which discards the draft (w4/307).
                   onClick={() =>
-                    void navigator.clipboard
-                      .writeText(staleDraft)
-                      .then(() => toast.success(t("common.copied")))
+                    void navigator.clipboard.writeText(staleDraft).then(
+                      () => toast.success(t("common.copied")),
+                      () => toast.error(t("common.copyFailed")),
+                    )
                   }
                 >
                   {t("journal.copyMyEdit")}
@@ -622,6 +652,7 @@ export function EntryContextPanel({
           onGoToFile={handleGoToFile}
           canWrite={canWrite}
           onDirtyChange={onDirtyChange}
+          onPendingChange={onPendingChange}
         />
       </>
     );

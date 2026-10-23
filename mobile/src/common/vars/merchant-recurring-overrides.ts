@@ -1,4 +1,5 @@
 import { createPersistentVar } from "@/common/apollo/persistent-var";
+import { merchantKey } from "@/common/merchant-key";
 import type { RecurringOverride } from "@/screens/merchants-screen/selectors/resolve-recurring";
 
 export type { RecurringOverride };
@@ -25,18 +26,32 @@ export const [
   {},
 );
 
+/**
+ * A ledger's marks without any for this merchant, whichever spelling they
+ * were saved under: marks were keyed by the displayed spelling, which flips
+ * when another spelling gains the majority (w21/169).
+ */
+function withoutMerchant(
+  forLedger: Record<string, RecurringOverride>,
+  payee: string,
+): Record<string, RecurringOverride> {
+  const key = merchantKey(payee);
+  return Object.fromEntries(
+    Object.entries(forLedger).filter(([saved]) => merchantKey(saved) !== key),
+  );
+}
+
 function setRecurringOverride(
   ledgerId: string,
   payee: string,
   override: RecurringOverride,
 ): void {
   const current = merchantRecurringOverridesVar();
-  const forLedger = current[ledgerId] ?? {};
   merchantRecurringOverridesVar({
     ...current,
     [ledgerId]: {
-      ...forLedger,
-      [payee]: override,
+      ...withoutMerchant(current[ledgerId] ?? {}, payee),
+      [merchantKey(payee)]: override,
     },
   });
 }
@@ -44,11 +59,10 @@ function setRecurringOverride(
 function clearRecurringOverride(ledgerId: string, payee: string): void {
   const current = merchantRecurringOverridesVar();
   const forLedger = current[ledgerId];
-  if (!forLedger || !(payee in forLedger)) {
+  if (!forLedger || overrideFor(current, ledgerId, payee) === null) {
     return;
   }
-  const nextLedger = { ...forLedger };
-  delete nextLedger[payee];
+  const nextLedger = withoutMerchant(forLedger, payee);
   const next: MerchantRecurringOverrides = { ...current };
   if (Object.keys(nextLedger).length === 0) {
     delete next[ledgerId];
@@ -63,7 +77,17 @@ export function overrideFor(
   ledgerId: string,
   payee: string,
 ): RecurringOverride | null {
-  return overrides[ledgerId]?.[payee] ?? null;
+  const forLedger = overrides[ledgerId];
+  if (!forLedger) return null;
+  const key = merchantKey(payee);
+  // Saved under the key, or under a spelling from before marks were keyed.
+  return (
+    forLedger[key] ??
+    Object.entries(forLedger).find(
+      ([saved]) => merchantKey(saved) === key,
+    )?.[1] ??
+    null
+  );
 }
 
 /**

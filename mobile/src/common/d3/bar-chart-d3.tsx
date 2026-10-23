@@ -17,6 +17,11 @@ type BarChartProps = {
   numbers: number[];
   /** Currency code; ticks show its symbol, or the code when it has none. */
   currency: string;
+  /**
+   * What the chart says, spoken as one element: without it VoiceOver stops on
+   * each axis tick and caption and never hears the amounts (w21/018).
+   */
+  accessibilityLabel: string;
 };
 
 /**
@@ -26,9 +31,14 @@ type BarChartProps = {
  */
 export const BAR_CHART_HEIGHT = 220;
 
-function BarChart({ labels, numbers, currency }: BarChartProps): JSX.Element {
+function BarChart({
+  labels,
+  numbers,
+  currency,
+  accessibilityLabel,
+}: BarChartProps): JSX.Element {
   const theme = useTheme().colorTheme;
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
 
   // Chart dimensions
   const chartWidth = ScreenWidth - contentPadding * 2;
@@ -46,7 +56,7 @@ function BarChart({ labels, numbers, currency }: BarChartProps): JSX.Element {
   // Y axis ticks
   const yTicks = yScale.ticks(5);
   const tickLabels = yTicks.map((tick) =>
-    formatShortMoneyWithCurrency(tick, currency),
+    formatShortMoneyWithCurrency(tick, currency, locale),
   );
   // The gutter fits the widest formatted tick; bars share what remains.
   const { axisWidth, barWidth, barX, labelX } = barChartLayout(
@@ -63,7 +73,7 @@ function BarChart({ labels, numbers, currency }: BarChartProps): JSX.Element {
   const entrance = useEntranceProgress(numbers.length > 0);
 
   return (
-    <View>
+    <View accessible accessibilityLabel={accessibilityLabel}>
       <Svg width={chartWidth} height={chartHeight}>
         {/* Y axis grid lines and labels */}
         {yTicks.map((tick: number, i: number) => (

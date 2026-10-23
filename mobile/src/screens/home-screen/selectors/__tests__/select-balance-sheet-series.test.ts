@@ -100,12 +100,14 @@ describe("selectLiabilitiesSeries", () => {
     ]);
   });
 
-  it("falls back to USD when the active currency is absent", () => {
+  // w21/058: USD history read as EUR made net worth "crash" 98% at the first
+  // EUR posting.
+  it("reads a point without the active currency as zero, not its USD", () => {
     const data = createBalanceSheet({
       liabilitiesData: [{ date: "2025-01-31", balance: { USD: -1200 } }],
     });
     expect(selectLiabilitiesSeries("EUR", data)).toEqual([
-      { date: "2025-01-31", value: -1200 },
+      { date: "2025-01-31", value: 0 },
     ]);
   });
 });
@@ -162,6 +164,46 @@ describe("selectSeriesValuation", () => {
     expect(valuation.notInTotal).toEqual([
       { currency: "VACHR", number: -13, scale: 0 },
     ]);
+  });
+
+  it("measures price age against today, not the month-end of the last activity (w21/209)", () => {
+    // Nothing dated October: the series ends at 2026-09-30, five days after
+    // the last price, but the price is 26 days old on 2026-10-21 and the
+    // Accounts tree says so.
+    const idle = createBalanceSheet({
+      netWorthData: [{ date: "2026-09-30", balance: { USD: "35714.29" } }],
+    });
+    const idleBasis = {
+      cost: {
+        netWorthData: [{ date: "2026-09-30", balance: { USD: "30000.00" } }],
+        assetsData: [],
+        liabilitiesData: [],
+      },
+      units: {
+        netWorthData: [
+          { date: "2026-09-30", balance: { USD: "0", QAETH: "0.5" } },
+        ],
+        assetsData: [],
+        liabilitiesData: [],
+      },
+    } as unknown as BalanceSheetBasisQuery;
+    const idlePrices = [
+      {
+        base: "QAETH",
+        quote: "USD",
+        prices: [{ date: "2026-08-04" }, { date: "2026-09-25" }],
+      },
+    ];
+    const valuation = selectSeriesValuation(
+      "USD",
+      "netWorthData",
+      idle,
+      idleBasis,
+      idlePrices,
+      "2026-10-21",
+    );
+    expect(valuation.priced[0]?.priceDate).toBe("2026-09-25");
+    expect(valuation.priced[0]?.stale).toBe(true);
   });
 
   it("knows no cost and no holdings until the basis read lands", () => {

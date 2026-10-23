@@ -1,5 +1,6 @@
 import { posix } from "node:path";
-import type { BeancountError } from "@rustledger/wasm";
+import type { BeancountError, DirectiveJson } from "@rustledger/wasm";
+import { getDirectiveSourceLocation } from "./plugins/provenance";
 
 /**
  * Reconcile the WASM engine's document-existence validation, which is broken in
@@ -79,6 +80,24 @@ function resolveDocumentPath(
 ): string {
   if (rawPath.startsWith("/") || !declaringFile) return normalizePath(rawPath);
   return normalizePath(posix.join(posix.dirname(declaringFile), rawPath));
+}
+
+/**
+ * The repository-relative file a Document directive names. A relative path
+ * resolves against the directory of the file that declares it, as for the
+ * existence check above, so `document … "receipt.txt"` in
+ * `books/documents.bean` is `books/receipt.txt`, not a root `receipt.txt`
+ * (w4/301). An absolute path, or one whose declaring file is unknown, is
+ * returned as written.
+ */
+export function documentFilePath(
+  directive: Extract<DirectiveJson, { type: "document" }>,
+): string {
+  const declaringFile = getDirectiveSourceLocation(directive)?.filename;
+  if (declaringFile === undefined || directive.path.startsWith("/")) {
+    return directive.path;
+  }
+  return resolveDocumentPath(directive.path, declaringFile);
 }
 
 /** The document file named in an `E8001` message (`… not found: <path>`). */

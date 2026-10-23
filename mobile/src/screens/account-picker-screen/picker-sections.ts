@@ -5,6 +5,7 @@
  *
  * Kept free of any `@/` imports so the jest-lite runner can require it.
  */
+import { openOn, type CloseDates } from "../../common/account-close-dates";
 import { filterAccounts } from "../../common/account-search";
 import {
   topAccounts,
@@ -88,8 +89,16 @@ export function visibleAccountSections(
 
   if (ranking && recentTitle) {
     // `accounts` is what this picker can offer, so a pinned account is always
-    // one the list could show.
-    const recents = topAccounts(ranking, RECENT_LIMIT, accounts);
+    // one the list could show — and, under a root chip, one under that root:
+    // narrowing to Expenses must not offer Assets:Cash first (w21/021).
+    const offered =
+      activeRoot === ALL_ROOTS
+        ? accounts
+        : accounts.filter(
+            (account) =>
+              account === activeRoot || account.startsWith(`${activeRoot}:`),
+          );
+    const recents = topAccounts(ranking, RECENT_LIMIT, offered);
     if (recents.length > 0) {
       return [
         { title: recentTitle, data: recents, source: "recents" },
@@ -113,9 +122,18 @@ export interface LedgerWriteAccess {
 }
 
 /**
+ * A filter picker only reads: its Create row opened Open Account, whose Done
+ * would write an `open` from a filter (w21/528).
+ */
+function offersCreate(type?: string): boolean {
+  return type !== "filter";
+}
+
+/**
  * Whether the create-account row belongs in the empty state. It renders exactly
  * when a query matched nothing (no sections at all — see
- * `visibleAccountSections`) *and* the caller may write to this ledger:
+ * `visibleAccountSections`), or the picker has no accounts at all (a new
+ * ledger, w21/643), *and* the caller may write to this ledger:
  * offering Create to a read-only collaborator only walks them into the open
  * account screen's write guard.
  *
@@ -127,11 +145,71 @@ export function showCreateAccountRow(
   query: string,
   visibleSectionCount: number,
   access: LedgerWriteAccess,
+  type?: string,
+  hasAccounts = true,
 ): boolean {
-  if (!access.canWrite || access.error) {
+  if (!offersCreate(type) || !access.canWrite || access.error) {
     return false;
   }
-  return isSearchQuery(query) && visibleSectionCount === 0;
+  return (isSearchQuery(query) || !hasAccounts) && visibleSectionCount === 0;
+}
+
+/**
+ * Whether the create-account row also belongs under search results. The
+ * scattered-letter matcher finds something for almost any word ("pets" in
+ * `Expenses:Transport:Tram`), which left a genuinely new name with no way to
+ * create it (w21/258). The row follows the results whenever no result contains
+ * every word of the query as a contiguous piece of its name — a name the
+ * ledger already has is a real hit and needs no Create. Same access rules as
+ * the empty state's row.
+ */
+export function showCreateBelowResults(
+  query: string,
+  results: readonly string[],
+  access: LedgerWriteAccess,
+  type?: string,
+): boolean {
+  if (
+    !offersCreate(type) ||
+    !access.canWrite ||
+    access.error ||
+    results.length === 0
+  ) {
+    return false;
+  }
+  const words = query
+    .trim()
+    .normalize("NFC")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return false;
+  // A query that starts at a root account ("Expenses:Food") is a whole name,
+  // not a piece of one: it is a hit only when the ledger has exactly that
+  // account, so a new "Expenses:Food" beside "Expenses:Food:Groceries" can
+  // still be created (w21/452). A partial path ("food:groc") stays a piece.
+  const wholeName = query
+    .normalize("NFC")
+    .toLowerCase()
+    .split(":")
+    .map((part) => part.trim())
+    .join(":");
+  const rootOf = (name: string) => name.split(":")[0];
+  if (
+    wholeName.includes(":") &&
+    results.some(
+      (account) =>
+        rootOf(account.normalize("NFC").toLowerCase()) === rootOf(wholeName),
+    )
+  ) {
+    return !results.some(
+      (account) => account.normalize("NFC").toLowerCase() === wholeName,
+    );
+  }
+  return !results.some((account) => {
+    const name = account.normalize("NFC").toLowerCase();
+    return words.every((word) => name.includes(word));
+  });
 }
 
 /** Where an account sits in rendered sections, for scrolling it into view. */
@@ -149,4 +227,51 @@ export function findAccountLocation(
     }
   }
   return null;
+}
+
+/**
+ * The accounts plus every parent between their root and themselves, each
+ * parent just before its first child: `Expenses:Food` ahead of
+ * `Expenses:Food:Groceries`. The ledger lists only opened accounts, so a
+ * category could not be chosen to filter by, though the server filters by a
+ * parent and the Accounts tab opens one as a combined journal (w21/036).
+ * Only a filter may offer these — a posting can't target an unopened parent.
+ */
+export function withParentAccounts(accounts: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const account of accounts) {
+    const parts = account.split(":");
+    for (let depth = 2; depth < parts.length; depth++) {
+      const parent = parts.slice(0, depth).join(":");
+      if (!seen.has(parent)) {
+        seen.add(parent);
+        result.push(parent);
+      }
+    }
+    if (!seen.has(account)) {
+      seen.add(account);
+      result.push(account);
+    }
+  }
+  return result;
+}
+
+/**
+ * The accounts a picker lists. A filter keeps every opened account plus their
+ * parents (w21/036). A budget is offered the accounts open today plus their
+ * parents too: "Food: 600 a month" across its children is the commonest budget,
+ * the server rolls children up by prefix, and a budget's account need not be
+ * opened itself, so `Expenses:Food` was reachable only through a spurious
+ * `open` (w21/396). A posting gets only accounts open on its date.
+ */
+export function pickerAccounts(
+  type: string,
+  opened: readonly string[],
+  onDate: string,
+  closeDates: CloseDates,
+): string[] {
+  if (type === "filter") return withParentAccounts(opened);
+  const open = openOn(opened, onDate, closeDates);
+  return type === "budget" ? withParentAccounts(open) : open;
 }

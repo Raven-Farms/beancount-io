@@ -1,4 +1,10 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReactiveVar } from "@apollo/client";
+import {
+  revealAccountVar,
+  type AccountReveal,
+} from "@/common/vars/reveal-account";
+import { ledgerVar } from "@/common/vars";
 import { useScrollToTop } from "expo-router";
 import {
   FlatList,
@@ -33,7 +39,12 @@ import {
   CATEGORY_SIGN,
   type AccountCategory,
 } from "@/components/account-list/select-account-list";
-import { flattenRows, rowDisclosure, type TableRow } from "./flatten-rows";
+import {
+  flattenRows,
+  revealAccountOverrides,
+  rowDisclosure,
+  type TableRow,
+} from "./flatten-rows";
 import { LEADING_TEXT_ALIGN, directionalIcon } from "@/common/rtl";
 
 /**
@@ -187,7 +198,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     amountNote: {
       fontSize: fontSizes.xs,
-      color: theme.black60,
+      color: theme.black80,
     },
     // Magnitude bar, aligned under the row's own label. Short and fixed-width by
     // design: given the full row to grow into, the widest sibling's bar spans the
@@ -282,7 +293,10 @@ const AccountTableRow = memo(function AccountTableRow({
   // When rows navigate, the chevron owns the toggle so a nested tap collapses
   // without triggering the row's drill-down. Category rows included: they carry a
   // real root account, so tapping one opens the whole category's detail.
-  const navigates = Boolean(onPressAccount) && row.account !== "";
+  // The own row is not one: it carries the parent's account, and account detail
+  // reads that account with its children, so it opened the parent's page ($28,100
+  // for a $10,000 own row) (w21/612).
+  const navigates = Boolean(onPressAccount) && row.account !== "" && !row.own;
   const chevron =
     navigates && row.hasChildren ? (
       <TouchableOpacity
@@ -478,6 +492,42 @@ export function AccountTable({
     [categories, overrides],
   );
 
+  // A just-opened account: open its ancestors, then scroll to it once the
+  // refreshed tree holds its row (w21/175).
+  const reveal = useReactiveVar(revealAccountVar);
+  const ledgerId = useReactiveVar(ledgerVar);
+  // The reveal whose ancestors were opened. Opened once: a row the user then
+  // collapses must stay collapsed, not be re-opened by every later change
+  // (w21/363).
+  const openedReveal = useRef<AccountReveal | null>(null);
+  useEffect(() => {
+    if (!reveal) return;
+    // Opened in another ledger: nothing here to reveal.
+    if (reveal.ledgerId !== ledgerId) {
+      revealAccountVar(null);
+      return;
+    }
+    const account = reveal.account;
+    if (openedReveal.current !== reveal) {
+      const opened = revealAccountOverrides(categories, account);
+      if (!opened) return;
+      openedReveal.current = reveal;
+      const pending = Object.keys(opened).filter((key) => !overrides[key]);
+      if (pending.length > 0) {
+        setOverrides((prev) => ({ ...prev, ...opened }));
+        return;
+      }
+    }
+    const index = rows.findIndex((row) => row.account === account && !row.own);
+    // Opened, yet the row is not there: the user collapsed an ancestor first.
+    if (index < 0) {
+      revealAccountVar(null);
+      return;
+    }
+    revealAccountVar(null);
+    listRef.current?.scrollToIndex({ index, viewPosition: 0.5 });
+  }, [reveal, ledgerId, categories, overrides, rows]);
+
   const onToggle = useCallback((row: TableRow) => {
     setOverrides((prev) => ({ ...prev, [row.key]: !row.expanded }));
   }, []);
@@ -488,7 +538,13 @@ export function AccountTable({
         row={item}
         // Category rows label themselves from the i18n key they carry; account
         // rows already hold a display name built from the ledger.
-        label={item.depth === 0 ? t(item.label) : item.label}
+        label={
+          item.depth === 0
+            ? t(item.label)
+            : item.own
+              ? t("accountOwnPostings", { name: item.label })
+              : item.label
+        }
         currency={currency}
         display={displays?.get(item.key)}
         stacked={stacked}
@@ -509,6 +565,16 @@ export function AccountTable({
       data={rows}
       renderItem={renderItem}
       keyExtractor={(row) => row.key}
+      // A row not yet measured: land near it, then try again once laid out.
+      onScrollToIndexFailed={({ index, averageItemLength }) => {
+        listRef.current?.scrollToOffset({
+          offset: index * averageItemLength,
+        });
+        setTimeout(
+          () => listRef.current?.scrollToIndex({ index, viewPosition: 0.5 }),
+          100,
+        );
+      }}
       ListHeaderComponent={
         <View style={styles.columnHeader}>
           <Text style={styles.columnLabel}>{t("account")}</Text>

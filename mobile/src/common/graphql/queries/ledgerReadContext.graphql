@@ -4,6 +4,7 @@ query LedgerReadContext($ledgerId: String!) {
     private
     attributes {
       accounts
+      currencies
     }
     options {
       nameAssets

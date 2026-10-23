@@ -10,12 +10,15 @@
  * covers the end-to-end engine.
  */
 import { deepStrictEqual } from "node:assert";
-import type { BeancountError, FileMap } from "@rustledger/wasm";
+import type { BeancountError, CellValue, FileMap } from "@rustledger/wasm";
 import {
   buildEntryIdMap,
   collectAttributes,
   closeRustledgerWorkerPool,
+  collectDocuments,
   countDirectives,
+  countLedgerDirectives,
+  countLedgerDirectivesInProcess,
   createBookedBlockParser,
   entriesCountPerType,
   findEntrySlice,
@@ -25,6 +28,7 @@ import {
   getRustledgerVersion,
   hashEntry,
   parseLedgerFiles,
+  parseLedgerFilesInProcess,
   queryLedgerFiles,
   queryLedgerFilesResult,
   withLedger,
@@ -34,6 +38,14 @@ import {
   queryResultToText,
 } from "@/features/ledger/service/ledger-shell-mappers";
 import { stripBqlBlockComments } from "@/features/ledger/service/bql-comments";
+import { UNDECODABLE_SOURCE } from "@/foundation/rustledger/file-map-loader";
+import { filterDirectives } from "@/foundation/rustledger/directive-filter";
+import { assertEntryTokens } from "@/features/ledger/utils/entry-tokens";
+import {
+  checkTransactionBalance,
+  scanInferredToleranceDefaults,
+} from "@/features/ledger/utils/transaction-balance";
+import { formatCellValue } from "@/foundation/rustledger/mappers";
 import { LedgerDataService } from "@/features/ledger/service/ledger-data-service";
 import { LedgerFinanceService } from "@/features/ledger/service/ledger-finance-service";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
@@ -572,6 +584,126 @@ async function verifyWindowedPlaintextExport(): Promise<void> {
   );
 }
 
+/**
+ * A quoted string may span physical lines — unindented, blank and date-like
+ * lines inside it are content (w4/m34). Each such entry must resolve its
+ * complete source block, and the source-details marker probe must not land
+ * inside the literal.
+ */
+/**
+ * w4/301: a Document's relative path names a file beside its declaring source,
+ * through the production worker clone and snapshot cache. The report used to
+ * hand `books/documents.bean`'s `"receipt.txt"` out as a root `receipt.txt`.
+ */
+async function verifyDocumentSourcePaths(): Promise<void> {
+  const files: FileMap = {
+    "main.bean": [
+      "2026-01-01 open Assets:Cash USD",
+      'include "books/documents.bean"',
+      'include "other/documents.bean"',
+      '2026-10-19 document Assets:Cash "books/receipt.txt"',
+      "",
+    ].join("\n"),
+    "books/documents.bean": '2026-10-21 document Assets:Cash "receipt.txt"\n',
+    "other/documents.bean": '2026-10-22 document Assets:Cash "receipt.txt"\n',
+    "books/receipt.txt": "qa root and included\n",
+    "other/receipt.txt": "qa other include\n",
+  };
+  const repoPaths = Object.keys(files);
+  for (const round of ["parsed", "cached"]) {
+    const snapshot = await parseLedgerFiles(files, "main.bean", { repoPaths });
+    assert(
+      snapshot.valid && snapshot.errors.length === 0,
+      `document source fixture is valid (${round})`,
+    );
+    const byDate = Object.fromEntries(
+      collectDocuments(snapshot.directives).map((doc) => [doc.date, doc.path]),
+    );
+    deepStrictEqual(byDate, {
+      "2026-10-19": "books/receipt.txt",
+      "2026-10-21": "books/receipt.txt",
+      "2026-10-22": "other/receipt.txt",
+    });
+    assert(
+      Object.values(byDate).every((path) => path in files),
+      `every reported document path names a committed file (${round})`,
+    );
+  }
+}
+
+async function verifyMultilineSources(): Promise<void> {
+  const notes = [
+    'qa "quoted" C:\\qa\\receipts\nsecond line\nthird line',
+    "first\n\nafter a blank line",
+    "first\n2024-03-02 open Assets:Phantom",
+    "indented\n  second line",
+  ];
+  const noteBlocks = notes.map(
+    (comment, index) =>
+      `2024-03-0${index + 1} note Assets:Cash "${comment.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`,
+  );
+  const txnBlock = [
+    '2024-03-09 * "Payee" "two-line',
+    'narration"',
+    "  Expenses:Food   1.25 USD",
+    "  Assets:Cash",
+  ].join("\n");
+  const tail = "2024-03-10 note Assets:Cash \"after\"";
+  const source = [
+    "2024-01-01 open Assets:Cash",
+    "2024-01-01 open Expenses:Food",
+    "",
+    ...noteBlocks.flatMap((block) => [block, ""]),
+    txnBlock,
+    "",
+    tail,
+    "",
+  ].join("\n");
+  const files: FileMap = { "main.beancount": source };
+
+  const plain = await parseLedgerFiles(files, "main.beancount");
+  assert(plain.valid, "multiline-string ledger is valid");
+  const probed = await parseLedgerFilesInProcess(files, "main.beancount", {
+    includeSourceDetails: true,
+  });
+  const comments = probed.directives
+    .filter((directive) => directive.type === "note")
+    .map((directive) => (directive as { comment: string }).comment);
+  deepStrictEqual(comments, [...notes, "after"]);
+  console.log("✓ multiline literals parse exactly as written");
+  assert(
+    probed.directives.length === plain.directives.length,
+    "source-details probe adds no phantom directive",
+  );
+
+  const ids = buildEntryIdMap(plain.directives);
+  const expected = [...noteBlocks, txnBlock, tail];
+  const resolvable = plain.directives.filter(
+    (directive) => directive.type === "note" || directive.type === "transaction",
+  );
+  for (const [index, directive] of resolvable.entries()) {
+    const id = ids.get(directive);
+    assert(id !== undefined, `multiline entry ${index} has an entry ID`);
+    // The probe's marker must follow the whole header, outside the literal,
+    // or the entry gets no source details at all.
+    const startLine = source.split("\n").indexOf(expected[index].split("\n")[0]);
+    assert(
+      probed.sourceDetails?.[id]?.lineno === startLine + 1,
+      `multiline entry ${index} carries probe source details at its line`,
+    );
+    const found = await findEntrySliceWithFullLedger(
+      files,
+      "main.beancount",
+      id,
+    );
+    assert(
+      found?.slice === expected[index] &&
+        source.split("\n")[found.startLine] === expected[index].split("\n")[0],
+      `multiline entry ${index} resolves its complete source block`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const version = await getRustledgerVersion();
   assert(
@@ -956,6 +1088,24 @@ async function main(): Promise<void> {
   assert(
     count === 2,
     `countDirectives on a leaf file returns 2 (got ${count})`,
+  );
+
+  // The free-tier precheck and the push gate count through the worker pool
+  // (w0/m5); it must agree with the in-process count, include graph and all.
+  const countFiles: FileMap = {
+    "main.bean":
+      'include "2024.bean"\n2024-01-01 open Assets:Cash USD\n2024-01-01 open Expenses:Food USD\n',
+    "2024.bean":
+      '2024-01-05 * "Lunch"\n  Expenses:Food 10 USD\n  Assets:Cash\n2024-01-06 balance Assets:Cash -10 USD\n',
+  };
+  const workerCount = await countLedgerDirectives(countFiles, "main.bean");
+  const inProcessCount = await countLedgerDirectivesInProcess(
+    countFiles,
+    "main.bean",
+  );
+  assert(
+    workerCount === 4 && inProcessCount === 4,
+    `the worker-pool directive count matches the in-process count across an include (worker ${workerCount}, in-process ${inProcessCount})`,
   );
 
   const formatted = await formatSource(
@@ -1491,6 +1641,522 @@ async function main(): Promise<void> {
   assert(
     scopedIncluded.valid,
     "included option/plugin is neutralized so a valid ledger stays valid (#4)",
+  );
+
+  await verifyMultilineSources();
+  await verifyDocumentSourcePaths();
+
+  // w23/011: an undecodable source the entry point does not reach changes
+  // nothing; one it includes is reported by path, and the rest still parses.
+  const strayExport = await parseLedgerFiles(
+    {
+      "main.bean": "2024-01-01 open Assets:Cash USD\n",
+      "export.bean": UNDECODABLE_SOURCE,
+    },
+    "main.bean",
+  );
+  assert(
+    strayExport.valid && strayExport.directiveCount === 1,
+    "an undecodable file nothing includes leaves the ledger valid (w23/011)",
+  );
+  const includedExport = await parseLedgerFiles(
+    {
+      "main.bean":
+        'include "export.bean"\n2024-01-01 open Assets:Cash USD\n',
+      "export.bean": UNDECODABLE_SOURCE,
+    },
+    "main.bean",
+  );
+  assert(
+    !includedExport.valid &&
+      includedExport.directiveCount === 1 &&
+      includedExport.errors.length === 1 &&
+      includedExport.errors[0]?.code === "INVALID_UTF8" &&
+      includedExport.errors[0]?.file === "export.bean",
+    "an included undecodable file is the one error, naming it (w23/011)",
+  );
+
+  // w23/012: rustledger 0.24.0 collapses cost(sum(position)) over several
+  // currencies into one mislabelled Amount; the query path refuses that. When
+  // a bump fixes the engine, the first check fails and the guard can go.
+  const costFiles: FileMap = {
+    "main.bean": [
+      "2024-01-01 open Assets:Hours",
+      "2024-01-01 open Assets:Broker",
+      "2024-01-01 open Assets:Cash",
+      "2024-01-01 open Equity:Opening",
+      '2024-01-02 * "hours"',
+      "  Assets:Hours  -13 VACHR",
+      "  Equity:Opening",
+      '2024-01-03 * "buy"',
+      "  Assets:Broker  17 GLD {268.22 USD}",
+      "  Assets:Cash",
+      "",
+    ].join("\n"),
+  };
+  const rawCost = await withLedger(costFiles, "main.bean", (ledger) =>
+    ledger.query(
+      "SELECT cost(sum(position)) WHERE account ~ '^Assets:(Hours|Broker)'",
+    ),
+  );
+  assert(
+    JSON.stringify(rawCost.rows) ===
+      JSON.stringify([[{ number: "4546.74", currency: "VACHR" }]]),
+    "raw engine still collapses a multi-currency cost(sum(position)) (w23/012)",
+  );
+  const guardedCost = await queryLedgerFilesResult(
+    costFiles,
+    "main.bean",
+    "SELECT cost(sum(position)) WHERE account ~ '^Assets:(Hours|Broker)'",
+  );
+  assert(
+    guardedCost.rows.length === 0 &&
+      guardedCost.errors[0]?.message.includes("sum(cost(position))") === true,
+    "the query path refuses the collapsed cost and names sum(cost(position))",
+  );
+  const singleCost = await queryLedgerFilesResult(
+    costFiles,
+    "main.bean",
+    "SELECT cost(sum(position)) WHERE account ~ '^Assets:Broker'",
+  );
+  assert(
+    JSON.stringify(singleCost.rows) ===
+      JSON.stringify([[{ number: "4559.74", currency: "USD" }]]),
+    "a single-currency cost(sum(position)) is still answered",
+  );
+
+  // w23/015: a position cell names its lot the way Beancount writes it.
+  const lotQuery = await queryLedgerFilesResult(
+    {
+      "main.bean": [
+        "2015-01-01 open Assets:Broker",
+        "2015-01-01 open Assets:Cash",
+        '2015-09-15 * "buy"',
+        '  Assets:Broker  5 GLD {197.06 USD, "lot-a"}',
+        "  Assets:Cash",
+        "",
+      ].join("\n"),
+    },
+    "main.bean",
+    "SELECT position WHERE account ~ 'Broker'",
+  );
+  assert(
+    formatCellValue(lotQuery.rows[0]?.[0] as CellValue) ===
+      '5 GLD {197.06 USD, 2015-09-15, "lot-a"}',
+    "a position cell keeps its lot date and label (w23/015)",
+  );
+
+  // w23/016: documented beanquery forms this engine refuses, and the spellings
+  // the refusals name instead. When a bump accepts the upstream form, the
+  // first check of a pair fails and its ENGINE_GAPS entry can go.
+  const gapFiles: FileMap = {
+    "main.bean": [
+      "2024-01-01 open Assets:Cash",
+      "2024-01-01 open Income:Salary",
+      '2024-01-02 * "pay"',
+      "  Assets:Cash  100 USD",
+      "  Income:Salary",
+      "",
+    ].join("\n"),
+  };
+  const gap = (query: string) =>
+    queryLedgerFilesResult(gapFiles, "main.bean", query);
+  const negInventory = await gap(
+    "SELECT account, neg(sum(position)) WHERE account ~ '^Income' GROUP BY account",
+  );
+  assert(
+    negInventory.errors[0]?.message.includes("NEG expects a number or amount") ===
+      true,
+    "engine still refuses neg(inventory) (w23/016)",
+  );
+  const negUnits = await gap(
+    "SELECT account, sum(neg(units(position))) WHERE account ~ '^Income' GROUP BY account",
+  );
+  assert(
+    negUnits.errors.length === 0 && negUnits.rows.length === 1,
+    "sum(neg(units(position))) runs, as the neg refusal says",
+  );
+  const negNumber = await gap(
+    "SELECT currency, neg(sum(number)) WHERE account ~ '^Income' GROUP BY currency",
+  );
+  assert(
+    negNumber.errors.length === 0 &&
+      JSON.stringify(negNumber.rows) === JSON.stringify([["USD", "100"]]),
+    "neg(sum(number)) grouped by currency runs, as the neg refusal says",
+  );
+  const filterPosition = await gap(
+    "SELECT account, sum(filter_currency(position, 'USD')) GROUP BY account",
+  );
+  assert(
+    filterPosition.errors[0]?.message.includes(
+      "FILTER_CURRENCY expects (inventory, string)",
+    ) === true,
+    "engine still refuses filter_currency(position, ...) (w23/016)",
+  );
+  const filterInventory = await gap(
+    "SELECT account, filter_currency(sum(position), 'USD') GROUP BY account",
+  );
+  assert(
+    filterInventory.errors.length === 0 && filterInventory.rows.length > 0,
+    "filter_currency(sum(position), 'USD') runs, as the refusal says",
+  );
+
+  // w23/020: BALANCES/JOURNAL … AT value come back in units, and a BALANCES
+  // FROM window that sells an earlier lot fails. The first check of each
+  // pair fails once an engine bump fixes it, and its guard or hint can go.
+  const lotFiles: FileMap = {
+    "main.bean": [
+      "2020-01-01 open Assets:Broker",
+      "2020-01-01 open Assets:Cash USD",
+      "2020-01-01 open Income:Gains USD",
+      '2020-01-02 * "buy lot1"',
+      "  Assets:Broker  9 VHT {113.91 USD, 2020-01-02}",
+      "  Assets:Cash",
+      '2021-03-10 * "sell lot1"',
+      "  Assets:Broker  -9 VHT {113.91 USD, 2020-01-02} @ 120.00 USD",
+      "  Assets:Cash   1080.00 USD",
+      "  Income:Gains",
+      '2021-03-11 * "buy lot2"',
+      "  Assets:Broker  4 VHT {118.03 USD}",
+      "  Assets:Cash",
+      "2021-03-12 price VHT 120.00 USD",
+      "",
+    ].join("\n"),
+  };
+  const rawAtValue = await withLedger(lotFiles, "main.bean", (ledger) =>
+    ledger.query("BALANCES AT value WHERE account ~ 'Broker'"),
+  );
+  assert(
+    JSON.stringify(rawAtValue.rows).includes('"currency":"VHT"'),
+    "raw engine still answers BALANCES AT value in units (w23/020)",
+  );
+  const guardedAtValue = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "BALANCES AT value WHERE account ~ 'Broker'",
+  );
+  assert(
+    guardedAtValue.rows.length === 0 &&
+      guardedAtValue.errors[0]?.message.includes("value(sum(position))") ===
+        true,
+    "the query path refuses BALANCES AT value and names value(sum(position))",
+  );
+  const valued = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "SELECT account, value(sum(position)) WHERE account ~ 'Broker' GROUP BY account",
+  );
+  assert(
+    JSON.stringify(valued.rows).includes('"number":"480.00","currency":"USD"'),
+    "value(sum(position)) values the holding at market, as the refusal says",
+  );
+  const windowed = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "BALANCES FROM year = 2021",
+  );
+  assert(
+    windowed.errors[0]?.message.includes("No matching lot for VHT") === true,
+    "engine still fails BALANCES FROM a window that sells an earlier lot (w23/020)",
+  );
+  const windowSum = await queryLedgerFilesResult(
+    lotFiles,
+    "main.bean",
+    "SELECT account, sum(position) FROM year = 2021 GROUP BY account",
+  );
+  assert(
+    windowSum.errors.length === 0 && windowSum.rows.length > 0,
+    "the windowed sum the lot-error hint names runs",
+  );
+
+  // w21/648: the entries precheck balances a transaction as the engine does,
+  // on the cases where Beancount and rustledger agree.
+  const toleranceCases: Array<[string, string[]]> = [
+    ['option "inferred_tolerance_default" "USD:0.01"', ["-10.00", "3.33", "3.33", "3.33"]],
+    ["", ["-10.00", "3.33", "3.33", "3.33"]],
+    ["", ["10", "-9.6"]],
+    ["", ["10", "-10.004"]],
+    ["", ["100.0000", "-99.9960"]],
+    ["", ["10.000", "-10.0004"]],
+    ["", ["10.00", "-9.995"]],
+    ["", ["10.00", "-9.9949"]],
+    ['option "inferred_tolerance_default" "EUR:0.5"', ["10", "-9.6"]],
+    ['option "inferred_tolerance_default" "*:1"', ["10", "-9"]],
+    ['option "inferred_tolerance_default" "0.01"', ["-10.00", "3.33", "3.33", "3.33"]],
+  ];
+  // w21/647: and weighs a priced posting (`EUR @ USD`) the engine's way.
+  const pricedCases: Array<[string, string, string]> = [
+    ["-110.00", "100.00", "1.10"],
+    ["-110.00", "100.00", "1.11"],
+    ["-33.33", "10", "3.3333"],
+    ["-33.33", "10", "3.334"],
+    ["-110", "100", "1.1"],
+  ];
+  for (const [cash, euros, rate] of pricedCases) {
+    const priced = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Assets:Bank\n2024-01-02 * "t"\n  Assets:Cash ${cash} USD\n  Assets:Bank ${euros} EUR @ ${rate} USD\n`,
+      },
+      "main.bean",
+    );
+    const engineBalances = !priced.errors.some((error) =>
+      error.message.startsWith("Transaction does not balance"),
+    );
+    const precheck = checkTransactionBalance([
+      { account: "Assets:Cash", units: { number: cash, currency: "USD" } },
+      {
+        account: "Assets:Bank",
+        units: { number: euros, currency: "EUR" },
+        price: { number: rate, currency: "USD" },
+      },
+    ]).ok;
+    assert(
+      precheck === engineBalances,
+      `the precheck ${precheck ? "accepts" : "refuses"} ${cash} USD / ${euros} EUR @ ${rate} USD, as the engine does`,
+    );
+  }
+  for (const [option, numbers] of toleranceCases) {
+    const accounts = numbers.map((_number, index) => `Assets:A${index}`);
+    const balanced = await parseLedgerFiles(
+      {
+        "main.bean": `${option}\n${accounts.map((account) => `2024-01-01 open ${account}\n`).join("")}2024-01-02 * "t"\n${numbers.map((number, index) => `  ${accounts[index]} ${number} USD\n`).join("")}`,
+      },
+      "main.bean",
+    );
+    const engineBalances = !balanced.errors.some((error) =>
+      error.message.startsWith("Transaction does not balance"),
+    );
+    const precheck = checkTransactionBalance(
+      numbers.map((number, index) => ({
+        account: accounts[index]!,
+        units: { number, currency: "USD" },
+      })),
+      scanInferredToleranceDefaults([option]),
+    ).ok;
+    assert(
+      precheck === engineBalances,
+      `the precheck ${precheck ? "accepts" : "refuses"} ${numbers.join(" / ")} USD${option ? ` under ${option.slice(36)}` : ""}, as the engine does`,
+    );
+  }
+
+  // w21/653: the entry validator accepts a tag (or a flag) exactly when the
+  // engine reads it back as written.
+  const accepts = (item: Record<string, unknown>): boolean => {
+    try {
+      assertEntryTokens([{ type: "transaction", item }]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  for (const tag of ["trip-2026", "inv/2026.03", "a_b", "café", "旅行"]) {
+    const tagged = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 * "t" #${tag}\n  Assets:Cash 1 USD\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = tagged.directives.find(
+      (directive) => directive.type === "transaction",
+    );
+    const intact =
+      tagged.errors.length === 0 &&
+      read?.type === "transaction" &&
+      JSON.stringify(read.tags) === JSON.stringify([tag]);
+    assert(
+      accepts({ tags: [tag] }) === intact,
+      `the validator ${intact ? "accepts" : "refuses"} tag #${tag}, as the engine reads it`,
+    );
+  }
+  // Every flag the validator takes reads back on a transaction and a posting
+  // (w21/650: a `%` posting was read as a comment and silently dropped).
+  const unreadFlags: string[] = [];
+  for (let code = 0x21; code <= 0x7e; code += 1) {
+    const flag = String.fromCharCode(code);
+    const asPosting = accepts({
+      postings: [{ account: "Assets:Cash", flag }],
+    });
+    if (!asPosting && !accepts({ flag })) continue;
+    const flagged = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 ${flag} "t"\n  ${flag} Assets:Cash 1 USD\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = flagged.directives.find(
+      (directive) => directive.type === "transaction",
+    );
+    if (
+      !(
+        flagged.errors.length === 0 &&
+        read?.type === "transaction" &&
+        read.flag === flag &&
+        read.postings.length === 2 &&
+        read.postings[0]?.flag === flag
+      )
+    ) {
+      unreadFlags.push(flag);
+    }
+  }
+  assert(
+    unreadFlags.length === 0,
+    `the engine reads every flag the validator accepts, on a transaction and a posting${unreadFlags.length ? ` (not: ${unreadFlags.join(" ")})` : ""}`,
+  );
+  for (const flag of ["*", "!", "P", "A", "Z", "'X"]) {
+    const flagged = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 ${flag} "t"\n  Assets:Cash 1 USD\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = flagged.errors.length === 0 &&
+      flagged.directives.some(
+        (directive) =>
+          directive.type === "transaction" && directive.flag === flag,
+      );
+    assert(
+      accepts({ flag }) === read,
+      `the validator ${read ? "accepts" : "refuses"} flag ${flag}, as the engine reads it`,
+    );
+  }
+
+  // w21/649: an account with a ZWNJ or ZWJ is accepted, and the engine reads it.
+  for (const account of ["Assets:Bank:خانه\u200cها", "Assets:Bank:क्\u200dष"]) {
+    const opened = await parseLedgerFiles(
+      { "main.bean": `2024-01-01 open ${account}\n` },
+      "main.bean",
+    );
+    assert(
+      accepts({ postings: [{ account }] }) &&
+        opened.errors.length === 0 &&
+        opened.directives.some(
+          (directive) =>
+            directive.type === "open" && directive.account === account,
+        ),
+      `the validator accepts ${JSON.stringify(account)}, and the engine reads it`,
+    );
+  }
+
+  // w21/651: a futures currency is accepted exactly when the engine reads it
+  // as written (`/6E` is read as one sixth of `E`).
+  for (const currency of ["/ESZ24", "/NQH21_QNEG21C13100", "/6E", "/6.3"]) {
+    const futures = await parseLedgerFiles(
+      {
+        "main.bean": `2024-01-01 open Assets:Cash\n2024-01-01 open Equity:Open\n2024-01-02 * "t"\n  Assets:Cash 1 ${currency}\n  Equity:Open\n`,
+      },
+      "main.bean",
+    );
+    const read = futures.directives.find(
+      (directive) => directive.type === "transaction",
+    );
+    const intact =
+      futures.errors.length === 0 &&
+      read?.type === "transaction" &&
+      read.postings[0]?.units?.number === "1" &&
+      read.postings[0]?.units?.currency === currency;
+    assert(
+      accepts({
+        postings: [
+          { account: "Assets:Cash", units: { number: "1", currency } },
+        ],
+      }) === intact,
+      `the validator ${intact ? "accepts" : "refuses"} currency ${currency}, as the engine reads it`,
+    );
+  }
+
+  // w21/654: the engine still opens a string at a `"` on an org heading or a
+  // `#` line and loses every entry after it; the parse comments such lines.
+  const headingFiles = {
+    "main.bean": `2024-01-01 open Assets:Cash
+2024-01-01 open Equity:Open
+* Notes: 12" pizza budget
+2024-01-02 * "after the heading"
+  Assets:Cash 1 USD
+  Equity:Open
+# It's 5" wide
+2024-01-03 note Assets:Cash "agenda:
+* kept inside the string"
+2024-01-04 balance Assets:Cash 1 USD
+`,
+  };
+  const headingSnapshot = await parseLedgerFiles(headingFiles, "main.bean");
+  assert(
+    headingSnapshot.errors.length === 0 &&
+      headingSnapshot.directives.some(
+        (directive) =>
+          directive.type === "transaction" &&
+          directive.narration === "after the heading",
+      ) &&
+      headingSnapshot.directives.some(
+        (directive) =>
+          directive.type === "note" &&
+          directive.comment === "agenda:\n* kept inside the string",
+      ) &&
+      headingSnapshot.directives.some(
+        (directive) => directive.type === "balance",
+      ),
+    "an org heading or # line with a quote keeps every entry after it",
+  );
+  const headingCount = await queryLedgerFilesResult(
+    headingFiles,
+    "main.bean",
+    "SELECT count(*)",
+  );
+  assert(
+    JSON.stringify(headingCount.rows) === "[[2]]",
+    "BQL counts the postings after a quoted heading",
+  );
+
+  // w21/655: the engine still drops a note's tags and links and pushtag on
+  // notes and documents; the parse restores them, so the filters see them.
+  const noteSnapshot = await parseLedgerFiles(
+    {
+      "main.bean": `2024-01-01 open Assets:Cash
+pushtag #trip
+2024-02-01 note Assets:Cash "dispute filed" #dispute ^case-42
+2024-02-02 document Assets:Cash "r.pdf"
+poptag #trip
+2024-02-03 note Assets:Cash "after"
+`,
+      "r.pdf": "",
+    },
+    "main.bean",
+    { repoPaths: ["main.bean", "r.pdf"] },
+  );
+  const tagged = (filter: string) =>
+    filterDirectives(noteSnapshot.directives, { filter }).map(
+      (directive) => directive.date,
+    );
+  deepStrictEqual(tagged("#dispute"), ["2024-02-01"]);
+  deepStrictEqual(tagged("^case-42"), ["2024-02-01"]);
+  deepStrictEqual(tagged("#trip"), ["2024-02-01", "2024-02-02"]);
+  console.log("✓ a note's tags and links, and pushed tags, reach the filters");
+
+  // w21/656: the engine still ignores raw mode, so the parse undoes its pad
+  // and balance steps, and BQL (over the materialized stream) follows.
+  const rawFiles = {
+    "main.bean": `option "plugin_processing_mode" "raw"
+2020-01-01 open Assets:Bank
+2020-01-01 open Equity:Open
+2020-01-01 pad Assets:Bank Equity:Open
+2020-01-02 balance Assets:Bank 100 USD
+2020-01-03 balance Assets:Bank 5 USD
+`,
+  };
+  const rawSnapshot = await parseLedgerFiles(rawFiles, "main.bean");
+  assert(
+    rawSnapshot.errors.length === 0 &&
+      !rawSnapshot.directives.some((directive) => directive.type === "transaction"),
+    "raw plugin processing inserts no padding and checks no balance",
+  );
+  const rawBalances = await queryLedgerFilesResult(
+    rawFiles,
+    "main.bean",
+    "SELECT account, sum(position) GROUP BY account",
+  );
+  assert(
+    rawBalances.rows.length === 0,
+    "BQL over a raw-mode ledger sums no padding",
   );
 
   console.log("\nAll rustledger engine checks passed.");

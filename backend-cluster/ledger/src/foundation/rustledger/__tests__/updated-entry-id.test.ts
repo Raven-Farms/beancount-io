@@ -4,7 +4,10 @@ import {
   inheritDirectiveSourceId,
   seedDirectiveSourceIds,
 } from "../plugins/provenance";
-import { resolveEntryIdAtSource } from "../updated-entry-id";
+import {
+  resolveEntryIdAtSource,
+  resolveEntryIdsAtSources,
+} from "../updated-entry-id";
 
 function txn(narration: string, amount: string): DirectiveJson {
   return {
@@ -112,5 +115,53 @@ describe("resolveEntryIdAtSource", () => {
         { file: "main.bean", startLine: 0, lineCount: 1 },
       ),
     ).toBeUndefined();
+  });
+});
+
+// w23/060: a bulk write locates every entry it added in one parse.
+describe("resolveEntryIdsAtSources", () => {
+  it("resolves each range to its own block, in request order", () => {
+    const coffee = txn("coffee", "4.25");
+    const lunch = txn("lunch", "12.00");
+    const other = txn("tea", "2.00");
+    const sourceDetails = {
+      [hashEntry(coffee)]: { filename: "main.bean", lineno: 5 },
+      [hashEntry(lunch)]: { filename: "main.bean", lineno: 9 },
+      [hashEntry(other)]: { filename: "txns/2024.bean", lineno: 5 },
+    };
+
+    expect(
+      resolveEntryIdsAtSources(
+        { directives: [coffee, lunch, other], sourceDetails },
+        [
+          { file: "main.bean", startLine: 8, lineCount: 3 },
+          { file: "txns/2024.bean", startLine: 4, lineCount: 3 },
+          { file: "main.bean", startLine: 4, lineCount: 3 },
+          { file: "main.bean", startLine: 20, lineCount: 3 },
+        ],
+      ),
+    ).toEqual([
+      hashEntry(lunch),
+      hashEntry(other),
+      hashEntry(coffee),
+      undefined,
+    ]);
+  });
+
+  it("gives identical entries their occurrence-suffixed IDs", () => {
+    const first = txn("coffee", "4.25");
+    const second = txn("coffee", "4.25");
+    const base = hashEntry(first);
+    const sourceDetails = {
+      [entryIdFor(base, 0)]: { filename: "main.bean", lineno: 1 },
+      [entryIdFor(base, 1)]: { filename: "main.bean", lineno: 5 },
+    };
+
+    expect(
+      resolveEntryIdsAtSources({ directives: [first, second], sourceDetails }, [
+        { file: "main.bean", startLine: 4, lineCount: 3 },
+        { file: "main.bean", startLine: 0, lineCount: 3 },
+      ]),
+    ).toEqual([entryIdFor(base, 1), entryIdFor(base, 0)]);
   });
 });

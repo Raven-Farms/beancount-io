@@ -13,6 +13,7 @@
  * Import-free, so the unit-test runner can require it and assert real formatted
  * output rather than mocking a formatter.
  */
+import { utcDate } from "./calendar-date";
 
 /**
  * The calendar is pinned to Gregorian, deliberately.
@@ -47,7 +48,7 @@ function gregorian(locale: string): string {
 export function formatLedgerDate(isoDate: string, locale: string): string {
   try {
     const [year, month, day] = isoDate.split("-").map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
+    const date = utcDate(year, month - 1, day);
     if (isNaN(date.getTime())) {
       return isoDate;
     }
@@ -71,7 +72,7 @@ export function formatLedgerDate(isoDate: string, locale: string): string {
 export function formatLedgerDateShort(isoDate: string, locale: string): string {
   try {
     const [year, month, day] = isoDate.split("-").map(Number);
-    const date = new Date(Date.UTC(year, month - 1, day));
+    const date = utcDate(year, month - 1, day);
     if (isNaN(date.getTime())) {
       return isoDate;
     }
@@ -87,13 +88,43 @@ export function formatLedgerDateShort(isoDate: string, locale: string): string {
 }
 
 /**
+ * A ledger date as numeric month and day in the locale's order — "3/2" in
+ * English, "02/03" in French, "2.3." in German — for a chart's weekly and
+ * daily ticks. A fixed US `month/day` read 3 February in day-first languages
+ * (w21/096). Same UTC / Gregorian rules as `formatLedgerDate`.
+ */
+export function formatLedgerMonthDay(isoDate: string, locale: string): string {
+  try {
+    const [year, month, day] = isoDate.split("-").map(Number);
+    const date = utcDate(year, month - 1, day);
+    if (isNaN(date.getTime())) {
+      return isoDate;
+    }
+    return date.toLocaleDateString(gregorian(locale), {
+      month: "numeric",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return isoDate;
+  }
+}
+
+/**
  * A timestamp in short form — "Aug 17, 2026" — for feed items, which carry a
  * real instant rather than a ledger day and so are shown in the device's zone.
+ * `calendarDay` is for a date-only post sent as midnight UTC: read in the
+ * device's zone it fell on the day before anywhere west of UTC (w21/147), so
+ * its UTC day is shown.
  *
  * Returns an empty string when unparseable: a feed row without a date reads
  * fine, and one saying "Invalid Date" does not.
  */
-export function formatFeedDate(publishedAt: unknown, locale: string): string {
+export function formatFeedDate(
+  publishedAt: unknown,
+  locale: string,
+  options: { calendarDay?: boolean } = {},
+): string {
   try {
     // Guarded before `new Date`, which reads `null` as the epoch and would
     // date every feed item with a missing timestamp to 1 Jan 1970.
@@ -108,6 +139,35 @@ export function formatFeedDate(publishedAt: unknown, locale: string): string {
       month: "short",
       day: "numeric",
       year: "numeric",
+      ...(options.calendarDay ? { timeZone: "UTC" } : {}),
+    });
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * An instant as its day and time, "Sep 13, 2026, 12:00 PM", in the device's
+ * zone (or `timeZone`, for a test): what a commit was made, told apart from
+ * another the same day (w21/487). Empty when unparseable, like
+ * {@link formatFeedDate}.
+ */
+export function formatMoment(
+  value: unknown,
+  locale: string,
+  timeZone?: string,
+): string {
+  try {
+    if (typeof value !== "string" && typeof value !== "number") return "";
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return "";
+    return date.toLocaleString(gregorian(locale), {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      ...(timeZone ? { timeZone } : {}),
     });
   } catch {
     return "";

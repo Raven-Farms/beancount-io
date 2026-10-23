@@ -1,11 +1,143 @@
-import { ArgsType, Field, ObjectType, registerEnumType } from "type-graphql";
-import { IsEnum, IsOptional, MaxLength, Matches } from "class-validator";
-import { LedgerTemplate } from "@/features/ledger/workflow/ledger-workflow.types";
+import {
+  ArgsType,
+  Field,
+  InputType,
+  ObjectType,
+  registerEnumType,
+} from "type-graphql";
+import {
+  IsEnum,
+  IsOptional,
+  MaxLength,
+  Matches,
+  type ValidationArguments,
+} from "class-validator";
+import {
+  NEW_LEDGER_NAME_PATTERN,
+  newLedgerNameRule,
+} from "@/shared/ledger-slug";
+import { GraphQLJSONObject } from "graphql-scalars";
+import {
+  LEDGER_DESCRIPTION_MAX,
+  LedgerTemplate,
+} from "@/features/ledger/workflow/ledger-workflow.types";
 
 registerEnumType(LedgerTemplate, {
   name: "LedgerTemplate",
   description: "Template used to populate a newly created ledger",
 });
+
+export enum LedgerSetupPreset {
+  PERSONAL = "personal@1",
+  FREELANCE = "freelance@1",
+  BUSINESS = "business@1",
+  PORTFOLIO = "portfolio@1",
+  RENTAL = "rental@1",
+  SHARED_EXPENSES = "shared-expenses@1",
+  COMMUNITY = "community@1",
+  BLANK = "blank@1",
+}
+
+registerEnumType(LedgerSetupPreset, {
+  name: "LedgerSetupPreset",
+  description: "Versioned starter preset from the setup catalog (ADR021)",
+});
+
+export enum LedgerOpeningState {
+  UNKNOWN = "unknown",
+  ZERO = "zero",
+  KNOWN = "known",
+}
+
+registerEnumType(LedgerOpeningState, {
+  name: "LedgerOpeningState",
+  description: "Whether an account's opening balance is unknown, zero, or known",
+});
+
+@InputType()
+export class LedgerSetupAccountInput {
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String, { nullable: true })
+  currency?: string;
+
+  @Field(() => LedgerOpeningState, { nullable: true })
+  openingState?: LedgerOpeningState;
+
+  @Field(() => String, {
+    nullable: true,
+    description: "Decimal amount; required when openingState is KNOWN.",
+  })
+  amount?: string;
+}
+
+@InputType()
+export class LedgerSetupInput {
+  @Field(() => LedgerSetupPreset)
+  preset: LedgerSetupPreset;
+
+  @Field(() => String, { nullable: true })
+  title?: string;
+
+  @Field(() => String, { nullable: true })
+  operatingCurrency?: string;
+
+  @Field(() => String, { nullable: true })
+  historyStart?: string;
+
+  @Field(() => GraphQLJSONObject, {
+    nullable: true,
+    description:
+      "Per optional question: enabled, declined, or deferred, keyed by question id.",
+  })
+  capabilities?: Record<string, string>;
+
+  @Field(() => [LedgerSetupAccountInput], { nullable: true })
+  accounts?: LedgerSetupAccountInput[];
+}
+
+@ObjectType()
+class LedgerSetupValidationError {
+  @Field(() => String)
+  message: string;
+
+  @Field(() => String, { nullable: true })
+  source?: string;
+}
+
+@ObjectType()
+class LedgerSetupValidation {
+  @Field(() => Boolean)
+  ok: boolean;
+
+  @Field(() => [LedgerSetupValidationError])
+  errors: LedgerSetupValidationError[];
+}
+
+@ObjectType()
+export class LedgerSetupPreview {
+  @Field(() => String)
+  preset: string;
+
+  @Field(() => String)
+  operatingCurrency: string;
+
+  @Field(() => String)
+  historyStart: string;
+
+  @Field(() => [String])
+  accounts: string[];
+
+  @Field(() => GraphQLJSONObject)
+  files: Record<string, string>;
+
+  @Field(() => LedgerSetupValidation, {
+    description:
+      "bean-check's verdict on the files; creation refuses on errors.",
+  })
+  validation: LedgerSetupValidation;
+}
 
 @ObjectType()
 export class Permission {
@@ -100,22 +232,46 @@ export class CreateLedgerInput {
   @MaxLength(100, {
     message: "Name must be at most 100 characters long",
   })
-  @Matches(/^[a-z0-9_-]+$/, {
-    message:
-      "Name can only contain lowercase letters, numbers, hyphens, and underscores. The name should already be slugified before submission.",
+  @Matches(NEW_LEDGER_NAME_PATTERN, {
+    message: ({ value }: ValidationArguments) =>
+      newLedgerNameRule(String(value)),
   })
   name: string;
 
   @Field(() => String, { nullable: true })
+  @IsOptional()
+  @MaxLength(LEDGER_DESCRIPTION_MAX, {
+    message: `A ledger description can be at most ${LEDGER_DESCRIPTION_MAX} characters`,
+  })
   description?: string;
 
-  @Field(() => Boolean, { nullable: true })
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "true or omitted keeps the ledger visible only to its owner and collaborators; false makes it public, readable by anyone.",
+  })
   private?: boolean;
 
   @Field(() => LedgerTemplate, { nullable: true })
   @IsOptional()
   @IsEnum(LedgerTemplate)
   template?: LedgerTemplate;
+
+  @Field(() => LedgerSetupInput, {
+    nullable: true,
+    description:
+      "Setup specification (ADR021); mutually exclusive with template.",
+  })
+  @IsOptional()
+  setup?: LedgerSetupInput;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Client-generated idempotency identifier: a retry with the same id and request returns the original ledger.",
+  })
+  @IsOptional()
+  requestId?: string;
 }
 
 @ArgsType()
@@ -125,16 +281,24 @@ export class UpdateLedgerInput {
   @MaxLength(100, {
     message: "Name must be at most 100 characters long",
   })
-  @Matches(/^[a-z0-9_-]+$/, {
-    message:
-      "Name can only contain lowercase letters, numbers, hyphens, and underscores. The name should already be slugified before submission.",
+  @Matches(NEW_LEDGER_NAME_PATTERN, {
+    message: ({ value }: ValidationArguments) =>
+      newLedgerNameRule(String(value)),
   })
   name?: string;
 
   @Field(() => String, { nullable: true })
+  @IsOptional()
+  @MaxLength(LEDGER_DESCRIPTION_MAX, {
+    message: `A ledger description can be at most ${LEDGER_DESCRIPTION_MAX} characters`,
+  })
   description?: string;
 
-  @Field(() => Boolean, { nullable: true })
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      "true makes the ledger visible only to its owner and collaborators; false makes it public, readable by anyone; omitted leaves it as it is.",
+  })
   private?: boolean;
 }
 

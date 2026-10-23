@@ -60,21 +60,18 @@ describe("tier-config", () => {
       const info = getTierInfo("PREMIUM");
       expect(info).not.toBeNull();
       expect(info?.key).toBe("premium");
-      expect(info?.price).toBe("$14.99");
     });
 
     it("should return tier info for GROWTH", () => {
       const info = getTierInfo("GROWTH");
       expect(info).not.toBeNull();
       expect(info?.key).toBe("growth");
-      expect(info?.price).toBe("$99.99");
     });
 
     it("should return tier info for ORGANIZATION", () => {
       const info = getTierInfo("ORGANIZATION");
       expect(info).not.toBeNull();
       expect(info?.key).toBe("organization");
-      expect(info?.price).toBe("$499.99");
     });
 
     it("should return null for FREE", () => {
@@ -91,7 +88,6 @@ describe("tier-config", () => {
         key: "growth",
         userTier: "GROWTH",
         rank: 2,
-        price: "$99.99",
         labelKey: "aiAgent.growthTier",
         popular: true,
       });
@@ -103,7 +99,6 @@ describe("tier-config", () => {
         key: "organization",
         userTier: "ORGANIZATION",
         rank: 3,
-        price: "$499.99",
         labelKey: "aiAgent.organizationTier",
       });
     });

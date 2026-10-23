@@ -1,4 +1,6 @@
+import { CardLoadFailure } from "@/components/card-load-failure";
 import React, { useState } from "react";
+import { disclosureAccessibility } from "@/common/accessibility";
 import {
   Text,
   View,
@@ -16,6 +18,7 @@ import {
 } from "@/generated-graphql/graphql";
 import { ColorTheme } from "@/types/theme-props";
 import { JournalDirectiveType } from "../types";
+import { formatEntryBalances } from "./format-entry-balances";
 import { BalanceSection } from "./balance-section";
 import { LoadingTile } from "@/components/loading-tile";
 
@@ -148,7 +151,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     emptyStateText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
     },
   });
@@ -166,6 +169,8 @@ interface EntryContextProps {
   contextData?: GetLedgerEntryContextQuery["getLedgerEntryContext"] | null;
   contextLoading?: boolean;
   contextError?: Error;
+  /** Retries the caller's own context read, when it supplies one. */
+  onRetryContext?: () => void;
 }
 
 /**
@@ -179,6 +184,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
   contextData,
   contextLoading = false,
   contextError,
+  onRetryContext,
 }) => {
   const styles = useThemeStyle(getStyles);
   const theme = useTheme().colorTheme;
@@ -188,7 +194,7 @@ export const EntryContext: React.FC<EntryContextProps> = ({
   // The detail screen already fetches this context to resolve the source
   // checksum and deep-link fallback entry. Reuse it there; the journal sheet
   // still fetches its own data when no context is supplied.
-  const { data, loading, error } = useGetLedgerEntryContextQuery({
+  const { data, loading, error, refetch } = useGetLedgerEntryContextQuery({
     variables: {
       entryHash: entry?.entry_hash || "",
       ledgerId: ledgerId,
@@ -197,24 +203,6 @@ export const EntryContext: React.FC<EntryContextProps> = ({
       Boolean(contextData) || contextLoading || !entry?.entry_hash || !ledgerId,
   });
 
-  // Helper function to format balances for display
-  const formatBalances = (balances: Record<string, unknown>) => {
-    if (!balances || typeof balances !== "object") return [];
-
-    return Object.entries(balances).map(([account, amount]) => ({
-      account,
-      amount:
-        typeof amount === "object" &&
-        amount !== null &&
-        "number" in amount &&
-        "currency" in amount
-          ? `${(amount as { number: string; currency: string }).number} ${
-              (amount as { number: string; currency: string }).currency
-            }`
-          : String(amount),
-    }));
-  };
-
   const entryContext = contextData ?? data?.getLedgerEntryContext;
   const isLoading = contextLoading || (loading && !entryContext);
   const entryError = contextError ?? error;
@@ -222,12 +210,8 @@ export const EntryContext: React.FC<EntryContextProps> = ({
   const entryFilename = entryMeta?.filename ?? "";
   const entryLineNumber = entryMeta?.lineno ?? "";
 
-  const balancesBefore = entryContext?.balances_before
-    ? formatBalances(entryContext.balances_before as Record<string, unknown>)
-    : [];
-  const balancesAfter = entryContext?.balances_after
-    ? formatBalances(entryContext.balances_after as Record<string, unknown>)
-    : [];
+  const balancesBefore = formatEntryBalances(entryContext?.balances_before);
+  const balancesAfter = formatEntryBalances(entryContext?.balances_after);
   const hasBalances = balancesBefore.length > 0 || balancesAfter.length > 0;
 
   if (isLoading) {
@@ -245,15 +229,16 @@ export const EntryContext: React.FC<EntryContextProps> = ({
     );
   }
 
-  if (entryError) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>
-          {t("journalError")}: {entryError.message}
-        </Text>
-      </View>
-    );
+  // Only a failure with nothing cached replaces the context: translated, with
+  // a Retry, never transport text. Cached context stays under a note
+  // (w21/118).
+  const retry = onRetryContext ?? (() => void refetch().catch(() => {}));
+  if (entryError && !entryContext) {
+    return <CardLoadFailure onRetry={retry} />;
   }
+  const staleNote = entryError ? (
+    <Text style={styles.contextLocation}>{t("staleDataNotice")}</Text>
+  ) : null;
 
   if (!entryContext) {
     return (
@@ -270,7 +255,20 @@ export const EntryContext: React.FC<EntryContextProps> = ({
         onPress={() => setIsContextOpen((open) => !open)}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityState={{ expanded: isContextOpen }}
+        // Its text alone: the code and chevron glyphs read as "U+F…"
+        // (w21/141).
+        accessibilityLabel={t("journalEntryContext")}
+        accessibilityValue={{
+          text: [
+            entryFilename && entryLineNumber
+              ? `${entryFilename}:${entryLineNumber}`
+              : null,
+            entryError ? t("staleDataNotice") : null,
+          ]
+            .filter(Boolean)
+            .join(", "),
+        }}
+        {...disclosureAccessibility(isContextOpen, t)}
       >
         <Ionicons name="code-slash-outline" size={20} color={theme.black80} />
         <View style={styles.contextHeaderCopy}>
@@ -278,10 +276,17 @@ export const EntryContext: React.FC<EntryContextProps> = ({
             {t("journalEntryContext")}
           </Text>
           {entryFilename && entryLineNumber ? (
-            <Text style={styles.contextLocation} numberOfLines={1}>
+            // Cut at the head, not the tail: the line number is what tells
+            // two entries in one file apart (w21/433).
+            <Text
+              style={styles.contextLocation}
+              numberOfLines={1}
+              ellipsizeMode="head"
+            >
               {entryFilename}:{entryLineNumber}
             </Text>
           ) : null}
+          {staleNote}
         </View>
         <Ionicons
           name={isContextOpen ? "chevron-up" : "chevron-down"}
@@ -308,10 +313,12 @@ export const EntryContext: React.FC<EntryContextProps> = ({
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("journalSource")}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {t("journalSource")}
+            </Text>
             <View style={styles.sourceContainer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Text style={styles.sourceText}>
+                <Text style={styles.sourceText} selectable>
                   {entryContext.slice || ""}
                 </Text>
               </ScrollView>

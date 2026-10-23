@@ -36,6 +36,8 @@ export type PillKey = string | null;
 type PillOption<T extends PillKey> = {
   key: T;
   label: string;
+  /** What VoiceOver says, when the short label is an abbreviation. */
+  spoken?: string;
 };
 
 type TimeRangePillsProps<T extends PillKey> = {
@@ -288,7 +290,7 @@ export function TimeRangePills<T extends PillKey>({
             }}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={option.label}
+            accessibilityLabel={option.spoken ?? option.label}
           >
             <Text
               key={fontScale}

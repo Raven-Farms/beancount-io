@@ -126,3 +126,15 @@ describe("ledger templates", () => {
     });
   });
 });
+
+describe("demo identity (w3/m54/t003)", () => {
+  it("stamps the sample ledger as fictional, in the ledger itself", () => {
+    const main = ledgerWithMultipleFilesTemplate["main.bean"];
+    expect(main).toContain("Demo ledger: fictional example data for learning");
+    expect(main).toContain('bcio_demo: "true"');
+  });
+
+  it("never stamps a real starter as a demo", () => {
+    expect(simpleLedgerTemplate["main.bean"]).not.toContain("bcio_demo");
+  });
+});

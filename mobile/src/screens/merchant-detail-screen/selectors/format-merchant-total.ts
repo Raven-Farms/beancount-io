@@ -12,7 +12,11 @@
  * Free of `@/` value imports so the jest-lite runner can require it.
  */
 
-import { formatSignedMoneyWithCurrency } from "../../../common/number-utils";
+import { getCurrencySymbol } from "../../../common/currency-util";
+import {
+  formatSignedMoneyWithCode,
+  formatSignedMoneyWithCurrency,
+} from "../../../common/number-utils";
 import type { MerchantCurrencyTotal } from "./merchant-stats";
 
 export function formatMerchantTotal({
@@ -21,4 +25,32 @@ export function formatMerchantTotal({
 }: MerchantCurrencyTotal): string {
   const shown = Math.abs(total) < 0.005 ? 0 : total;
   return formatSignedMoneyWithCurrency(shown, currency);
+}
+
+/**
+ * The header's total lines. `$` is the symbol of USD, CAD, AUD and MXN, `¥` of
+ * CNY and JPY, `kr` of SEK, NOK and DKK, so a merchant paid in two of them read
+ * two identical "$42.50" lines (w21/535). A currency whose symbol another total
+ * shares keeps it only when it is the ledger's primary currency; the others read
+ * by code ("42.50 CAD").
+ */
+export function formatMerchantTotals(
+  totals: readonly MerchantCurrencyTotal[],
+  primaryCurrency?: string,
+): string[] {
+  return totals.map((row) => {
+    const symbol = getCurrencySymbol(row.currency);
+    const shared =
+      symbol !== "" &&
+      totals.some(
+        (other) =>
+          other.currency !== row.currency &&
+          getCurrencySymbol(other.currency) === symbol,
+      );
+    if (!shared || row.currency === primaryCurrency) {
+      return formatMerchantTotal(row);
+    }
+    const shown = Math.abs(row.total) < 0.005 ? 0 : row.total;
+    return formatSignedMoneyWithCode(shown, row.currency);
+  });
 }

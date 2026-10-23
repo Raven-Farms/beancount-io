@@ -73,7 +73,8 @@ describe("detectRecurrence", () => {
     expect(verdict!.cadence).toBe("monthly");
     expect(verdict!.typicalAmountByCurrency.USD).toBe(-15.99);
     expect(verdict!.isApproximate).toBe(false);
-    expect(verdict!.nextExpected).toBe("2024-07-16");
+    // The bill's own day of the month, not last + 31 (w21/007).
+    expect(verdict!.nextExpected).toBe("2024-07-15");
     expect(verdict!.isOverdue).toBe(false);
   });
 
@@ -207,7 +208,7 @@ describe("detectRecurrence", () => {
       ["2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01"],
       -50,
     );
-    // median gap ≈ 30; nextExpected ≈ 2024-05-01; grace ≈ 8 → overdue after ~May 9
+    // nextExpected 2024-05-01; grace ≈ 8 → overdue after May 9
     expect(detectRecurrence(series, "2024-05-05")!.isOverdue).toBe(false);
     expect(detectRecurrence(series, "2024-05-20")!.isOverdue).toBe(true);
   });
@@ -278,11 +279,77 @@ describe("detectRecurrence", () => {
       ["2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01"],
       -50,
     );
-    const onTime = detectRecurrence(series, "2024-05-10");
-    const overdue = detectRecurrence(series, "2024-05-11");
-    // nextExpected ≈ 2024-05-02, grace ≈ 8 → boundary is May 10 inclusive.
+    const onTime = detectRecurrence(series, "2024-05-09");
+    const overdue = detectRecurrence(series, "2024-05-10");
+    // nextExpected 2024-05-01 (the 1st, not last + 31), grace 8 → boundary
+    // is May 9 inclusive.
     expect(onTime!.isOverdue).toBe(false);
     expect(overdue!.isOverdue).toBe(true);
+  });
+});
+
+// A monthly bill was predicted at last payment + round(median gap): usually
+// 31 days, so one to three days late, and a month-end bill rolled into the
+// next month (w21/007).
+describe("next expected date for a bill kept on one day of the month", () => {
+  const next = (dates: string[]) =>
+    detectRecurrence(pointsOn(dates, -30), "2026-10-20")!.nextExpected;
+
+  it("lands on the bill's day of the month", () => {
+    expect(next(["2026-07-25", "2026-08-25", "2026-09-25"])).toBe("2026-10-25");
+    expect(next(["2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10"])).toBe(
+      "2026-05-10",
+    );
+    expect(next(["2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01"])).toBe(
+      "2026-03-01",
+    );
+  });
+
+  it("clamps a month-end bill to a short month's last day", () => {
+    expect(next(["2026-05-31", "2026-06-30", "2026-07-31", "2026-08-31"])).toBe(
+      "2026-09-30",
+    );
+    expect(next(["2025-11-30", "2025-12-31", "2026-01-31"])).toBe("2026-02-28");
+  });
+
+  it("steps quarters by calendar months too", () => {
+    expect(next(["2025-03-31", "2025-06-30", "2025-09-30", "2025-12-31"])).toBe(
+      "2026-03-31",
+    );
+  });
+
+  it("keeps the day-count step for every-four-weeks payments", () => {
+    // Same monthly gap band, but the day of the month drifts.
+    expect(next(["2026-01-01", "2026-01-29", "2026-02-26", "2026-03-26"])).toBe(
+      "2026-04-23",
+    );
+  });
+
+  // w21/408: February's 28 days put two four-weekly payments on the same day
+  // (02-02, 03-02), and 03-30 sat within three days of April's 2nd, so the
+  // series read as "the 2nd" and Next came about five days late.
+  it("keeps the day-count step for every-four-weeks payments that span February", () => {
+    expect(next(["2026-02-02", "2026-03-02", "2026-03-30"])).toBe("2026-04-27");
+    expect(next(["2026-01-05", "2026-02-02", "2026-03-02", "2026-03-30"])).toBe(
+      "2026-04-27",
+    );
+  });
+
+  it("still anchors a monthly bill that crosses February", () => {
+    // One short gap among monthly ones is month-length wobble, not four weeks.
+    expect(next(["2026-01-02", "2026-02-02", "2026-03-02", "2026-04-02"])).toBe(
+      "2026-05-02",
+    );
+    expect(next(["2025-12-31", "2026-01-31", "2026-02-28", "2026-03-31"])).toBe(
+      "2026-04-30",
+    );
+  });
+
+  it("flags overdue from the corrected date", () => {
+    const series = pointsOn(["2026-07-25", "2026-08-25", "2026-09-25"], -30);
+    // Next 2026-10-25, grace 8 days → still on time on Nov 2, late on Nov 3.
+    expect(detectRecurrence(series, "2026-11-02")!.isOverdue).toBe(false);
+    expect(detectRecurrence(series, "2026-11-03")!.isOverdue).toBe(true);
   });
 });
 
@@ -317,5 +384,254 @@ describe("hasEnoughHistory", () => {
     ];
     expect(hasEnoughHistory(sameDay)).toBe(false);
     expect(hasEnoughHistory([])).toBe(false);
+  });
+});
+
+// w21/167: a pre-entered future payment counted as paid, so a missed bill
+// before it no longer read Overdue.
+describe("detectRecurrence with a pre-entered payment", () => {
+  const rent = (date: string): SeriesPoint => ({
+    date,
+    currency: "USD",
+    amount: 1500,
+  });
+
+  it("stays Overdue for a missed month and names the payment as scheduled", () => {
+    const verdict = detectRecurrence(
+      [
+        rent("2026-07-01"),
+        rent("2026-08-01"),
+        rent("2026-09-01"),
+        rent("2026-11-01"),
+      ],
+      "2026-10-21",
+    );
+    expect(verdict?.cadence).toBe("monthly");
+    expect(verdict?.nextExpected).toBe("2026-10-01");
+    expect(verdict?.isOverdue).toBe(true);
+    expect(verdict?.scheduled).toBe("2026-11-01");
+  });
+
+  it("expects the pre-entered month next when nothing was missed", () => {
+    const verdict = detectRecurrence(
+      [
+        rent("2026-07-01"),
+        rent("2026-08-01"),
+        rent("2026-09-01"),
+        rent("2026-10-01"),
+        rent("2026-11-01"),
+      ],
+      "2026-10-21",
+    );
+    expect(verdict?.nextExpected).toBe("2026-11-01");
+    expect(verdict?.isOverdue).toBe(false);
+  });
+});
+
+// w21/170: bills on the 1st and 15th read "Every 2 weeks", Next 2–3 days early.
+describe("detectRecurrence twice a month", () => {
+  const paid = (date: string): SeriesPoint => ({
+    date,
+    currency: "USD",
+    amount: 120,
+  });
+  const months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
+  const lastDays = ["31", "28", "31", "30", "31", "30", "31", "31", "30"];
+
+  it("reads the 1st and 15th as twice a month, next on the 1st", () => {
+    const series = months.flatMap((m) => [
+      paid(`2026-${m}-01`),
+      paid(`2026-${m}-15`),
+    ]);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("semimonthly");
+    expect(verdict?.nextExpected).toBe("2026-11-01");
+    expect(verdict?.isOverdue).toBe(false);
+  });
+
+  it("follows the last day of the month, February included", () => {
+    const series = [
+      ...months
+        .slice(0, 9)
+        .flatMap((m, i) => [
+          paid(`2026-${m}-15`),
+          paid(`2026-${m}-${lastDays[i]}`),
+        ]),
+      paid("2026-10-15"),
+    ];
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("semimonthly");
+    expect(verdict?.nextExpected).toBe("2026-10-31");
+  });
+
+  // w21/458: one shifted, early or missing payment turned "Twice a month" into
+  // "Every 2 weeks", with Next two or three days early.
+  describe("with one payment off its day", () => {
+    const dates = (change: (date: string) => string | null) =>
+      months
+        .flatMap((m) => [`2026-${m}-01`, `2026-${m}-15`])
+        .map(change)
+        .filter((date): date is string => date !== null);
+    const verdictFor = (list: string[]) =>
+      detectRecurrence(pointsOn(list, 120), "2026-10-20");
+
+    it("stays twice a month with Next on the 1st, whichever one is off", () => {
+      const variants = {
+        "the 15th paid early": dates((d) =>
+          d === "2026-02-15" ? "2026-02-13" : d,
+        ),
+        "the 1st paid on the 31st": dates((d) =>
+          d === "2026-08-01" ? "2026-07-31" : d,
+        ),
+        "a payment missing": dates((d) => (d === "2026-05-15" ? null : d)),
+        "the clean series": dates((d) => d),
+      };
+      for (const [name, list] of Object.entries(variants)) {
+        const verdict = verdictFor(list);
+        expect([name, verdict?.cadence]).toEqual([name, "semimonthly"]);
+        expect([name, verdict?.nextExpected]).toEqual([name, "2026-11-01"]);
+      }
+    });
+
+    it("gives up after two missing, and for a payment far from either day", () => {
+      const twoMissing = dates((d) =>
+        d === "2026-05-15" || d === "2026-07-01" ? null : d,
+      );
+      expect(verdictFor(twoMissing)?.cadence).not.toBe("semimonthly");
+      const far = dates((d) => (d === "2026-04-15" ? "2026-04-22" : d));
+      expect(verdictFor(far)?.cadence).not.toBe("semimonthly");
+    });
+
+    it("does not read a short 14-day run as twice a month", () => {
+      const series = pointsOn(
+        ["2024-01-01", "2024-01-15", "2024-01-29", "2024-02-12", "2024-02-26"],
+        -40,
+      );
+      expect(detectRecurrence(series, "2024-02-27")?.cadence).toBe("biweekly");
+    });
+  });
+
+  it("keeps a monthly bill's day through a skipped month (w21/459)", () => {
+    const onThe = (day: string, list: string[]) =>
+      detectRecurrence(
+        pointsOn(
+          list.map((m) => `${m}-${day}`),
+          50,
+        ),
+        "2026-02-20",
+      );
+    expect(
+      onThe("01", ["2025-09", "2025-10", "2025-11", "2026-01", "2026-02"])
+        ?.nextExpected,
+    ).toBe("2026-03-01");
+    expect(
+      onThe("15", [
+        "2025-08",
+        "2025-09",
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+      ])?.nextExpected,
+    ).toBe("2026-03-15");
+    // The same series without the gap, for comparison.
+    expect(
+      onThe("01", [
+        "2025-09",
+        "2025-10",
+        "2025-11",
+        "2025-12",
+        "2026-01",
+        "2026-02",
+      ])?.nextExpected,
+    ).toBe("2026-03-01");
+  });
+
+  it("keeps a true 14-day cadence as every two weeks", () => {
+    const start = parseLedgerDay("2026-06-05")!;
+    const series = Array.from({ length: 10 }, (_, i) =>
+      paid(formatLedgerDay(start + i * 14)),
+    );
+    expect(detectRecurrence(series, "2026-10-21")?.cadence).toBe("biweekly");
+  });
+});
+
+// w21/171: after a price rise the typical amount kept the old price.
+describe("detectRecurrence after a price change", () => {
+  const charge = (date: string, amount: number): SeriesPoint => ({
+    date,
+    currency: "USD",
+    amount,
+  });
+
+  it("shows the new price, marked approximate", () => {
+    const series = [
+      ...["01", "02", "03", "04", "05", "06"].map((m) =>
+        charge(`2026-${m}-05`, 10.99),
+      ),
+      ...["07", "08", "09", "10"].map((m) => charge(`2026-${m}-05`, 11.99)),
+    ];
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(11.99);
+    expect(verdict?.isApproximate).toBe(true);
+  });
+
+  it("leaves a steady price as it was", () => {
+    const series = ["05", "06", "07", "08", "09", "10"].map((m) =>
+      charge(`2026-${m}-05`, 10.99),
+    );
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(10.99);
+    expect(verdict?.isApproximate).toBe(false);
+  });
+});
+
+// w21/335: detectRecurrence ignores pre-entered events, but hasEnoughHistory
+// still counted them, so a manual Recurring mark read "Irregular" for a series
+// too short to analyse.
+describe("hasEnoughHistory with a pre-entered event", () => {
+  const point = (date: string) => ({ date, currency: "USD", amount: -10 });
+
+  it("does not count a future event as history", () => {
+    const series = [
+      point("2026-09-05"),
+      point("2026-10-05"),
+      point("2026-11-05"),
+    ];
+    expect(hasEnoughHistory(series)).toBe(true);
+    expect(hasEnoughHistory(series, "2026-10-21")).toBe(false);
+    // Agrees with the detector on what it analysed.
+    expect(detectRecurrence(series, "2026-10-21")).toBe(null);
+  });
+
+  it("counts everything up to and including today", () => {
+    const series = [
+      point("2026-08-05"),
+      point("2026-09-05"),
+      point("2026-10-21"),
+    ];
+    expect(hasEnoughHistory(series, "2026-10-21")).toBe(true);
+  });
+});
+
+// w21/615: a monthly $10.99 bill with one ¥980 charge abroad is paid in dollars.
+describe("detectRecurrence primary currency", () => {
+  it("is the currency with the most charges, not the largest amount", () => {
+    const series = [
+      ...monthlySeries("2026-01-05", 8, 10.99),
+      { date: "2026-04-20", currency: "JPY", amount: 980 },
+    ];
+    const verdict = detectRecurrence(series, "2026-09-01");
+    expect(verdict?.primaryCurrency).toBe("USD");
+    expect(verdict?.typicalAmountByCurrency.JPY).toBe(980);
+  });
+
+  it("follows the latest charge when the counts tie", () => {
+    const series = [
+      ...monthlySeries("2026-01-05", 4, 2000, "JPY"),
+      ...monthlySeries("2026-05-05", 4, 18, "USD"),
+    ];
+    const verdict = detectRecurrence(series, "2026-09-01");
+    expect(verdict?.primaryCurrency).toBe("USD");
   });
 });

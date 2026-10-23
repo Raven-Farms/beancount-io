@@ -148,6 +148,41 @@
       "when": 1792306761829,
       "tag": "0020_verified_subscription_period",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792363292325,
+      "tag": "0021_reported_purchases",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792371933054,
+      "tag": "0022_verified_period_tier",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792391156458,
+      "tag": "0023_sent_billing_emails",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792468640655,
+      "tag": "0024_auth_mail",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792515691917,
+      "tag": "0025_drop_reported_purchases",
+      "breakpoints": true
     }
   ]
 }

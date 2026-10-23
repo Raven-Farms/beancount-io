@@ -4,34 +4,64 @@ fragment DiscoveryLedger on Ledger {
   description
   private
   isStarred
-  permissions { pull push admin }
+  permissions {
+    pull
+    push
+    admin
+  }
 }
 
 query DiscoverLedgers($q: String!, $page: Float!, $limit: Float!) {
-  searchLedgers(q: $q, page: $page, limit: $limit, isPrivate: false, includeDesc: true) {
+  searchLedgers(
+    q: $q
+    page: $page
+    limit: $limit
+    isPrivate: false
+    includeDesc: true
+  ) {
     ...DiscoveryLedger
   }
 }
 
 query MyDiscoveryLedgers($page: Float!, $limit: Float!) {
-  listLedgers(page: $page, limit: $limit) { ...DiscoveryLedger }
+  listLedgers(page: $page, limit: $limit) {
+    ...DiscoveryLedger
+  }
 }
 
-query StarredDiscoveryLedgers($username: String!, $page: Float!, $limit: Float!) {
+query StarredDiscoveryLedgers(
+  $username: String!
+  $page: Float!
+  $limit: Float!
+) {
   getUserStarredRepos(username: $username, page: $page, limit: $limit) {
     total
-    repositories { fullName description isPrivate }
+    repositories {
+      fullName
+      description
+      isPrivate
+    }
   }
 }
 
 query DiscoveryIdentity($userId: String!) {
-  userProfile(userId: $userId) { username }
+  userProfile(userId: $userId) {
+    username
+  }
 }
 
 mutation StarDiscoveryLedger($ledgerId: String!) {
-  starLedger(ledgerId: $ledgerId) { success isStarred message }
+  starLedger(ledgerId: $ledgerId) {
+    success
+    isStarred
+    message
+  }
 }
 
 mutation UnstarDiscoveryLedger($ledgerId: String!) {
-  unstarLedger(ledgerId: $ledgerId) { success isStarred message }
+  unstarLedger(ledgerId: $ledgerId) {
+    success
+    isStarred
+    message
+  }
 }

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@apollo/client/react";
 import {
@@ -30,7 +31,10 @@ import {
 } from "@/graphql/definitions";
 import { toast } from "sonner";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { useErrorMessage } from "@/common/lib/errors/error-message";
+import {
+  getErrorMessageKey,
+  useErrorMessage,
+} from "@/common/lib/errors/error-message";
 import { useUserLimits } from "@/common/hooks/use-user-limits";
 import { LedgerAdminPermission } from "@/common/components/ledger-permission/admin";
 import { LimitIndicator } from "@/common/components/limit-indicator";
@@ -42,7 +46,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const navigate = useNavigate();
-  const { limits } = useUserLimits();
+  const { limits, tier } = useUserLimits();
 
   const {
     data: collaboratorsData,
@@ -79,8 +83,16 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
       });
       toast.success(t("collaboration.collaboratorAddedSuccess"));
     } catch (error) {
+      // The owner's plan sets the limit: telling anyone else to upgrade
+      // would not help (w1/181).
+      const ownersLimit =
+        getErrorMessageKey(error) === "common.errors.resourceLimitReached" &&
+        ledgerId.split("/")[0]?.toLowerCase() !==
+          currentUserLogin?.toLowerCase();
       toast.error(t("collaboration.failedToAddCollaborator"), {
-        description: formatError(error),
+        description: ownersLimit
+          ? t("collaboration.ownerPlanLimitReached")
+          : formatError(error),
       });
     }
   };
@@ -121,11 +133,13 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
   };
 
   const collaborators = collaboratorsData?.listLedgerCollaborators || [];
+  // Both the loading and the member tables carry the card's own title.
+  const titleId = useId();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("collaboration.collaborators")}</CardTitle>
+        <CardTitle id={titleId}>{t("collaboration.collaborators")}</CardTitle>
         <CardDescription>
           {t("page.settings.collaboratorsDescription")}
         </CardDescription>
@@ -137,6 +151,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
               used={collaborators.length}
               max={limits.collaboratorsPerLedgerMax}
               limitType="collaborators"
+              tier={tier}
               variant="alert"
             />
           )}
@@ -148,7 +163,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
               <Skeleton className="h-10 w-45" />
             </div>
             <div className="rounded-md border">
-              <Table>
+              <Table aria-labelledby={titleId}>
                 <TableBody>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
@@ -217,7 +232,7 @@ export function CollaboratorsSection({ ledgerId }: { ledgerId: string }) {
                 </div>
               </LedgerAdminPermission>
               <div className="rounded-md border">
-                <Table>
+                <Table aria-labelledby={titleId}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("collaboration.user")}</TableHead>

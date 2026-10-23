@@ -6,6 +6,9 @@ export const ru: Translations = {
   guestTryExample: "Попробовать пример",
   guestChooseExample: "Выбрать пример",
   guestReadOnly: "Пример только для чтения",
+  guestSignInHint: "Открывает вход",
+  guestReadOnlyEditor:
+    "Пример только для чтения. Войдите, чтобы редактировать свою книгу.",
   guestExit: "Выйти из примеров",
   guestIntroduction:
     "Изучайте реальные отчёты без аккаунта. Эти книги доступны только для чтения.",
@@ -27,6 +30,7 @@ export const ru: Translations = {
   discoveryTab_explore: "Обзор",
   discoverySearch: "Поиск книг",
   discoveryClear: "Очистить поиск",
+  clearSearch: "Очистить поиск",
   discoveryOpen: "Открыть {{name}}",
   discoveryStar: "Добавить {{name}} в избранное",
   discoveryUnstar: "Убрать {{name}} из избранного",
@@ -47,6 +51,15 @@ export const ru: Translations = {
     "Не удалось выполнить действие. Проверьте соединение и доступ к книге, затем повторите попытку.",
   ledgerReadOnly:
     "Эта книга доступна только для чтения. Для изменений выберите книгу, которую можете редактировать.",
+  ledgerGoneTitle: "Эта книга больше недоступна",
+  ledgerGoneMessage:
+    "Она удалена, переименована или к ней закрыт доступ. Выберите другую книгу, чтобы продолжить.",
+  ledgerEditorNotUtf8:
+    "Этот файл не является текстом в UTF-8. Редактирование здесь изменило бы часть символов, поэтому он открыт только для чтения. Отредактируйте его на компьютере.",
+  ledgerEditorTooLarge:
+    "Этот файл слишком велик, чтобы открыть его на телефоне, поэтому он доступен только для чтения. Редактируйте его на компьютере.",
+  ledgerEditorTooLargeToEdit:
+    "Этот файл больше 1 МиБ — его нельзя сохранить с телефона, поэтому он доступен только для чтения. Редактируйте его в вебе или через CLI.",
 
   // bottom tab bar
   home: "Главная",
@@ -81,25 +94,32 @@ export const ru: Translations = {
   merchantsEmptyMessage:
     "Получатели из ваших транзакций появятся здесь в виде каталога с поиском.",
   merchantsNoSearchResults: "Нет получателей, соответствующих поиску.",
-  merchantsLoadError: "Не удалось загрузить получателей: ",
+  merchantsLoadError: "Не удалось загрузить получателей",
   merchantsSortByCount: "Сортировать по числу транзакций",
   merchantsSortAlphabetical: "Сортировать по алфавиту",
   merchantsRecurringSection: "Регулярные",
+  merchantsAllSection: "Все получатели",
   merchantsRecurringBadge: "Регулярный",
   merchantsCadenceWeekly: "Еженедельно",
   merchantsCadenceBiweekly: "Раз в 2 недели",
+  merchantsCadenceSemimonthly: "Дважды в месяц",
   merchantsCadenceMonthly: "Ежемесячно",
+  merchantsCadenceBimonthly: "Раз в 2 месяца",
   merchantsCadenceQuarterly: "Ежеквартально",
+  merchantsCadenceSemiannual: "Раз в 6 месяцев",
   merchantsCadenceYearly: "Ежегодно",
   merchantsCadenceIrregular: "Нерегулярно",
   merchantsCadenceUnknown: "Мало истории",
+  merchantsCadenceInactive: "Нет недавних платежей",
   merchantsNextExpected: "Следующий {{date}}",
   merchantsOverdue: "Просрочено",
+  merchantsLastPaid: "Последний платёж {{date}}",
+  merchantsScheduled: "Запланировано на {{date}}",
   merchantsRecurringToggle: "Регулярный",
   merchantsRecurringToggleHelper:
     "Закрепить этого контрагента в «Регулярные». Ручной выбор важнее автоопределения и хранится на этом устройстве.",
   merchantDetailDateRange: "{{first}} – {{last}}",
-  merchantDetailLoadError: "Не удалось загрузить контрагента: ",
+  merchantDetailLoadError: "Не удалось загрузить контрагента",
   merchantDetailRetry: "Повторить",
   merchantDetailEmptyTitle: "Нет транзакций",
   merchantDetailEmptyMessage:
@@ -138,6 +158,7 @@ export const ru: Translations = {
   deleteAccountConfirmMessage:
     'Для подтверждения введите "sudo delete my account" ниже:',
   deleteAccountConfirmPhrase: "sudo delete my account",
+  deleteAccountConfirmMismatch: "Введите фразу точно так, как показано.",
   deleteAccountConfirmPlaceholder: "Введите фразу здесь",
   deleteAccountSuccess: "Аккаунт удалён",
   deleteAccountFailed: "Не удалось удалить аккаунт. Попробуйте ещё раз.",
@@ -147,6 +168,7 @@ export const ru: Translations = {
   accountSettings: "Аккаунт",
   supportSettings: "Поддержка",
   signIn: "Войти",
+  sessionEndedNotice: "Сеанс завершён. Войдите снова, чтобы продолжить.",
   signUp: "Регистрация",
   serverSettings: "Сервер",
   serverSettingsDescription:
@@ -167,6 +189,13 @@ export const ru: Translations = {
   serverConnectionUnreachable: "Не удалось подключиться к этому серверу.",
   serverConnectionIncompatible:
     "Этот сервер не предоставляет необходимый API Beancount.io.",
+  serverConnectionOlder:
+    "Этот сервер старше приложения. Подключиться можно, но некоторые функции могут не работать.",
+  serverConnectionNotConfigured: "Этот сервер ещё не настроен для входа.",
+  serverConnectionMismatch:
+    "Этот адрес не совпадает с адресом, который сообщает сервер. Откройте настройки сервера и проверьте соединение.",
+  serverConnectionCanonical: "Этот сервер представляется как {{url}}.",
+  serverUseCanonical: "Использовать этот адрес",
   serverConnectionAdvisory:
     "Вы всё равно можете сохранить этот URL и войти, когда сервер станет доступен.",
   restoreDefaultServer: "Восстановить сервер Beancount.io по умолчанию",
@@ -187,26 +216,38 @@ export const ru: Translations = {
   multiPostingsInvalidBalance: "Сумма проводок должна быть равна нулю",
   multiPostingsMissingAccount: "У каждой проводки должен быть счёт",
   multiPostingsZeroAmount: "Сумма каждой проводки должна быть отлична от нуля",
+  multiPostingsAmountFormat:
+    "Используйте цифры и одну десятичную точку, например 1234.56",
   accountPicker: "Выбор счёта",
   accountPickerSearchPlaceholder: "Поиск счетов",
   accountPickerRecent: "Недавние",
   accountPickerAllTab: "Все",
   accountPickerNoResults: "Нет подходящих счетов",
   accountPickerCreate: "Создать «%{name}»",
-  next: "Далее",
+  accountPickerClosedOn: "{{name}} закрыт {{date}}",
+  accountPickerOpensOn:
+    "{{name}} открывается {{date}}. Измените дату, чтобы использовать его.",
+  accountPickerOpenLater:
+    "Ваши счета открываются {{date}}. Измените дату, чтобы использовать их.",
+  accountPickerNoAccounts: "В этой книге пока нет счетов.",
   cancel: "Отмена",
   confirm: "Подтвердить",
   saving: "Сохранение...",
+  deleting: "Удаление...",
   saveSuccess: "Транзакция сохранена!",
   saveFailed: "Ошибка сохранения",
-  amountEmptyError: "Пожалуйста, введите сумму",
-  accountEmptyError: "Выберите счёт списания и счёт зачисления",
+  profilePartialSave:
+    "Имя пользователя сохранено, но имя сохранить не удалось. Повторите попытку.",
   accounts: "Счета",
   // Column header for the Accounts tab's account column. The balance column
   // reuses `balance`; each root row states its own valuation basis.
   account: "Счёт",
   atCost: "{{amount}} по себестоимости",
+  postingCost: "себестоимость {{amount}}",
+  postingPrice: "цена {{amount}}",
   notInTotal: "Не входит в итог: {{amounts}}",
+  spendingLastMonthNotInTotal:
+    "В прошлом месяце, не учтено в сумме: {{amounts}}",
   atMarket: "{{amount}} по рыночной стоимости",
   atMarketValue: "По рыночной стоимости",
   pricesNotUpdatedSince: {
@@ -241,11 +282,15 @@ export const ru: Translations = {
   equity: "Собственный капитал",
   noDataCharts: "Быстро добавьте для отображения графиков",
   notEnoughChartData: "Пока недостаточно данных для графика",
+  chartSummary:
+    "С {{start}}, {{startValue}}, по {{end}}, {{endValue}}. Минимум {{low}}, максимум {{high}}.",
+  chartPointValue: "{{period}}, {{value}}, {{change}} с начала",
+  chartAdjustHint: "Проведите вверх или вниз, чтобы перебирать месяцы",
+  chartAdjustHintAndroid: "Откройте меню действий, чтобы перебирать месяцы",
   done: "Готово",
   payee: "Получатель",
   narration: "Описание",
   suggestions: "Предложения",
-  aiSuggestions: "Подсказки ИИ",
   from: "От",
   to: "Кому",
   date: "Дата",
@@ -289,9 +334,11 @@ export const ru: Translations = {
     "Как только вы добавите транзакции, они появятся здесь.",
   transactionsNoSearchResults:
     "Нет транзакций, подходящих под поиск или фильтры.",
-  transactionsLoadError: "Не удалось загрузить транзакции: ",
+  transactionsLoadError: "Не удалось загрузить транзакции",
   // transactions filter modal
   filters: "Фильтры",
+  filtersActive: "Активно: {{count}}",
+  clearAccount: "Очистить счёт",
   filterStatus: "Статус",
   filterDateRange: "Период",
   filterDateRangeInvalid: "Конечная дата должна быть не раньше начальной даты.",
@@ -306,6 +353,7 @@ export const ru: Translations = {
   transactions: "Транзакции",
   search: "Поиск",
   unknown: "Неизвестно",
+  datePlaceholder: "ГГГГ-ММ-ДД",
   openAccount: "Открыть счёт",
   accountType: "Тип счёта",
   currency: "Валюта",
@@ -314,30 +362,70 @@ export const ru: Translations = {
   chooseCurrency: "Выберите валюту",
   openAccountNamePlaceholder: "Bank:Checking",
   openAccountNoCurrency: "Валюта не выбрана",
+  openAccountOtherCurrency: "Другая…",
+  openAccountOtherCurrencyTitle: "Другая валюта",
+  openAccountOtherCurrencyMessage:
+    "Введите код валюты или актива, например EUR или VTI.",
+  openAccountCurrencyInvalid:
+    "Используйте заглавные буквы, цифры и ' . _ -, начиная с буквы, например EUR или VTI.",
   openAccountSaving: "Открываем...",
   openAccountFailed: "Не удалось открыть счёт. Попробуйте ещё раз.",
   ledgerWouldBreak: "Это добавит ошибку в вашу книгу: {{detail}}",
+  ledgerRefusalLine: "строка {{line}}",
+  ledgerRefusalNearEntry: "рядом с этой записью",
+  ledgerRefusalQuoteHint:
+    'Чтобы поставить кавычку внутри текста, напишите её как \\".',
+  ledgerWriteOffline: "Нет подключения к сети. Ничего не сохранено.",
+  ledgerWriteUnconfirmed:
+    "Сервер не подтвердил сохранение. Проверьте, прежде чем повторять попытку.",
+  ledgerWriteRateLimited:
+    "Слишком много изменений сразу. Подождите немного и повторите попытку.",
+  ledgerInvalidAccount: "{{value}} — недопустимое имя счёта.",
+  ledgerInvalidCurrency: "{{value}} — недопустимая валюта.",
+  ledgerInvalidTag:
+    "#{{value}} нельзя использовать как тег. Используйте только буквы A–Z, цифры и - _ . /",
+  ledgerInvalidLink:
+    "^{{value}} нельзя использовать как ссылку. Используйте только буквы A–Z, цифры и - _ . /",
+  ledgerInvalidFlag: "{{value}} нельзя использовать как флаг.",
+  ledgerEntryOneAtATime: "Редактируйте по одной записи за раз.",
+  ledgerEntryIndent: "Сделайте отступ у проводок под строкой с датой.",
+  ledgerEntryNotAnEntry:
+    "Опции, плагины и включения не являются записями. Меняйте их в редакторе файла книги.",
   openAccountInvalidRoot: "Выберите допустимый тип счёта.",
   openAccountNameRequired: "Введите хотя бы одну часть названия счёта.",
   openAccountEmptyComponent: "Части названия счёта не могут быть пустыми.",
   openAccountNamePreview: "Будет создан как {{account}}",
   openAccountAlreadyOpen: "Счёт {{account}} уже открыт в этой книге.",
+  openAccountClosed: "{{account}} закрыт {{date}}, открыть его снова нельзя.",
   openAccountUppercaseComponent:
     "Каждая часть названия счёта должна начинаться с заглавной буквы или цифры.",
   openAccountInvalidCharacters:
     "В названиях счетов используйте только буквы, цифры и дефисы.",
   transaction: "Транзакция",
+  transactionActions: "Действия с транзакцией",
   loadingMore: "Загружается ещё...",
   noMoreEntries: "Больше записей нет",
+  loadMoreFailed: "Не удалось загрузить ещё записи.",
+  a11yTapToExpand: "Дважды коснитесь, чтобы развернуть",
+  a11yTapToCollapse: "Дважды коснитесь, чтобы свернуть",
   noEntries: "Нет записей",
   accountDetailUnavailable: "Этот счёт недоступен в выбранной книге.",
   transactionDetailUnavailable: "Эта транзакция недоступна в выбранной книге.",
+  transactionDetailRemoved:
+    "Эта транзакция была изменена или удалена. Вернитесь, чтобы увидеть актуальный список.",
+  transactionErrorOpenFile: "Открыть в редакторе файлов",
+  pluginCopyNotice:
+    "Эта запись создана плагином из другой записи, поэтому её нельзя изменить или удалить здесь.",
+  pluginCopyOpenSource: "Открыть исходную запись",
   merchantDetailUnavailable: "Этот продавец недоступен в выбранной книге.",
   commitDetailUnavailable: "Это изменение недоступно в выбранной книге.",
-  journalLoadError: "Ошибка загрузки журнала: ",
+  commitDetailGone: "Это изменение больше недоступно.",
+  fileEditorUnavailable: "Этот файл недоступен в выбранной книге.",
+  journalLoadError: "Ошибка загрузки журнала",
   // entry context (transactions screen)
   journalError: "Ошибка",
   journalNoData: "Данные контекста записи недоступны",
+  dateSectionHeaderTotal: "{{date}}, итого {{total}}",
   journalEntryContext: "Контекст записи",
   journalBalancesBefore: "Балансы до записи",
   journalBalancesAfter: "Балансы после записи",
@@ -346,6 +434,7 @@ export const ru: Translations = {
   open: "Открытие",
   close: "Закрытие",
   balance: "Баланс",
+  balanceOffBy: "Расхождение {{amount}}",
   note: "Заметка",
   document: "Документ",
   pad: "Выравнивание",
@@ -353,9 +442,11 @@ export const ru: Translations = {
   custom: "Своя запись",
   cleared: "Проведено",
   pending: "В ожидании",
+  entryUpcoming: "Предстоит",
   other: "Прочее",
   budget: "Бюджет",
   metadata: "Метаданные",
+  accountOwnPostings: "{{name}} (собственные)",
   postings: "Проводки",
   details: "Подробности",
   tags: "Теги",
@@ -364,6 +455,8 @@ export const ru: Translations = {
   reports: "Отчёты",
   netProfit: "Чистая прибыль",
   cashFlow: "Денежный поток",
+  cashFlowRefunds: "Возвраты",
+  cashFlowClawbacks: "Удержания",
   moneyFlow: "Движение денег",
   cashFlowEmpty: "Нет денежного потока за этот период",
   savings: "Сбережения",
@@ -375,12 +468,22 @@ export const ru: Translations = {
   notFoundGoHome: "На главную",
   // home dashboard
   seeAll: "Показать все",
+  seeAllCard: "Показать все: {{title}}",
+  seeAllAccounts: "Показать все счета",
   netWorth: "Чистые активы",
   noAccounts: "Нет счетов",
+  reportsNoExpenses: "Нет расходов за этот период",
+  reportsNoIncome: "Нет доходов за этот период",
   recentTransactions: "Последние транзакции",
   recentTransactionsEmpty: "Транзакций пока нет",
+  recentTransactionsUpcoming:
+    "До сегодняшнего дня ничего нет. Предстоящие записи — в разделе «Транзакции».",
+  recentTransactionsEmptyRange: "Нет транзакций за этот период",
   spending: "Расходы",
   spendingSubtitle: "Этот месяц и прошлый",
+  spendingChartSummary:
+    "Расходы: в прошлом месяце {{lastMonth}}, в этом месяце {{thisMonth}}.",
+  spendingEmpty: "Пока нет расходов",
   thisMonth: "Этот месяц",
   lastMonth: "Прошлый месяц",
   range1M: "1М",
@@ -390,6 +493,13 @@ export const ru: Translations = {
   range1Y: "1Г",
   rangeLastYear: "Пр. год",
   rangeAll: "ВСЁ",
+  rangeSpoken1M: "1 месяц",
+  rangeSpoken3M: "3 месяца",
+  rangeSpoken6M: "6 месяцев",
+  rangeSpokenYTD: "С начала года",
+  rangeSpoken1Y: "1 год",
+  rangeSpokenLastYear: "Прошлый год",
+  rangeSpokenAll: "Всё время",
   // edit / delete transaction
   editTransaction: "Изменить транзакцию",
   deleteTransaction: "Удалить",
@@ -398,8 +508,12 @@ export const ru: Translations = {
     "Удалить эту транзакцию? Отменить это действие будет нельзя.",
   deleteSuccess: "Транзакция удалена",
   deleteFailed: "Не удалось удалить транзакцию",
+  deleteTransactionChanged:
+    "Эта транзакция была изменена в другом месте. Она перезагружена; попробуйте удалить её ещё раз.",
   editSuccess: "Транзакция сохранена",
   editFailed: "Не удалось сохранить транзакцию",
+  editTransactionEmpty:
+    "Пустую запись нельзя сохранить. Чтобы удалить транзакцию, используйте «Удалить» на экране её деталей.",
   editTransactionLoadFailed: "Не удалось загрузить транзакцию",
   editTransactionSource:
     "Измените исходный текст beancount ниже. Устаревшая контрольная сумма или неверный beancount будут отклонены с ошибкой.",
@@ -413,12 +527,16 @@ export const ru: Translations = {
   receiptFlashOff: "Выключена",
   receiptFlashOn: "Включена",
   receiptRetake: "Переснять",
+  receiptTryAgain: "Повторить",
   receiptUpload: "Загрузить",
   receiptOpenSettings: "Открыть настройки",
+  receiptAllowCamera: "Разрешить камеру",
   receiptCancel: "Отмена",
   receiptUploading: "Загружаем фото…",
+  receiptUploadingProgress: "Загрузка фото… {{percent}}%",
   receiptParsing: "ИИ читает ваш чек…",
   receiptRevealTitle: "Вот что мы прочитали",
+  receiptRevealSpoken: "Чек прочитан: {{summary}}",
   // Deliberately a proposal: nothing is written to the ledger until the user
   // saves on the next screen.
   receiptRevealHint:
@@ -438,14 +556,35 @@ export const ru: Translations = {
   notificationsChangesSection: "Последние изменения",
   notificationsLedgerHealthy: "С книгой всё в порядке — ошибок нет.",
   notificationsNoChanges: "Недавних изменений нет.",
+  notificationsShowOlder: "Показать более старые изменения",
+  commitNoMessage: "(без сообщения)",
   // commit detail
   commitDetailAuthor: "Автор",
   commitDetailStats: "Статистика",
   commitDetailFiles: "Файлы",
+  commitFileAdded: "Добавлен",
+  commitFileDeleted: "Удалён",
+  commitFileRenamedFrom: "Переименован из {{name}}",
   commitDetailDiff: "Изменения",
+  commitDetailShowMore: {
+    one: "Показать ещё {{count}} строку",
+    few: "Показать ещё {{count}} строки",
+    many: "Показать ещё {{count}} строк",
+    other: "Показать ещё {{count}} строки",
+  },
   commitDetailNoDiff: "Изменения недоступны.",
-  commitDetailAdditions: "+{{count}} строк",
-  commitDetailDeletions: "-{{count}} строк",
+  commitDetailAdditions: {
+    one: "+{{count}} строка",
+    few: "+{{count}} строки",
+    many: "+{{count}} строк",
+    other: "+{{count}} строки",
+  },
+  commitDetailDeletions: {
+    one: "-{{count}} строка",
+    few: "-{{count}} строки",
+    many: "-{{count}} строк",
+    other: "-{{count}} строки",
+  },
   // ledger file browser
   ledgerLoadError: "Не удалось загрузить",
   ledgerEmpty: "Нет файлов",
@@ -458,32 +597,72 @@ export const ru: Translations = {
     "Введите уникальное имя файла .bean или .beancount. Без расширения будет добавлено .bean.",
   ledgerCreateFilePlaceholder: "investments.bean",
   ledgerCreateFileSuccess: "Создан {{name}}",
+  ledgerCreateFileSuccessIn: "Файл {{name}} создан в {{ledger}}",
   ledgerCreateFileFailed: "Не удалось создать файл",
+  ledgerFileNameExists: "Файл с именем {{name}} уже существует",
+  ledgerFileNameExtension: "Используйте имя с расширением .bean или .beancount",
+  ledgerFileNamePath: "Используйте имя без \\, .. и пустых имён папок",
+  ledgerFileNamePortable:
+    'Нельзя использовать < > : " | ? *, части имени, оканчивающиеся точкой или пробелом, и имена вроде con или nul',
   ledgerDeleteFile: "Удалить {{name}}",
+  ledgerFilesFolderLabel: "{{name}}, папка",
+  ledgerFilesFileLabel: "{{name}}, файл",
   ledgerDeleteFileTitle: "Удалить файл книги",
   ledgerDeleteFileMessage: 'Удалить "{{name}}"? Отменить это будет нельзя.',
   ledgerDeleteFileConfirm: "Удалить",
   ledgerDeleteFileSuccess: "Удалён {{name}}",
   ledgerDeleteFileFailed: "Не удалось удалить файл",
+  ledgerDeleteFileChanged:
+    "Этот файл изменён в другом месте. Список обновлён; попробуйте ещё раз.",
   ledgerMainFileProtected: "main.bean удалить нельзя",
   // ledger file editor
   ledgerEditorSave: "Сохранить",
   ledgerEditorSaving: "Сохраняем...",
   ledgerEditorSaveSuccess: "Файл сохранён",
   ledgerEditorSaveFailed: "Не удалось сохранить",
+  ledgerEditorSaveLeftErrorsTitle: "Сохранено, но в книге новая ошибка",
+  ledgerEditorSaveLeftErrors:
+    "Файл сохранён, но в вашей книге теперь есть ошибка, которой раньше не было: {{error}}",
+  ledgerEditorViewErrors: "Показать ошибки",
   ledgerEditorLoadFailed: "Не удалось загрузить файл",
   ledgerEditorFileUnavailable: "Этого файла больше нет в книге.",
   ledgerEditorBackToFiles: "Назад к файлам",
   ledgerEditorUnsavedTitle: "Несохранённые изменения",
-  ledgerEditorUnsavedMessage: "Отменить изменения?",
-  ledgerEditorDiscardChanges: "Отменить",
+  ledgerEditorUnsavedMessage: "Отбросить изменения?",
+  ledgerEditorDiscardChanges: "Отбросить",
   ledgerEditorConflictTitle: "Файл изменён",
   ledgerEditorConflictMessage:
-    "Этот файл был изменён на сервере. Отменить локальные изменения и перезагрузить?",
+    "Этот файл был изменён удалённо. Сохранить ваш текст поверх него или скопировать его и загрузить новую версию?",
+  ledgerEditorOverwrite: "Перезаписать",
+  ledgerEditorCopyReload: "Копировать и перезагрузить",
+  ledgerEditorOverwriteTitle: "Перезаписать удалённые изменения?",
+  ledgerEditorOverwriteMessage:
+    "Ваш текст заменит версию, сохранённую в другом месте. Её изменения будут потеряны.",
+  ledgerEditorFileGoneTitle: "Файл удалён",
+  ledgerEditorFileGoneMessage:
+    "Этот файл удалён или перемещён в другом месте и не может быть сохранён. Ваш текст всё ещё здесь: скопируйте его или сохраните как новый файл по тому же пути.",
+  ledgerEditorRecreate: "Сохранить как новый файл",
+  ledgerEditorSaveFailedHint:
+    "Ваш текст всё ещё здесь. Попробуйте ещё раз чуть позже.",
+  ledgerEditorAccessRemoved:
+    "Вы больше не можете редактировать эту книгу. Ваш текст пока здесь: скопируйте его, чтобы сохранить.",
+  ledgerEditorCopyFailed:
+    "Не удалось скопировать ваш текст, поэтому файл не перезагружен.",
   ledgerEditorReload: "Перезагрузить",
   ledgerEditorKeepEditing: "Продолжить правку",
   keyboardAccessoryInsert: "Вставить {{symbol}}",
+  keyboardInsertDate: "Вставить сегодняшнюю дату",
+  keyboardInsertCleared: "Вставить флаг «проведено»",
+  keyboardInsertPending: "Вставить флаг «в ожидании»",
+  keyboardInsertQuotes: "Вставить кавычки",
+  keyboardInsertColon: "Вставить двоеточие",
+  keyboardInsertTab: "Вставить табуляцию",
+  keyboardInsertMinus: "Вставить минус",
+  keyboardInsertTag: "Вставить тег",
+  keyboardInsertLink: "Вставить ссылку",
   keyboardAccessoryDismiss: "Скрыть клавиатуру",
+  ledgerEditorErrorLine: "строка {{line}}",
+  ledgerEditorJumpToLine: "Перейти к строке {{line}}",
   ledgerEditorErrorCount: {
     one: "{{count}} ошибка",
     few: "{{count}} ошибки",
@@ -509,14 +688,22 @@ export const ru: Translations = {
     "Задайте цель для любого счёта, чтобы начать отслеживание.",
   budgetEmptyStateCta: "Добавить первый бюджет",
   budgetPanelEmpty: "Задайте цель для счёта",
+  budgetPanelEmptyGuest: "Войдите, чтобы задать цели расходов",
   budgetPanelRowValue:
     "{{actual}} из {{budget}}, использовано {{percent}}%, {{status}}",
+  budgetPanelRowValueNoBudget: "{{actual}} из {{budget}}, {{status}}",
+  budgetStartsOn: "Начинается {{date}}",
   budgetLoadFailed: "Не удалось загрузить бюджеты",
   budgetIntervalDaily: "Ежедневно",
   budgetIntervalWeekly: "Еженедельно",
   budgetIntervalMonthly: "Ежемесячно",
   budgetIntervalQuarterly: "Ежеквартально",
   budgetIntervalYearly: "Ежегодно",
+  budgetIntervalAdjDaily: "ежедневный",
+  budgetIntervalAdjWeekly: "еженедельный",
+  budgetIntervalAdjMonthly: "ежемесячный",
+  budgetIntervalAdjQuarterly: "ежеквартальный",
+  budgetIntervalAdjYearly: "ежегодный",
   // add / update budget
   budgetAdd: "Добавить бюджет",
   budgetUpdate: "Обновить бюджет",
@@ -530,10 +717,14 @@ export const ru: Translations = {
   budgetSaveFailed: "Не удалось сохранить бюджет",
   // delete
   budgetDelete: "Удалить",
+  budgetUpdateNamed: "Обновить бюджет для {{account}}, {{currency}}",
+  budgetDeleteNamed: "Удалить запись бюджета от {{date}}, {{amount}}",
   budgetDeleteTitle: "Удалить бюджет",
   budgetDeleteMessage:
     "Удалить {{interval}} бюджет {{amount}} для {{account}}, действующий с {{date}}? Будет удалена одна запись, отменить это нельзя.",
   budgetDeleteFailed: "Не удалось удалить бюджет",
+  budgetDeleteChanged:
+    "Эта запись бюджета изменена в другом месте. История обновлена; попробуйте ещё раз.",
 
   // Ask Beancount.io — the agent chat
   agentTitle: "Спросить Beancount.io",
@@ -572,10 +763,16 @@ export const ru: Translations = {
   createLedgerNameInvalid:
     "Название должно содержать хотя бы одну букву или цифру.",
   createLedgerNameConflict: "Книга с таким названием уже существует.",
+  createLedgerNameReserved:
+    "Это имя принадлежало переименованной книге и всё ещё перенаправляет на неё. Выберите другое имя.",
+  createLedgerSetupUnsupported:
+    "Этот сервер не поддерживает пошаговую настройку. Вернитесь и выберите «Стартовая» или «Пример», чтобы создать книгу с настройками сервера по умолчанию.",
+  createLedgerCreated: "Создан {{name}}",
   createLedgerSlugPreview: "Будет создана как {{slug}}",
   createLedgerDescription: "Описание",
   createLedgerDescriptionPlaceholder: "Необязательно",
   createLedgerPrivate: "Частная",
+  createLedgerPublic: "Публичная",
   createLedgerTemplate: "Шаблон",
   createLedgerTemplateStarter: "Стартовая",
   createLedgerTemplateStarterHint: "Пустая книга со стандартным планом счетов.",
@@ -585,6 +782,8 @@ export const ru: Translations = {
   createLedgerTierLimit:
     "Достигнут лимит книг. Создать ещё одну книгу невозможно.",
   createLedgerGenericError: "Не удалось создать книгу. Попробуйте снова.",
+  createLedgerStillCreating:
+    "Эта книга ещё создаётся. Подождите несколько секунд и снова нажмите «Создать».",
   createLedgerDrawerRow: "Новая книга",
   createLedgerEmptyTitle: "Пока нет книг",
   createLedgerEmptyBody: "Создайте книгу или найдите публичные примеры.",
@@ -594,8 +793,16 @@ export const ru: Translations = {
   ledgerGuardMessage: "Создайте книгу или найдите её, чтобы продолжить.",
   removePosting: "Удалить проводку",
   toggleAmountSign: "Сменить знак суммы",
-  incomeExpenseChartSummary:
-    "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+  postingSignToggle: "Знак для {{account}}",
+  signPlus: "Плюс",
+  signMinus: "Минус",
+  incomeExpenseChartSummary: {
+    one: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+    few: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+    many: "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+    other:
+      "Доходы и расходы за {{count}} мес. Доходы {{income}}, расходы {{expense}}, чистыми {{net}}.",
+  },
   cashFlowChartSummary:
     "Денежный поток от доходов к расходам. Доходы {{income}}, расходы {{expenses}}.",
   cashFlowChartSummaryWithSavings:
@@ -605,6 +812,7 @@ export const ru: Translations = {
   sankeyIncomeNodeLabel: "{{name}} (доходы)",
   sankeyExpensesNodeLabel: "{{name}} (расходы)",
   ledgerNavigateUp: "На уровень выше",
+  ledgerNavigateUpTo: "Вверх, в {{folder}}",
   openLedgerDrawer: "Открыть меню",
   back: "Назад",
   postingAmountLabel: "Сумма для {{account}}",
@@ -614,8 +822,15 @@ export const ru: Translations = {
   expandAccount: "Развернуть {{account}}",
   collapseAccount: "Свернуть {{account}}",
   breakdownRowShare: "{{amount}}, {{percent}}% от итога",
-  budgetChartSummary:
-    "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периодов, {{over}} сверх цели.",
+  budgetChartSummary: {
+    one: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} период, {{missed}}.",
+    few: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{missed}}.",
+    many: "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периодов, {{missed}}.",
+    other:
+      "Бюджет и факт за {{span}}. Факт {{actual}} из {{budget}} за {{count}} периода, {{missed}}.",
+  },
+  budgetSummaryOverTarget: "{{count}} сверх цели",
+  budgetSummaryBelowTarget: "{{count}} ниже цели",
   feedSourceLedger: "Книга",
   feedSourceBlog: "Блог",
   feedSourceRelease: "Релиз",
@@ -628,6 +843,7 @@ export const ru: Translations = {
   profileUsernameHint:
     "Веб-адреса ваших книг начинаются с имени пользователя, поэтому при его смене они тоже изменятся.",
   profileUsernameRequired: "Введите имя пользователя",
+  profileNameTooLong: "Не более 100 символов.",
   profileUsernameRule:
     "Используйте от 1 до 20 символов: строчные буквы a–z, цифры 0–9 или подчёркивания.",
   profileUsernameTaken: "Это имя пользователя уже занято",
@@ -635,6 +851,54 @@ export const ru: Translations = {
   profileEmailReadOnly: "Адрес эл. почты нельзя изменить здесь",
   profileNotSet: "Не указано",
   profilePhotoFromGravatar: "Фото из Gravatar",
+  profileAddGravatar: "Добавьте фото в Gravatar",
   profileUpdated: "Профиль обновлён",
   multiplePostings: "Несколько проводок",
+  createLedgerNext: "Далее",
+  createLedgerBack: "Назад",
+  createLedgerStep: "Шаг {{step}} из {{total}}",
+  createLedgerStartPreset: "Шаблон",
+  createLedgerStartPresetHint:
+    "Выберите готовый план счетов для того, что вы учитываете: домохозяйство, бизнес, инвестиции.",
+  createLedgerCurrency: "Операционная валюта",
+  createLedgerHistoryStart: "Книги начинаются с",
+  createLedgerOpeningAccount: "Счёт открытия",
+  createLedgerOpeningAmount: "Начальный остаток (необязательно)",
+  createLedgerReviewOpening: "Начальный остаток: {{account}} {{amount}}",
+  createLedgerAmountOwed: "Сумма долга (необязательно)",
+  createLedgerOpeningNone: "Решить позже",
+  createLedgerReview: "Проверка",
+  createLedgerReviewDescription:
+    "Будет создано именно это. Вернитесь, чтобы что-то изменить.",
+  createLedgerAccounts: "Счета",
+  createLedgerAmountInvalid: "Введите сумму, например 100 или -30.50",
+  createLedgerAmountReenter:
+    "Введите начальный остаток ещё раз или выберите «Решить позже». В сохранённом черновике он не хранится.",
+  createLedgerCurrencyInvalid: "Укажите код валюты, например USD или EUR.",
+  createLedgerHistoryStartInvalid:
+    "Введите корректную дату, например 2026-01-01.",
+  createLedgerPresetPersonal: "Личная книга",
+  createLedgerPresetPersonalOutcome:
+    "Запишите покупку и поймите её влияние на остаток денег.",
+  createLedgerPresetFreelance: "Книга фрилансера",
+  createLedgerPresetFreelanceOutcome:
+    "Запишите доход от клиентов или посмотрите, сколько должен неоплативший клиент.",
+  createLedgerPresetBusiness: "Книга бизнеса",
+  createLedgerPresetBusinessOutcome:
+    "Создайте начальную позицию и отличайте финансирование от выручки.",
+  createLedgerPresetPortfolio: "Портфельная книга",
+  createLedgerPresetPortfolioOutcome:
+    "Запишите покупку и проверьте единицы, записи о приобретении и движение денег.",
+  createLedgerPresetRental: "Книга аренды",
+  createLedgerPresetRentalOutcome:
+    "Запишите поступления и отличайте аренду от возвратного залога.",
+  createLedgerPresetShared: "Книга общих расходов",
+  createLedgerPresetSharedOutcome:
+    "Запишите аванс и посмотрите, кто кому должен.",
+  createLedgerPresetCommunity: "Книга сообщества",
+  createLedgerPresetCommunityOutcome:
+    "Объясните взносы, проектные расходы и оставшиеся средства.",
+  createLedgerPresetBlank: "Пустая книга",
+  createLedgerPresetBlankOutcome:
+    "Добавьте выбранную структуру, не удаляя ненужные категории.",
 };

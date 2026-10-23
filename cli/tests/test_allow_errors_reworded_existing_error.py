@@ -230,7 +230,7 @@ def test_a_second_error_on_the_same_line_is_still_refused(tmp_path: Path) -> Non
     ledger = _ledger(tmp_path, body)
 
     done = _bea(
-        tmp_path, "--file", str(ledger), "add", "close", "--account", "Assets:Cash", "--date", "2024-02-15",
+        tmp_path, "--file", str(ledger), "add", "close", "--account", "Assets:Cash", "--date", "2024-02-15", "--force",
         "--allow-errors",
     )  # fmt: skip
 

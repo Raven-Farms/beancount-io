@@ -44,6 +44,7 @@ import {
 import {
   LIFECYCLE_OPERATION_SCHEMAS,
   lifecycleToolOutput,
+  previewToolOutput,
   LIFECYCLE_EXECUTORS,
 } from "./mcp-lifecycle";
 import {
@@ -110,6 +111,7 @@ import {
   withPostWriteValidation,
 } from "../tools/write-validation";
 import { BANK_OPERATIONS } from "../tools/bank-import-tool";
+import { LEDGER_ENTRY_POINT } from "@/features/ledger/utils/ledger-entry-point";
 import {
   checkLedgerDescription,
   checkLedgerInputSchema,
@@ -408,19 +410,27 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
             allowInvalid ?? false,
           ),
       );
-      const written = outcome.written;
+      const { includedFiles = [], ...written } = outcome.written;
       const files = written.files ?? [];
       const noun = entries.length === 1 ? "entry" : "entries";
+      // The entry point gained an include for a routed file (w23/062).
+      const included =
+        includedFiles.length > 0
+          ? `; ${LEDGER_ENTRY_POINT} now includes ${includedFiles.join(", ")}`
+          : "";
+      const touched = [
+        ...new Set([...files, ...(included ? [LEDGER_ENTRY_POINT] : [])]),
+      ];
       return {
         ok: true,
         result: {
           summary: summarizeWrite(
-            `Added ${entries.length} ${noun}${files.length > 0 ? ` to ${files.join(", ")}` : ""}`,
+            `Added ${entries.length} ${noun}${files.length > 0 ? ` to ${files.join(", ")}` : ""}${included}`,
             outcome.validation,
           ),
           ...written,
-          wrote: files.map((path) => ({ path })),
-          entryHashes: [],
+          wrote: touched.map((path) => ({ path })),
+          entryHashes: written.entryHashes ?? [],
           validation: outcome.validation,
         },
       };
@@ -548,7 +558,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Update Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit.",
+      "Replace one entry's source text with newContent, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. Returns the entry's new hash as newEntryHash; the request's entryHash is stale after the commit. A replacement that would take a free ledger past its directive limit is RESOURCE_LIMIT_REACHED. A write that would add a bean-check error the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED naming each new error; pass allowInvalid: true to commit it anyway.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.update,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.update,
     execute: SOURCE_SLICE_EXECUTORS.update,
@@ -558,7 +568,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Delete Entry Source",
     annotations: DESTRUCTIVE,
     description:
-      "Delete one entry's source text, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext.",
+      "Delete one entry's source text, addressed by entryHash (listLedgerEntries' entry_hash) and sha256sum from getEntryContext. A write that would add a bean-check error the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED naming each new error; pass allowInvalid: true to commit it anyway.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete,
     execute: SOURCE_SLICE_EXECUTORS.delete,
@@ -568,7 +578,7 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     title: "Delete Several Entry Sources",
     annotations: DESTRUCTIVE,
     description:
-      "Delete several entries' source text in one commit; entries is a list of {entryHash, sha256sum}. Returns the deleted count.",
+      "Delete several entries' source text in one commit; entries is a list of {entryHash, sha256sum}. Returns the deleted count. A write that would add a bean-check error the ledger did not have — deleting an entry a balance assertion depends on, re-dating it past one — is refused with VALIDATION_FAILED naming each new error; pass allowInvalid: true to commit it anyway.",
     inputSchema: SOURCE_SLICE_OPERATION_SCHEMAS.delete_many,
     outputSchema: SOURCE_SLICE_OPERATION_OUTPUTS.delete_many,
     execute: SOURCE_SLICE_EXECUTORS.delete_many,
@@ -725,11 +735,13 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
     execute: PULL_REQUEST_EXECUTORS.create,
   },
   {
-    name: "approvePullRequest",
-    title: "Approve Pull Request",
+    // Named for what it does: OpenAI flagged "approve" as inconsistent with
+    // a merge (w1/172). GraphQL and REST keep `approvePullRequest`.
+    name: "mergePullRequest",
+    title: "Merge Pull Request",
     annotations: DESTRUCTIVE,
     description:
-      "Approve a pull request by merging it into its base branch; the merge applies immediately. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
+      "Merge a pull request into its base branch; the merge applies immediately. A merge that would take a free ledger past its directive limit is RESOURCE_LIMIT_REACHED. A repository server failure is SERVICE_UNAVAILABLE naming the failed step.",
     inputSchema: PULL_REQUEST_OPERATION_SCHEMAS.approve,
     outputSchema: pullRequestToolOutput,
     execute: PULL_REQUEST_EXECUTORS.approve,
@@ -747,17 +759,29 @@ export const MCP_TOOLS: readonly McpToolDescriptor[] = [
   {
     name: "createLedger",
     title: "Create Ledger",
-    annotations: APPEND,
+    // Open world: `private: false` publishes the ledger to anyone (w1/174).
+    annotations: { ...APPEND, openWorldHint: true },
     description:
-      "Create a ledger owned by the authenticated user. Requires name; accepts description, private, and template: STARTER (default, including null) has options and accounts without transactions or opening balances; SAMPLE has demonstration transactions.",
+      "Create a ledger owned by the authenticated user. Requires name; accepts description, private, template (STARTER default, including null: options and accounts without transactions; SAMPLE: demonstration transactions), a setup specification (mutually exclusive with template), and a requestId for idempotent retries.",
     inputSchema: LIFECYCLE_OPERATION_SCHEMAS.create,
     outputSchema: lifecycleToolOutput,
     execute: LIFECYCLE_EXECUTORS.create,
   },
   {
+    name: "previewLedgerSetup",
+    title: "Preview Ledger Setup",
+    annotations: READ_ONLY,
+    description:
+      "Preview a ledger setup (ADR021) without creating anything: returns the files, account list, and validation result the specification would produce. Accepts the same setup object as createLedger.",
+    inputSchema: LIFECYCLE_OPERATION_SCHEMAS.preview,
+    outputSchema: previewToolOutput,
+    execute: LIFECYCLE_EXECUTORS.preview,
+  },
+  {
     name: "updateLedger",
     title: "Update Ledger Settings",
-    annotations: IDEMPOTENT_DESTRUCTIVE,
+    // Open world: `private: false` publishes the ledger to anyone (w1/174).
+    annotations: { ...IDEMPOTENT_DESTRUCTIVE, openWorldHint: true },
     description:
       "Change a ledger's name, description, or privacy; omitted fields stay as they are.",
     inputSchema: LIFECYCLE_OPERATION_SCHEMAS.update,

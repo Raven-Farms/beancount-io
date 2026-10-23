@@ -72,6 +72,7 @@ function load(): (props: Record<string, unknown>) => Node {
         type === "Transaction" ? null : "directiveBalance",
     },
     "@/common/rtl": { LEADING_TEXT_ALIGN: "left" },
+    "@/common/bidi": { isolateLtr: (text: string) => text },
     "@/common/theme/dynamic-type": dynamicType,
   };
   vm.runInNewContext(source, {
@@ -162,7 +163,7 @@ describe("AccountEntryRow at enlarged text", () => {
     expect(flat(row.props.style).flexDirection).toBe("column");
     expect(title.props.numberOfLines).toBe(undefined);
     expect(textOf(title)).toBe(transfer.title);
-    expect(findAll(main, (node) => textOf(node) === "P").length > 0).toBe(true);
+    expect(findAll(main, (node) => textOf(node) === "!").length > 0).toBe(true);
     expect(flat(trailing.props.style).alignItems).toBe("flex-start");
     expect(
       findAll(trailing, (node) => node.type === "AmountText").map(textOf),
@@ -208,6 +209,25 @@ describe("AccountEntryRow accessibility", () => {
     const row = AccountEntryRow({ row: broker, currency: "USD", onPress() {} });
     expect(row.props.accessibilityLabel).toBe(
       "Broker, -100 NWRB, $-1045 at cost, balance: 380 NWRB",
+    );
+  });
+
+  // w21/559: Open, Pad and Close rows read alike without their chip.
+  it("says the type chip a directive row draws", () => {
+    const row = AccountEntryRow({ row: balanceDirective, currency: "USD" });
+    const label = String(row.props.accessibilityLabel).split(", ");
+    expect(label[0]).toBe(balanceDirective.title);
+    expect(label[1]).toBe("directiveBalance");
+  });
+
+  it("names no chip for a transaction", () => {
+    const row = AccountEntryRow({
+      row: transfer,
+      currency: "USD",
+      onPress() {},
+    });
+    expect(String(row.props.accessibilityLabel).includes("directive")).toBe(
+      false,
     );
   });
 

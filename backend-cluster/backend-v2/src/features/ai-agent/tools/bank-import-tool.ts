@@ -103,7 +103,11 @@ const submitInput = z.object({
   transactions: z
     .array(
       z.object({
-        transaction_id: z.string(),
+        transaction_id: z
+          .string()
+          .describe(
+            "The staged row's `transactionId` from listStagedBankTransactions — not its `id`.",
+          ),
         target_account: z
           .string()
           .describe("The ledger account to book this against."),
@@ -148,7 +152,9 @@ export const BANK_OPERATIONS = {
       transaction_ids: z
         .array(z.string())
         .min(1)
-        .describe("The staged transactions to remove."),
+        .describe(
+          "The staged transactions to remove, each by its `transactionId` from listStagedBankTransactions — not its `id`.",
+        ),
       dry_run: dryRunField,
     }),
     "Remove staged bank transactions so they are never imported. dry_run reports what would be removed.",

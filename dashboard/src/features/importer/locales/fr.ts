@@ -137,9 +137,15 @@ const frImporter: Record<string, TranslationEntry> = {
     message: "Le type de fichier actuel nécessite une analyse par IA",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "Passer à la version premium",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "Passer à {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "Changer d'offre",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message:
@@ -170,6 +176,15 @@ const frImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "Échec de l'analyse du fichier",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "Le fichier n'est pas du texte UTF-8",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "Ce CSV contient des caractères qui ne sont pas de l'UTF-8 valide : l'importer modifierait le texte des bénéficiaires et des descriptions. Enregistrez-le à nouveau au format CSV UTF-8 depuis votre banque ou votre tableur, puis importez ce fichier.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -311,6 +326,30 @@ const frImporter: Record<string, TranslationEntry> = {
   "importer.configure.currencyHint": {
     message: "Devise pour toutes les transactions",
     description: "Hint text for currency field",
+  },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} ligne ({rows}) est libellée en {symbol} ({currencies}), mais cette importation la comptabiliserait en {currency}.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_many": {
+    message:
+      "{count} lignes ({rows}) sont libellées en {symbol} ({currencies}), mais cette importation les comptabiliserait en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} lignes ({rows}) sont libellées en {symbol} ({currencies}), mais cette importation les comptabiliserait en {currency}.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "Une importation ne comptabilise qu’une seule devise. Choisissez la devise de ces lignes, ou désélectionnez-les et importez-les séparément. Rien n’a été importé.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
   },
   "importer.configure.assignTargetAccounts": {
     message: "Attribuer des comptes cibles",
@@ -464,6 +503,12 @@ const frImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_many": {
     message: "{count} transactions catégorisées avec succès",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message:
+      "Aucune suggestion n'était assez fiable pour remplir un compte de destination.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "Échec de la catégorisation IA",

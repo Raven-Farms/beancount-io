@@ -1,0 +1,20 @@
+;; fixture — beancount-reconcile eval19 (split settlement: one statement row, two postings)
+option "operating_currency" "USD"
+
+2026-04-01 open Assets:Bank:Checking USD
+2026-04-01 open Expenses:Travel:Lodging USD
+2026-04-01 open Equity:Opening-Balances
+
+2026-04-30 * "Opening deposit"
+  Assets:Bank:Checking   1000.00 USD
+  Equity:Opening-Balances
+
+2026-05-01 balance Assets:Bank:Checking   1000.00 USD
+
+2026-05-06 * "HOTEL MERIDIAN DEPOSIT"
+  Assets:Bank:Checking    -30.00 USD
+  Expenses:Travel:Lodging
+
+2026-05-07 * "HOTEL MERIDIAN FINAL"
+  Assets:Bank:Checking    -45.00 USD
+  Expenses:Travel:Lodging

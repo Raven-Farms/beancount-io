@@ -153,7 +153,7 @@ export const VOCABULARY_READS: readonly VocabularyRead[] = [
     segment: "errors",
     summary: "List the ledger's parse and validation errors",
     description:
-      "What `bean-check` reports for this ledger. An empty list means the ledger is currently valid.",
+      "What `bean-check` reports for this ledger. An empty list means the ledger is currently valid. The engine's warnings (a one-posting entry, closing an account with a balance) are not listed: `bean-check` does not fail on them.",
     schema: z.array(z.unknown()),
     fetch: (data, p) => data.getErrors(p),
   },

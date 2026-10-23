@@ -132,9 +132,15 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "현재 파일 형식에는 AI 기반 파싱이 필요합니다",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "프리미엄으로 업그레이드",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "{plan}(으)로 업그레이드",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "플랜 업그레이드",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "AI로 PDF, OFX, 이미지 파일을 자동 파싱",
@@ -163,6 +169,15 @@ const koImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "파일 파싱에 실패했습니다",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "파일이 UTF-8 텍스트가 아닙니다",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "이 CSV에는 유효한 UTF-8이 아닌 문자가 있어 가져오면 수취인과 설명 텍스트가 바뀝니다. 은행이나 스프레드시트 앱에서 CSV UTF-8로 다시 저장한 뒤 그 파일을 업로드하세요.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -305,6 +320,18 @@ const koImporter: Record<string, TranslationEntry> = {
     message: "모든 거래의 통화",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count}개 행({rows})은 {symbol}({currencies})로 기재되어 있지만, 이 가져오기는 {currency}(으)로 기록합니다.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "한 번의 가져오기에는 하나의 통화만 기록됩니다. 해당 행의 통화를 선택하거나 선택을 해제한 뒤 따로 가져오세요. 아직 아무것도 가져오지 않았습니다.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "대상 계정 할당",
     description: "Heading for account mapping section",
@@ -429,6 +456,11 @@ const koImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count}건의 거래를 성공적으로 분류했습니다",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "대상 계정을 채울 만큼 신뢰도가 높은 제안이 없었습니다.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AI 분류에 실패했습니다",

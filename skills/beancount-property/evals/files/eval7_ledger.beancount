@@ -1,0 +1,10 @@
+;; fixture — beancount-property eval7 (closing arithmetic gap stops)
+option "operating_currency" "USD"
+
+2026-01-01 open Assets:Checking USD
+2026-01-01 open Expenses:ClosingCosts USD
+2026-01-01 open Equity:Opening-Balances
+
+2026-01-02 * "Cash in"
+  Assets:Checking  200000.00 USD
+  Equity:Opening-Balances

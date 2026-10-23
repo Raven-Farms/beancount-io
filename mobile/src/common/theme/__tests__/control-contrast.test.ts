@@ -11,6 +11,8 @@
  * palette can be re-tuned upward freely. The table in `palette.ts` records
  * where each pair actually lands.
  */
+import fs from "fs";
+import path from "path";
 import { contrastRatio, relativeLuminance } from "../color-utils";
 import { themes, type ThemeName } from "../palette";
 
@@ -93,3 +95,56 @@ describe("control token contrast", () => {
     expect(() => relativeLuminance("#fff")).toThrow();
   });
 });
+
+// w21/329: amber `warning` is a fill colour; used as text it was 2.36:1 on the
+// Pending chip's tint and 2.68:1 on white in light mode.
+describe("warning as text", () => {
+  for (const name of THEME_NAMES) {
+    const theme = themes[name].colorTheme;
+
+    it(`reads at 4.5:1 on the surface and the warning tint in ${name}`, () => {
+      expect(contrastRatio(theme.warningText, theme.white) >= TEXT_BAR).toBe(
+        true,
+      );
+      expect(contrastRatio(theme.warningText, theme.black10) >= TEXT_BAR).toBe(
+        true,
+      );
+      // The chip's own background: the warning at 14% over the surface.
+      const tint = overlay(theme.warning, theme.white, 0.14);
+      expect(contrastRatio(theme.warningText, tint) >= TEXT_BAR).toBe(true);
+    });
+  }
+
+  it("is what the Pending chip and the stale-price text use", () => {
+    const read = (relative: string) =>
+      fs.readFileSync(path.join(__dirname, "..", "..", "..", relative), "utf8");
+    const chip = read(
+      "screens/transaction-detail-screen/transaction-detail-screen.tsx",
+    );
+    expect(/statusText:\s*\{[^}]*color: theme\.warningText/u.test(chip)).toBe(
+      true,
+    );
+    const sheet = read("components/valuation-sheet/index.tsx");
+    expect(/staleText:\s*\{[^}]*color: theme\.warningText/u.test(sheet)).toBe(
+      true,
+    );
+  });
+});
+
+/** `foreground` at `alpha` over `background`, as a `#rrggbb`. */
+function overlay(
+  foreground: string,
+  background: string,
+  alpha: number,
+): string {
+  const channel = (hex: string, at: number) =>
+    parseInt(hex.slice(1 + at * 2, 3 + at * 2), 16);
+  const mixed = [0, 1, 2].map((at) =>
+    Math.round(
+      channel(foreground, at) * alpha + channel(background, at) * (1 - alpha),
+    )
+      .toString(16)
+      .padStart(2, "0"),
+  );
+  return `#${mixed.join("")}`;
+}

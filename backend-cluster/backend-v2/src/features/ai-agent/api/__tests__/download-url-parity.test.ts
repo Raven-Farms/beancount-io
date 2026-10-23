@@ -52,7 +52,7 @@ async function fixture(identity: Identity = readOnlyToken) {
       return;
     }
     if (
-      url.pathname === "/ledgers/alice/main/archive/main.zip" &&
+      url.pathname === "/api/v1/repos/alice/main/archive/main.zip" &&
       req.headers.authorization ===
         `Basic ${Buffer.from("alice:fixture-only").toString("base64")}`
     ) {
@@ -69,8 +69,8 @@ async function fixture(identity: Identity = readOnlyToken) {
   const originUrl = `http://127.0.0.1:${address.port}`;
   const config = {
     api: { scopeEnforcement: "enforce" },
-    server: { url: "" },
-    favaApi: { baseUrl: originUrl },
+    oauth: { issuer: "" },
+    gitea: { internalBaseUrl: originUrl },
   } as AppConfig;
   const check = jest.fn().mockResolvedValue(true);
   const authorization = new AuthorizationService({ check }, jest.fn());
@@ -132,7 +132,7 @@ async function fixture(identity: Identity = readOnlyToken) {
     { apiKeys: false },
   );
   rest.setIdentity(identity);
-  config.server.url = rest.url;
+  config.oauth.issuer = rest.url;
   resolver = new LedgerAssetQueryResolver(service);
   schemaPromise ??= buildSchema({
     resolvers: [LedgerAssetQueryResolver],

@@ -45,7 +45,7 @@ export const getChromeStyles = (theme: ColorTheme) =>
     },
     placeholderText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
     },
     legend: {
       flexDirection: "row",

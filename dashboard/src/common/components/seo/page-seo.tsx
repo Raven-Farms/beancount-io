@@ -70,8 +70,13 @@ export function PageSEO({
           search: location.search,
         }));
 
-  // Generate the title with interpolated params
-  const title = params ? t(titleKey, params) : t(titleKey);
+  const translatedTitle = params ? t(titleKey, params) : t(titleKey);
+  // GA's automatic page views read document.title. Keep every 404 identifiable
+  // by its exact, encoded path; query strings and fragments are not part of it.
+  const title =
+    titleKey === "seo.notFound.title"
+      ? `${translatedTitle} — ${location.href.split(/[?#]/, 1)[0]}`
+      : translatedTitle;
 
   // Generate description if key is provided
   const description = descriptionKey

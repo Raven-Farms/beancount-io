@@ -25,12 +25,14 @@ extra into the managed engine venv and records it so repairs re-apply it.
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from importlib import resources
@@ -39,9 +41,8 @@ from typing import Any
 
 from cli import context, output
 from cli.engine import paths
-from cli.errors import BeaError, UsageError
+from cli.errors import AuthError, BeaError, ConflictError, EngineError, UsageError
 from cli.paths import expand_path
-from cli.utils import exclusive_lock
 
 UV_ENV = "BEA_UV"
 FEATURES_FILE = "bea-features.json"
@@ -71,6 +72,24 @@ def _refuse_offline_install(root: Path) -> None:
         )
 
 
+#: How long a command queues behind another bea's engine install before it
+#: gives up, when it first says so, and how often it retries. Mirrors the
+#: write lock's notice and limit (w5/182): a stalled install must not hang
+#: every later command behind it without a word (w5/787).
+_PROVISION_LOCK_TIMEOUT = 60.0
+_PROVISION_LOCK_NOTICE_SECONDS = 1.0
+_PROVISION_LOCK_POLL_SECONDS = 0.05
+
+
+def _unwritable_engine_dir(root: Path, exc: OSError) -> AuthError:
+    """The exit-3 refusal for a data directory bea cannot install into."""
+    variable = paths.DIR_ENV if os.environ.get(paths.DIR_ENV) else "XDG_DATA_HOME"
+    return AuthError(
+        f"Cannot install the Beancount engine: the directory {root.parent} cannot be created or is not "
+        f"writable ({exc.strerror or exc}). Make it a writable directory or set {variable} to one before retrying."
+    )
+
+
 @contextmanager
 def provisioning_lock(root: Path) -> Iterator[None]:
     """Hold the exclusive lock for changing the engine at `root`.
@@ -80,9 +99,59 @@ def provisioning_lock(root: Path) -> Iterator[None]:
     from under a command already running it. The lock file sits beside the
     root and is never removed, so every waiter locks the same inode.
     """
-    root.parent.mkdir(parents=True, exist_ok=True)
-    with exclusive_lock(root.with_name(f"{root.name}.lock")):
-        yield
+    lock = root.with_name(f"{root.name}.lock")
+    try:
+        root.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(lock, os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError as exc:
+        raise _unwritable_engine_dir(root, exc) from exc
+    with os.fdopen(fd, "r+b") as stream:
+        if sys.platform == "win32":
+            import msvcrt
+
+            if not os.fstat(stream.fileno()).st_size:
+                try:
+                    stream.write(b"\0")
+                    stream.flush()
+                except OSError as exc:
+                    raise _unwritable_engine_dir(root, exc) from exc
+        else:
+            import fcntl
+
+        started = time.monotonic()
+        announced = False
+        while True:
+            try:
+                if sys.platform == "win32":
+                    stream.seek(0)
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if sys.platform != "win32" and not isinstance(exc, BlockingIOError):
+                    raise _unwritable_engine_dir(root, exc) from exc
+            waited = time.monotonic() - started
+            if _PROVISION_LOCK_TIMEOUT <= waited:
+                raise ConflictError(
+                    f"Timed out after {_PROVISION_LOCK_TIMEOUT:g} seconds waiting for another bea to finish "
+                    f"installing the engine at {root}. Retry once that install has finished."
+                )
+            if not announced and waited >= _PROVISION_LOCK_NOTICE_SECONDS:
+                announced = True
+                output.note(
+                    f"Waiting up to {_PROVISION_LOCK_TIMEOUT:g} seconds for another bea to finish installing "
+                    f"the engine at {root} ..."
+                )
+            time.sleep(_PROVISION_LOCK_POLL_SECONDS)
+        try:
+            yield
+        finally:
+            if sys.platform == "win32":
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 def provision(root: Path) -> None:
@@ -151,7 +220,36 @@ def provision(root: Path) -> None:
     except BaseException:
         shutil.rmtree(partial, ignore_errors=True)
         raise
+    # A writer that died since the pre-build sweep left a partial no future
+    # provision will see; remove it while provisioning still runs (w5/786).
+    # One still running can still rebuild its directory afterwards — SIGKILL
+    # cannot be forwarded — but it must now outlive the whole build to do so.
+    _sweep_abandoned(root)
+    _prune_other_versions(root)
     output.note(f"Beancount engine {version} ready.")
+
+
+def _prune_other_versions(root: Path) -> None:
+    """Remove engine versions a successful provision just superseded (w5/788).
+
+    Each version lives in its own directory, so an upgrade that provisions a
+    new one would otherwise leave the old tens of megabytes behind forever.
+    Only directories bea marked are removed — never an unmarked one, which
+    predates the marker or is not bea's — and lock files stay: a build of
+    that version still running elsewhere waits on its lock's inode.
+    """
+    try:
+        siblings = list(root.parent.iterdir())
+    except OSError:
+        return
+    for sibling in siblings:
+        if sibling.name == root.name or not sibling.is_dir():
+            continue
+        if not (sibling / ENGINE_MARKER).is_file():
+            continue
+        shutil.rmtree(sibling, ignore_errors=True)
+        if not sibling.exists():
+            output.note(f"Removed superseded Beancount engine {sibling.name}.")
 
 
 def optional_features() -> dict[str, dict[str, Any]]:
@@ -204,6 +302,13 @@ def enable_feature(name: str) -> tuple[bool, set[str]]:
     with provisioning_lock(root):
         if not paths.is_provisioned(root):
             provision(root)
+        else:
+            # A damaged base would record the feature into a broken engine
+            # (or blame the feature for not importing); refuse it as damaged
+            # instead (w5/785). Deferred: launch imports this module.
+            from cli.engine.launch import refuse_unusable_engine
+
+            refuse_unusable_engine()
 
         already = enabled_features(root)
         if name in already and _feature_present(root, name):
@@ -248,9 +353,13 @@ def feature_status() -> dict[str, Any]:
     enabled = set() if override is not None else enabled_features(root)
     features: dict[str, Any] = {}
     for name, spec in sorted(optional_features().items()):
+        try:
+            present: bool | None = feature_available(name)
+        except ProbeNotRun:
+            present = None
         features[name] = {
             "enabled": name in enabled,
-            "present": feature_available(name),
+            "present": present,
             "license": spec.get("license"),
             "notes": spec.get("notes"),
             "requirements": list(spec.get("requirements") or []),
@@ -289,13 +398,13 @@ def _install_feature(root: Path, name: str) -> None:
     else:
         requirements = [str(item) for item in spec.get("requirements") or []]
         if not requirements:
-            raise BeaError(f"Engine feature '{name}' has no requirements in the manifest.")
+            raise EngineError(f"Engine feature '{name}' has no requirements in the manifest.")
         _run(
             [uv, "pip", "install", "--python", python, *requirements],
             failure=f"Could not install engine feature '{name}'",
         )
     if not _feature_present(root, name):
-        raise BeaError(
+        raise EngineError(
             f"Engine feature '{name}' installed but its packages are not importable.",
             details=[f"Expected packages: {', '.join(_feature_packages(name))}"],
         )
@@ -310,6 +419,26 @@ def _feature_present(root: Path, name: str) -> bool:
     return _packages_importable(paths.venv_python(root), _feature_packages(name))
 
 
+#: What a refused spawn's errno says about the limit behind it.
+SPAWN_LIMITS = {
+    errno.EMFILE: "the open-file limit is reached (ulimit -n)",
+    errno.ENFILE: "the system's open-file table is full",
+    errno.EAGAIN: "the process limit is reached (ulimit -u)",
+    errno.ENOMEM: "there is not enough memory to start it",
+}
+
+
+class ProbeNotRun(BeaError):
+    """A probe a process or descriptor limit kept from starting: it says nothing about the engine.
+
+    Read as a failed probe, a working engine was called damaged, with advice
+    to delete it, and its features absent (w5/815).
+    """
+
+    def __init__(self, exc: OSError) -> None:
+        super().__init__(f"the check could not start ({exc.strerror}: {SPAWN_LIMITS[exc.errno or 0]})")
+
+
 def _packages_importable(python: Path, packages: list[str]) -> bool:
     if not packages:
         return False
@@ -320,7 +449,11 @@ def _packages_importable(python: Path, packages: list[str]) -> bool:
     # and a folder of that name made the feature look installed (w5/174).
     try:
         completed = subprocess.run([str(python), "-P", "-c", probe], capture_output=True, text=True, check=False)
-    except (OSError, ValueError):
+    except OSError as exc:
+        if exc.errno in SPAWN_LIMITS:
+            raise ProbeNotRun(exc) from exc
+        return False
+    except ValueError:
         return False
     # The import must say so itself: `/usr/bin/true` exits 0 having run
     # nothing, and its features read as present (w5/481).
@@ -384,7 +517,7 @@ def _find_packaged_file(name: str) -> Path | None:
         staged.write_bytes(data)
         os.replace(staged, cache)
     except OSError as exc:
-        raise BeaError(
+        raise EngineError(
             f"Could not prepare the hash-pinned {name} for the engine install at {cache}: {exc.strerror or exc}.",
             details=["Make that directory writable, or set BEA_ENGINE_DIR to a writable location."],
         ) from exc
@@ -447,11 +580,11 @@ def _refuse_foreign_root(root: Path) -> None:
     else:
         reason = "is not a directory"
     if os.environ.get(paths.DIR_ENV):
-        raise BeaError(
+        raise EngineError(
             f"{paths.DIR_ENV} points at '{root}', which {reason}, so bea will not install an engine over it. "
             f"Point {paths.DIR_ENV} at an empty or new directory, or unset it."
         )
-    raise BeaError(
+    raise EngineError(
         f"The engine location '{root}' {reason}, so bea will not install over it. Move it aside, then rerun."
     )
 
@@ -468,7 +601,7 @@ def _publish(partial: Path, root: Path) -> None:
             shutil.rmtree(discarded, ignore_errors=True)
         os.replace(partial, root)
     except OSError as exc:
-        raise BeaError(f"Could not move the finished engine into place at {root}: {exc.strerror or exc}.") from exc
+        raise EngineError(f"Could not move the finished engine into place at {root}: {exc.strerror or exc}.") from exc
 
 
 def _requirements() -> list[str]:
@@ -490,15 +623,21 @@ def _find_uv() -> str:
         # `paths.python_override()` validates its own variable the same way.
         expanded = expand_path(Path(override), f"${UV_ENV}")
         if not expanded.exists():
-            raise BeaError(f"{UV_ENV} points at '{override}', which does not exist.")
+            raise EngineError(f"{UV_ENV} points at '{override}', which does not exist.")
         return str(expanded)
     found = shutil.which("uv")
     if found:
         return found
-    raise BeaError(
+    raise EngineError(
         "The Beancount engine needs uv to install, and uv was not found on PATH. "
         "Install it from https://docs.astral.sh/uv/ or set BEA_UV to its path."
     )
+
+
+#: What a failed install says last: the fix is network and uv, then a retry,
+#: not a manual Beancount install. Shared with `bea upgrade`, which appends
+#: the same line when its own engine refresh fails (w5/788).
+RETRY_ONCE_ONLINE = "Retry with a local command such as 'bea check' once the network and uv are available."
 
 
 def _run(command: list[str], *, failure: str) -> None:
@@ -506,9 +645,14 @@ def _run(command: list[str], *, failure: str) -> None:
 
     Captured rather than inherited: in JSON mode the frontend's stderr must
     stay a single parseable object, and uv is chatty. On failure the output is
-    what explains it, so it becomes the error's details.
+    what explains it, so it becomes the error's details. A stop aimed at bea
+    alone still stops uv: a bare `subprocess.run` orphaned it, and a retry in
+    that window left a partial directory that survived forever (w5/786).
     """
-    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    # Deferred: launch imports this module.
+    from cli.engine.launch import run_captured
+
+    completed = run_captured(command)
     if completed.returncode != 0:
         details = [line for line in (completed.stderr or completed.stdout or "").splitlines() if line.strip()]
-        raise BeaError(f"{failure} (uv exited {completed.returncode}).", details=details[-20:])
+        raise EngineError(f"{failure} (uv exited {completed.returncode}).", details=[*details[-20:], RETRY_ONCE_ONLINE])

@@ -37,6 +37,26 @@ export function parseBudgetAmount(amount: string): ParsedBudgetAmount {
   return { value: Number.isNaN(value) ? 0 : value, currency };
 }
 
+/**
+ * The direction of a budget, from its history rather than from the amount in
+ * effect today: `-1` for an income target (written as a negative amount), `1`
+ * for an expense cap. Zeroing an income target (Delete rewrites history, so
+ * "0" is the natural way to stop tracking one) stores a sign-less "0", and the
+ * chart then ran on expense rules: income drawn as negative bars and a missed
+ * month on the favourable side (w21/475, as mobile's `groupDirection`). The
+ * newest entry that has a sign decides; a budget that was only ever zero is an
+ * expense cap.
+ */
+export function budgetGroupDirection(
+  group: Pick<BudgetGroup, "amount" | "budgetHistory">,
+): 1 | -1 {
+  for (let i = group.budgetHistory.length - 1; i >= 0; i -= 1) {
+    const { value } = parseBudgetAmount(group.budgetHistory[i]!.amount);
+    if (value !== 0) return value < 0 ? -1 : 1;
+  }
+  return parseBudgetAmount(group.amount).value < 0 ? -1 : 1;
+}
+
 function getBudgetFields(entry: BudgetEntry): BudgetFields | null {
   const account = typeof entry.values[0] === "string" ? entry.values[0] : "";
   const interval = typeof entry.values[1] === "string" ? entry.values[1] : "";
@@ -68,6 +88,10 @@ function getBudgetFields(entry: BudgetEntry): BudgetFields | null {
 /**
  * Fava keeps one budget history per account and currency. A newer directive
  * replaces the previous directive for that pair, even when its cadence changes.
+ *
+ * `entries` arrive as the journal returns them, newest first. Reversing them
+ * before the stable date sort keeps two directives on the same date in
+ * ledger order, so the later one is the current target (w4/232).
  */
 export function groupBudgetEntries(
   entries: BudgetEntry[],
@@ -78,7 +102,7 @@ export function groupBudgetEntries(
     Array<{ entry: BudgetEntry; fields: BudgetFields }>
   >();
 
-  for (const entry of entries) {
+  for (const entry of [...entries].reverse()) {
     const fields = getBudgetFields(entry);
     if (!fields) continue;
     const key = `${fields.account}::${fields.currency}`;

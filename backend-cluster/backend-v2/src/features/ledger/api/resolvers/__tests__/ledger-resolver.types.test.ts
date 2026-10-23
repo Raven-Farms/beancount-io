@@ -156,9 +156,34 @@ describe("ledger-resolver.types", () => {
       const errors = await validate(input);
       expect(errors.length).toBeGreaterThan(0);
       expect(errors[0].constraints?.matches).toContain(
-        "lowercase letters, numbers, hyphens, and underscores",
+        "lowercase letters, numbers, and underscores joined by single hyphens",
       );
+      expect(errors[0].constraints?.matches).toContain("use 'myledger'");
     });
+
+    // w23/064: the ledger service slugified these into another name, so the
+    // next call by the name sent found nothing.
+    it.each([
+      ["x-", "; use 'x'"],
+      ["-x", "; use 'x'"],
+      ["a--b", "; use 'a-b'"],
+      ["-", ""],
+      ["_", ""],
+    ])(
+      "refuses %j, which the service would store differently",
+      async (name, use) => {
+        for (const input of [
+          new CreateLedgerInput(),
+          new UpdateLedgerInput(),
+        ]) {
+          input.name = name;
+          const [error] = await validate(input);
+          expect(error?.constraints?.matches).toBe(
+            `A ledger name is lowercase letters, numbers, and underscores joined by single hyphens, with at least one letter or number${use}`,
+          );
+        }
+      },
+    );
 
     it("should fail validation for name with spaces", async () => {
       const input = new CreateLedgerInput();
@@ -181,6 +206,9 @@ describe("ledger-resolver.types", () => {
       const validNames = [
         "my-ledger",
         "my_ledger",
+        "a-b",
+        "a_b",
+        "_x",
         "my-ledger-2024",
         "123-ledger",
         "ledger123",

@@ -54,4 +54,5 @@ def test_a_mixed_file_names_both_lines_and_no_cp1252(tmp_path: Path) -> None:
 def test_a_pure_cp1252_file_still_gets_the_hint(tmp_path: Path) -> None:
     result = _import(tmp_path, HEADER + b"2026-01-08,Caf\xe9,b,-4.00\n")
     assert result.returncode == 2
-    assert "it decodes as cp1252 — pass --csv encoding=cp1252." in result.stderr
+    assert "Re-save the export as UTF-8" in result.stderr
+    assert "pass --csv encoding=cp1252 only if" in result.stderr

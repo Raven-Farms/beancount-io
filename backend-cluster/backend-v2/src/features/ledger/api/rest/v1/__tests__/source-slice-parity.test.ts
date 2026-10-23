@@ -10,6 +10,7 @@ import { HealthResolver } from "@/features/healthz/api/health-resolver";
 import { LedgerJournalService } from "@/features/ledger/service/ledger-journal-service";
 import { createHash } from "node:crypto";
 import { BadUserInputError } from "@/shared/errors";
+import { FavaApiError } from "@/foundation/fava/api-client";
 import {
   AuthorizationService,
   SourceBackedRelationshipEvaluator,
@@ -45,6 +46,8 @@ beforeAll(async () => {
   });
 });
 
+const BALANCE_FAILED =
+  "Balance failed for Assets:Cash: expected 49.75 USD, got 73.25 USD (main.bean:84)";
 const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 const original = '2026-09-01 * "Café" "Breakfast"\n';
 const operations = {
@@ -76,38 +79,77 @@ async function fixture(caller = identity) {
     ["entry1", original],
     ["entry2", "; second\n"],
   ]);
-  const state = { writable: true };
+  const state = { writable: true, limited: false, breaks: false };
   const envelope = (data: unknown) => ({ data: { success: true, data } });
-  type Ref = { entry_hash: string; sha256sum: string };
+  type Ref = { entry_hash: string; sha256sum: string; allowInvalid?: boolean };
   function validate(ref: Ref) {
     const text = slices.get(ref.entry_hash);
     if (text === undefined || hash(text) !== ref.sha256sum)
       throw new BadUserInputError("Stale source fixture");
   }
+  // The ledger service's pre-commit projection (w21/m1): an edit or delete
+  // that adds a bean-check error is refused unless the caller allows it.
+  function refuseBreaking(
+    body: { allowInvalid?: boolean },
+    action: "update" | "delete",
+  ) {
+    if (!state.breaks || body.allowInvalid === true) return;
+    const subject = action === "update" ? "this edit" : "this deletion";
+    const error = `${subject} would introduce 1 new bean-check error: ${BALANCE_FAILED}`;
+    throw new FavaApiError(error, 400, {
+      error,
+      code: "NEW_LEDGER_ERRORS",
+      details: { count: 1, detail: BALANCE_FAILED, action },
+    });
+  }
   const deleteSourceSlice = jest.fn(async (_owner, _name, ref: Ref) => {
     validate(ref);
+    refuseBreaking(ref, "delete");
     slices.delete(ref.entry_hash);
-    return envelope({ message: "Deleted", entry_hash: ref.entry_hash });
+    return envelope({
+      message: "Deleted",
+      entry_hash: ref.entry_hash,
+      files: ["main.bean"],
+    });
   });
   const deleteMultiSourceSlices = jest.fn(
-    async (_owner, _name, body: { entries: Ref[] }) => {
+    async (_owner, _name, body: { entries: Ref[]; allowInvalid?: boolean }) => {
       body.entries.forEach(validate);
+      refuseBreaking(body, "delete");
       body.entries.forEach((ref) => slices.delete(ref.entry_hash));
       return envelope({
         message: "Deleted",
         deleted_hashes: body.entries.map((ref) => ref.entry_hash),
+        // Each rewritten file once, as the ledger service reports them.
+        files: ["main.bean", "2026/imports.bean"],
       });
     },
   );
   const updateSourceSlice = jest.fn(
     async (_owner, _name, body: Ref & { new_content: string }) => {
       validate(body);
+      refuseBreaking(body, "update");
+      // The ledger service's commit-boundary check (w0/m6): the replacement
+      // would take a free ledger past its directive limit.
+      if (state.limited) {
+        const error =
+          "This ledger has reached its free-tier limit of 2 directives (this change would bring it to approximately 5). Deleting entries still works and is how to get back under the limit; upgrading removes it entirely.";
+        throw new FavaApiError(error, 403, {
+          error,
+          code: "directive_limit_exceeded",
+          details: { limit: 2, current: 5 },
+        });
+      }
       slices.set(body.entry_hash, body.new_content);
+      // The ledger service's wire contract: `entry_hash` is the entry's NEW
+      // hash, repeated as `new_entry_hash`. A fake that echoed the request
+      // here hid a summary that printed the new hash as the old one (w23/007).
       return envelope({
         message: "Updated",
-        entry_hash: body.entry_hash,
+        entry_hash: "entry1-updated",
         new_sha256sum: hash(body.new_content),
         new_entry_hash: "entry1-updated",
+        files: ["2026/imports.bean"],
       });
     },
   );
@@ -186,6 +228,8 @@ async function fixture(caller = identity) {
         return {
           success: response.status === 200,
           result: await response.json(),
+          errors: undefined,
+          full: undefined,
         };
       }
       if (surface === "gql") {
@@ -198,6 +242,8 @@ async function fixture(caller = identity) {
         return {
           success: !response.errors,
           result: response.data?.[spec.field],
+          errors: response.errors,
+          full: undefined,
         };
       }
       // One MCP tool per operation (ADR 019, 2026-10-18).
@@ -215,6 +261,8 @@ async function fixture(caller = identity) {
       return {
         success: !response.isError,
         result: (response.structuredContent as { result?: unknown })?.result,
+        errors: undefined,
+        full: response.structuredContent,
       };
     },
     close: async () => {
@@ -261,7 +309,7 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
             expect(f.slices.get("entry1")).toBe("; replacement café\n");
             const updated = {
               message: "Updated",
-              entryHash: "entry1",
+              entryHash: "entry1-updated",
               newSha256sum: hash("; replacement café\n"),
               newEntryHash: "entry1-updated",
             };
@@ -271,7 +319,8 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
                     ...updated,
                     summary:
                       "Updated entry entry1 (new hash entry1-updated). No new bean-check errors.",
-                    wrote: [],
+                    // w23/042: the file the ledger rewrote, not always [].
+                    wrote: [{ path: "2026/imports.bean" }],
                     entryHashes: ["entry1-updated"],
                     validation: emptyValidation,
                   }
@@ -285,7 +334,10 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
                 ? {
                     ...deleted,
                     summary: "Deleted 2 entries. No new bean-check errors.",
-                    wrote: [],
+                    wrote: [
+                      { path: "main.bean" },
+                      { path: "2026/imports.bean" },
+                    ],
                     entryHashes: ["entry1", "entry2"],
                     validation: emptyValidation,
                   }
@@ -299,7 +351,7 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
                 ? {
                     ...deleted,
                     summary: "Deleted entry entry1. No new bean-check errors.",
-                    wrote: [],
+                    wrote: [{ path: "main.bean" }],
                     entryHashes: ["entry1"],
                     validation: emptyValidation,
                   }
@@ -356,3 +408,124 @@ describe.each(["rest", "gql", "mcp"])("source edits via %s", (surface) => {
     });
   });
 });
+
+// The ledger service refuses a source-slice update past the directive limit at
+// its commit boundary (w0/m6); every surface must refuse it the same way, with
+// the limit and the projected count, and change nothing.
+describe.each(["rest", "gql", "mcp"])(
+  "a source edit past the directive limit via %s",
+  (surface) => {
+    it("is refused with the limit and the projected count", async () => {
+      const f = await fixture();
+      f.state.limited = true;
+      const before = [...f.slices];
+      try {
+        const result = await f.call(surface, "update", args("update"));
+        expect(result.success).toBe(false);
+        expect([...f.slices]).toEqual(before);
+        const limit = { resource: "directives", limit: 2, current: 5 };
+        const message = expect.stringContaining(
+          "free-tier limit of 2 directives",
+        );
+        if (surface === "rest") {
+          expect(result.result).toMatchObject({
+            ok: false,
+            error: { code: "RESOURCE_LIMIT_REACHED", message, metadata: limit },
+          });
+        } else if (surface === "gql") {
+          // Raw `graphql()` bypasses Apollo's formatError; the error itself
+          // carries what formatError copies into `extensions`.
+          const refusal = result.errors?.[0]?.originalError as
+            | { category?: string; metadata?: unknown }
+            | undefined;
+          expect(refusal).toMatchObject({
+            category: "RESOURCE_LIMIT_REACHED",
+            metadata: limit,
+          });
+        } else {
+          expect(result.full).toMatchObject({
+            ok: false,
+            error: { code: "RESOURCE_LIMIT_REACHED", message },
+          });
+        }
+      } finally {
+        await f.close();
+      }
+    });
+  },
+);
+
+// The ledger service refuses an edit or delete that would add a bean-check
+// error (w21/m1). Every surface must refuse it as structured adds are refused
+// (w0/m2) — VALIDATION_FAILED naming the new error in newLedgerErrors — change
+// nothing, and commit the same request when it carries allowInvalid.
+describe.each(["rest", "gql", "mcp"])(
+  "a source edit that would break the ledger via %s",
+  (surface) => {
+    describe.each(Object.keys(operations) as Operation[])("%s", (operation) => {
+      const subject = operation === "update" ? "this edit" : "this deletion";
+
+      it("is refused with the new error named, changing nothing", async () => {
+        const f = await fixture();
+        f.state.breaks = true;
+        const before = [...f.slices];
+        try {
+          const result = await f.call(surface, operation, args(operation));
+          expect(result.success).toBe(false);
+          expect([...f.slices]).toEqual(before);
+          const message = expect.stringContaining(
+            `${subject} would introduce 1 new bean-check error: ${BALANCE_FAILED}`,
+          );
+          const metadata = {
+            field: "entry",
+            newLedgerErrors: BALANCE_FAILED,
+          };
+          if (surface === "rest") {
+            expect(result.result).toMatchObject({
+              ok: false,
+              error: { code: "VALIDATION_FAILED", message, metadata },
+            });
+          } else if (surface === "gql") {
+            // Raw `graphql()` bypasses Apollo's formatError, which copies
+            // the category and metadata into `extensions`.
+            expect(result.errors?.[0]?.originalError).toMatchObject({
+              category: "VALIDATION_FAILED",
+              message,
+              metadata,
+            });
+          } else {
+            expect(result.full).toMatchObject({
+              ok: false,
+              error: {
+                code: "VALIDATION_FAILED",
+                message,
+                hint: expect.stringContaining("allowInvalid: true"),
+              },
+            });
+          }
+        } finally {
+          await f.close();
+        }
+      });
+
+      it("commits the same request with allowInvalid", async () => {
+        const f = await fixture();
+        f.state.breaks = true;
+        try {
+          const result = await f.call(surface, operation, {
+            ...args(operation),
+            allowInvalid: true,
+          });
+          expect(result.success).toBe(true);
+          if (operation === "update") {
+            expect(f.slices.get("entry1")).toBe("; replacement café\n");
+          } else {
+            expect(f.slices.has("entry1")).toBe(false);
+          }
+        } finally {
+          await f.close();
+        }
+      });
+    });
+  },
+);

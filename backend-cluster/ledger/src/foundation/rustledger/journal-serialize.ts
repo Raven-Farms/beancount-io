@@ -28,7 +28,9 @@ import {
   DocumentSubtype,
   TransactionSubtype,
 } from "@/foundation/ledger-api-types";
+import BigNumber from "bignumber.js";
 import { hashEntry } from "./entry-hash";
+import { endsInsideString, type SourceSyntax } from "./source-slice";
 import { perUnitFromTotalCostString } from "./total-cost";
 
 /**
@@ -49,9 +51,10 @@ import { perUnitFromTotalCostString } from "./total-cost";
  *   Python service additionally includes `filename`/`lineno` (kept by
  *   `sanitize_meta`, which only strips dunder keys). Those source-location keys
  *   are unavailable here.
- * - `Balance.diff_amount` is `null` in the common (passing-assertion) case, which
- *   matches; the failed-assertion diff is a beancount balance-check artifact
- *   rustledger's `DirectiveJson` does not expose.
+ * - `Balance.diff_amount` is `null` for a passing assertion, which matches. A
+ *   failed one is not on rustledger's `DirectiveJson`; its validator reports it
+ *   as an `E2001` error instead, which {@link failedBalanceDiffs} joins back
+ *   onto the directive as beancount's `actual − expected` (w21/087).
  * - `Balance` also carries the asserted `amount` and its explicit `tolerance`,
  *   which the Python `serialize_directive` dropped, so a journal row can show
  *   what was asserted (w3/556). The fields are additive.
@@ -198,6 +201,121 @@ function serializeCustomValue(
   return value.value;
 }
 
+// --- failed balance assertions --------------------------------------------
+
+/** `Balance failed for Assets:Cash: expected 50.00 USD, got 49.75 USD` (E2001). */
+const BALANCE_FAILED =
+  /^Balance failed for (\S+): expected (-?[\d.]+) (\S+), got (-?[\d.]+) (\S+)$/;
+
+/**
+ * `Balance exceeds explicit tolerance for Assets:Cash: expected 99.995 USD ~
+ * 0.001, got 100.00 USD (difference: 0.005)` (E2002): an assertion that wrote
+ * its own `~ tolerance` fails with this, not with E2001 (w21/533).
+ */
+const TOLERANCE_FAILED =
+  /^Balance exceeds explicit tolerance for (\S+): expected (-?[\d.]+) (\S+) ~ ([\d.]+), got (-?[\d.]+) (\S+)(?: \(difference: .*\))?$/;
+
+/** `got − expected`, exactly, at the finer of the two written scales. */
+function subtractDecimal(got: string, expected: string): string {
+  const scale = Math.max(
+    new BigNumber(got).decimalPlaces() ?? 0,
+    new BigNumber(expected).decimalPlaces() ?? 0,
+    (got.split(".")[1] ?? "").length,
+    (expected.split(".")[1] ?? "").length,
+  );
+  return new BigNumber(got).minus(expected).toFixed(scale);
+}
+
+/** The same quantity however it was written: `50`, `50.0` and `50.00`. */
+function decimalKey(number: string): string {
+  return new BigNumber(number).toFixed();
+}
+
+/** What an assertion and its error share: the explicit tolerance is part of it. */
+function assertionKey(
+  account: string,
+  amount: string,
+  currency: string,
+  tolerance: string,
+): string {
+  return `${account}\u0000${decimalKey(amount)}\u0000${currency}\u0000${tolerance === "" ? "" : decimalKey(tolerance)}`;
+}
+
+/**
+ * Each failing Balance directive's `diff_amount` (actual − expected), joined
+ * from the validator's `E2001` and `E2002` errors, which name the account and both
+ * amounts but carry no date. A key (account, asserted amount) shared by more
+ * assertions than errors cannot say which of them failed, so those stay null
+ * rather than mark a passing assertion failed; otherwise errors pair with
+ * their assertions in date order. The validator checks assertions in date
+ * order, so that is the order its errors come in whatever line each sits on: a
+ * file that is not in date order (a backdated assertion appended last) put the
+ * errors by line against the assertions by date and swapped their differences
+ * (w21/532).
+ */
+export function failedBalanceDiffs(
+  directives: readonly DirectiveJson[],
+  errors: readonly {
+    message: string;
+    code?: string | null;
+    file?: string | null;
+    line?: number | null;
+  }[],
+): Map<DirectiveJson, JournalAmountPublic> {
+  const failures = new Map<string, { diff: JournalAmountPublic }[]>();
+  for (const error of errors) {
+    const message = error.message.trim();
+    let account: string;
+    let expected: string;
+    let currency: string;
+    let got: string;
+    let gotCurrency: string;
+    let tolerance = "";
+    if (error.code === "E2001") {
+      const match = BALANCE_FAILED.exec(message);
+      if (!match) continue;
+      [, account, expected, currency, got, gotCurrency] = match;
+    } else if (error.code === "E2002") {
+      const match = TOLERANCE_FAILED.exec(message);
+      if (!match) continue;
+      [, account, expected, currency, tolerance, got, gotCurrency] = match;
+    } else {
+      continue;
+    }
+    if (gotCurrency !== currency) continue;
+    const key = assertionKey(account, expected, currency, tolerance);
+    const list = failures.get(key) ?? [];
+    list.push({ diff: { number: subtractDecimal(got, expected), currency } });
+    failures.set(key, list);
+  }
+  const diffs = new Map<DirectiveJson, JournalAmountPublic>();
+  if (failures.size === 0) return diffs;
+
+  const assertions = new Map<string, DirectiveJson[]>();
+  for (const directive of directives) {
+    if (directive.type !== "balance") continue;
+    const key = assertionKey(
+      directive.account,
+      directive.amount.number,
+      directive.amount.currency,
+      directive.tolerance ?? "",
+    );
+    if (!failures.has(key)) continue;
+    const list = assertions.get(key) ?? [];
+    list.push(directive);
+    assertions.set(key, list);
+  }
+  for (const [key, list] of failures) {
+    const candidates = assertions.get(key) ?? [];
+    if (candidates.length !== list.length) continue;
+    const dated = [...candidates].sort((a, b) =>
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
+    );
+    dated.forEach((directive, i) => diffs.set(directive, list[i].diff));
+  }
+  return diffs;
+}
+
 // --- serializeDirective ---------------------------------------------------
 
 /**
@@ -206,7 +324,10 @@ function serializeCustomValue(
  * schema for) is not emitted by `getJournal`; if one is passed we serialize it
  * as a `Custom`-typed item so the union stays exhaustive.
  */
-export function serializeDirective(directive: DirectiveJson): JournalItem {
+export function serializeDirective(
+  directive: DirectiveJson,
+  balanceDiffs?: ReadonlyMap<DirectiveJson, JournalAmountPublic>,
+): JournalItem {
   const date = directive.date;
   const directive_type = DIRECTIVE_TYPE_BY_TAG[directive.type];
   const entry_hash = hashEntry(directive);
@@ -237,7 +358,7 @@ export function serializeDirective(directive: DirectiveJson): JournalItem {
         account: directive.account,
         amount: serializeAmount(directive.amount),
         tolerance: directive.tolerance ?? null,
-        diff_amount: null,
+        diff_amount: balanceDiffs?.get(directive) ?? null,
       };
     case "commodity":
       return {
@@ -468,10 +589,21 @@ function escapeString(value: string): string {
 const NUMBER_LITERAL_RE = /^-?\d+(\.\d+)?$/;
 const DATE_LITERAL_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * How `directiveToText` treats string metadata. Re-serializing a parsed entry
+ * must guess (see above); a caller's own entry states its values as strings,
+ * and guessing turned `"00123"` into the number `123` (w23/053).
+ */
+export interface DirectiveTextOptions {
+  /** Quote every string meta value, never reading it as a number or date. */
+  readonly literalStringMeta?: boolean;
+}
+
 /** Port of beancount `EntryPrinter.write_metadata` (excluding filename/lineno/dunder). */
 function renderMetadata(
   meta: Record<string, MetaValueJson> | undefined,
   prefix: string,
+  options: DirectiveTextOptions = {},
 ): string {
   if (!meta) return "";
   let out = "";
@@ -481,7 +613,8 @@ function renderMetadata(
     let valueStr: string;
     if (typeof value === "string") {
       valueStr =
-        NUMBER_LITERAL_RE.test(value) || DATE_LITERAL_RE.test(value)
+        !options.literalStringMeta &&
+        (NUMBER_LITERAL_RE.test(value) || DATE_LITERAL_RE.test(value))
           ? value
           : `"${escapeString(value)}"`;
     } else if (typeof value === "boolean") {
@@ -569,6 +702,7 @@ function tagsLinksSuffix(tags: string[], links: string[]): string {
 
 function renderTransaction(
   directive: Extract<DirectiveJson, { type: "transaction" }>,
+  options: DirectiveTextOptions,
 ): string {
   const header: string[] = [];
   if (directive.payee) header.push(`"${escapeString(directive.payee)}"`);
@@ -581,7 +715,7 @@ function renderTransaction(
   [...directive.links].sort().forEach((link) => header.push(`^${link}`));
 
   let out = `${directive.date} ${directive.flag} ${header.join(" ")}\n`;
-  out += renderMetadata(directive.meta, INDENT);
+  out += renderMetadata(directive.meta, INDENT, options);
 
   const accounts = directive.postings.map((posting) => {
     const flag = posting.flag ? `${posting.flag} ` : "";
@@ -601,7 +735,7 @@ function renderTransaction(
       widthPosition,
     )}`;
     out += `${line.replace(/\s+$/, "")}\n`;
-    out += renderMetadata(posting.meta, "    ");
+    out += renderMetadata(posting.meta, "    ", options);
   });
   return out;
 }
@@ -611,18 +745,21 @@ function renderTransaction(
  * (a beancount `EntryPrinter` render + `fava.core.misc.align` to column 61, with
  * trailing whitespace stripped per line). See PARITY NOTES on number formatting.
  */
-export function directiveToText(directive: DirectiveJson): string {
+export function directiveToText(
+  directive: DirectiveJson,
+  options: DirectiveTextOptions = {},
+): string {
   let raw: string;
   switch (directive.type) {
     case "transaction":
-      raw = renderTransaction(directive);
+      raw = renderTransaction(directive, options);
       break;
     case "balance": {
       const account = padEnd(directive.account, 47);
       const tolerance = directive.tolerance ? `~ ${directive.tolerance} ` : "";
       raw =
         `${directive.date} balance ${account} ${directive.amount.number} ${tolerance}${directive.amount.currency}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "open": {
@@ -635,31 +772,32 @@ export function directiveToText(directive: DirectiveJson): string {
           "",
         ) +
         "\n" +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "close":
       raw =
         `${directive.date} close ${directive.account}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "commodity":
       raw =
         `${directive.date} commodity ${directive.currency}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "pad":
       raw =
         `${directive.date} pad ${directive.account} ${directive.source_account}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "note": {
-      const suffix = tagsLinksSuffix([], []);
+      const { tags = [], links = [] } = directive as SourceSyntax;
+      const suffix = tagsLinksSuffix(tags, links);
       raw =
         `${directive.date} note ${directive.account} "${escapeString(
           directive.comment,
         )}"${suffix ? ` ${suffix}` : ""}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "document": {
@@ -670,7 +808,7 @@ export function directiveToText(directive: DirectiveJson): string {
         `${directive.date} document ${directive.account} "${escapeString(
           directive.path,
         )}"${suffix ? ` ${suffix}` : ""}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "price": {
@@ -679,7 +817,7 @@ export function directiveToText(directive: DirectiveJson): string {
       const paddedAmount = amount.length >= 22 ? amount : amount.padStart(22);
       raw =
         `${directive.date} price ${currency} ${paddedAmount}\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     }
     case "event":
@@ -687,22 +825,22 @@ export function directiveToText(directive: DirectiveJson): string {
         `${directive.date} event "${escapeString(
           directive.event_type,
         )}" "${escapeString(directive.value)}"\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "query":
       raw =
         `${directive.date} query "${escapeString(
           directive.name,
         )}" "${escapeString(directive.query_string)}"\n` +
-        renderMetadata(directive.meta, INDENT);
+        renderMetadata(directive.meta, INDENT, options);
       break;
     case "custom": {
       const values = (directive.values ?? []).map(renderCustomValueText);
       raw =
-        `${directive.date} custom "${directive.custom_type}" ${values.join(" ")}\n`.replace(
+        `${directive.date} custom "${escapeString(directive.custom_type)}" ${values.join(" ")}\n`.replace(
           / \n$/,
           "\n",
-        ) + renderMetadata(directive.meta, INDENT);
+        ) + renderMetadata(directive.meta, INDENT, options);
       break;
     }
     default:
@@ -722,7 +860,7 @@ function renderCustomValueText(value: TypedValueJson): string {
     case "string":
     case "tag":
     case "link":
-      return `"${value.value}"`;
+      return `"${escapeString(value.value)}"`;
     case "number":
       return value.value;
     case "date":
@@ -747,7 +885,16 @@ function stripAndAlign(raw: string): string {
   // effect: align content lines, keep the trailing newline.
   const hadTrailingNewline = raw.endsWith("\n");
   const content = hadTrailingNewline ? lines.slice(0, -1) : lines;
+  // Text inside a quoted string is the user's, not layout: a narration line
+  // ending in "2 x Milk 3.50 EUR" was padded to the currency column, and
+  // trailing spaces and \r dropped, silently changing what was typed
+  // (w21/191). A line that starts inside a string is not aligned, and one that
+  // ends inside it is not stripped.
+  let inside = false;
   const alignedLines = content.map((line) => {
+    const startsInside = inside;
+    inside = endsInsideString(line, startsInside);
+    if (startsInside) return line;
     const match = ALIGN_RE.exec(line);
     if (match) {
       const [, prefix, number, rest] = match;
@@ -757,6 +904,11 @@ function stripAndAlign(raw: string): string {
     }
     return line;
   });
-  const rstripped = alignedLines.map((line) => line.replace(/\s+$/, ""));
+  inside = false;
+  const rstripped = alignedLines.map((line) => {
+    const startsInside = inside;
+    inside = endsInsideString(line, startsInside);
+    return inside ? line : line.replace(/\s+$/, "");
+  });
   return rstripped.join("\n") + (hadTrailingNewline ? "\n" : "");
 }

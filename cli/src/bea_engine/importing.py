@@ -8,7 +8,9 @@ Beangulp importer, deduplicates, validates, and optionally appends.
 from __future__ import annotations
 
 import copy
+import datetime
 import difflib
+import functools
 import hashlib
 import io
 import os
@@ -17,14 +19,18 @@ import runpy
 import shlex
 import sys
 import unicodedata
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextvars import ContextVar
+from dataclasses import dataclass, replace
 from decimal import Context, Decimal
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
 from bea_engine.ledger import write as ledger_write
+from bea_engine.ledger.prices import reciprocal_agrees
 from bea_engine.ledger.text import (
+    OPENED_ACCOUNTS,
     bea_command,
     checked_operating_currencies,
     ledger_roots,
@@ -32,7 +38,13 @@ from bea_engine.ledger.text import (
     reports_unused_accounts,
     unknown_root_message,
 )
-from bea_engine.ledger.writer import format_entry, nfc_entry_accounts, normalize_entry_strings
+from bea_engine.ledger.writer import (
+    _SHORT_LOT_LABELS,
+    format_entry,
+    held_short_lot_labels,
+    nfc_entry_accounts,
+    normalize_entry_strings,
+)
 from bea_engine.paths import expand_path
 from bea_engine.protocol import ConflictError, EngineError, LedgerError, UsageError, capturing
 from bea_engine.query import format_error
@@ -65,6 +77,20 @@ def _exited(exc: SystemExit, logs: io.StringIO) -> EngineError:
             traceback=_traceback(exc),
         ),
         logs,
+    )
+
+
+def _method_exited(exc: SystemExit, method: str) -> LedgerError:
+    """An importer method that called `sys.exit`, named as the method it is.
+
+    The configuration's own `Ingest(CONFIG)()` hint was given for any exit,
+    though a method exiting has nothing to do with how the module runs (w5/852).
+    """
+    status = "" if exc.code is None else f" ({exc.code})"
+    return LedgerError(
+        f"Importer {method} called sys.exit{status}; an importer method must return its answer or raise an "
+        "exception, not exit.",
+        traceback=_traceback(exc),
     )
 
 
@@ -128,6 +154,27 @@ def _effective_id_keys(id_keys: list[str] | None, *, csv_id_mapped: bool = False
     return resolved
 
 
+def _with_short_lots[**P, R](function: Callable[P, R]) -> Callable[P, R]:
+    """Run an import knowing nothing of its ledger until it is loaded, then forget what it learned.
+
+    Short-lot labels and opened accounts are both read from the ledger the
+    import loads; neither may leak into the next call in this process.
+    """
+
+    @functools.wraps(function)
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        token = _SHORT_LOT_LABELS.set(lambda: frozenset())
+        opened = OPENED_ACCOUNTS.set(frozenset())
+        try:
+            return function(*args, **kwargs)
+        finally:
+            OPENED_ACCOUNTS.reset(opened)
+            _SHORT_LOT_LABELS.reset(token)
+
+    return wrapped
+
+
+@_with_short_lots
 def answer(
     file: Path,
     source: Path,
@@ -137,6 +184,8 @@ def answer(
     date_format: str | None = None,
     delimiter: str | None = None,
     encoding: str | None = None,
+    decimal: str | None = None,
+    skip: int = 0,
     rules_file: Path | None = None,
     default_account: str | None = None,
     config: Path | None = None,
@@ -147,6 +196,7 @@ def answer(
     into: Path | None = None,
     allow_errors: bool = False,
     config_source: str = "--config",
+    delimiter_source: str = "--delimiter",
 ) -> dict[str, Any]:
     """Extract, review, optionally write, and answer with the preview payload.
 
@@ -154,10 +204,17 @@ def answer(
     always skipped. Nothing is written unless `--apply` is set and the preview
     is free of conflicts / unresolved possible duplicates / validation errors.
     """
-    from beancount.core.data import Open, Price, Transaction
+    from beancount.core.data import Balance, Close, Open, Price, Transaction
 
     from bea_engine import managed_load
-    from bea_engine.csv_mapper import CsvImporter, load_rules, parse_delimiter, parse_encoding, parse_mapping
+    from bea_engine.csv_mapper import (
+        CsvImporter,
+        load_rules,
+        parse_decimal,
+        parse_delimiter,
+        parse_encoding,
+        parse_mapping,
+    )
     from bea_engine.ledger.reader import entry_generated, forget_source_lines, shared_locations
 
     if duplicates not in {"review", "skip", "include"}:
@@ -178,6 +235,15 @@ def answer(
     target = ledger_write.destination(file, into)
     original = snapshot.require_target(target, into=into)
     existing, errors, options = managed_load.load_file(file, snapshot=snapshot)
+    # A positive cover keeps the label of the short lot it covers, in the rows
+    # an importer returns as well (w5/925).
+    short_labels = held_short_lot_labels(existing)
+    _SHORT_LOT_LABELS.set(lambda: short_labels)
+    # An account the ledger already opens stays usable by name even where its
+    # root is one the main file renamed and an include kept (w5/928).
+    OPENED_ACCOUNTS.set(
+        frozenset(unicodedata.normalize("NFC", entry.account) for entry in existing if isinstance(entry, Open))
+    )
     # Appended rows cannot repair unreadable existing text. Refuse it before
     # extracting rows or calling any ready, even under --allow-errors.
     # An account staged under nounused can still be cleared by this import.
@@ -228,6 +294,7 @@ def answer(
         resolved_date_format = "%Y-%m-%d" if date_format is None else date_format
         resolved_delimiter = parse_delimiter(delimiter) if delimiter is not None else None
         resolved_encoding = parse_encoding(encoding) if encoding is not None else "utf-8"
+        resolved_decimal = parse_decimal(decimal) if decimal is not None else None
         operating = options.get("operating_currency") or []
         importer: Any = CsvImporter(
             account=csv_account,
@@ -237,9 +304,14 @@ def answer(
             default_account=default_account,
             currency=_row_currency(existing, csv_account, options, checked="currency" not in mapping.columns),
             known_currencies=_known_currencies(existing, operating),
+            source_open=csv_account in _open_currencies(existing, Open),
             delimiter=resolved_delimiter,
             encoding=resolved_encoding,
             account_roots=roots,
+            forced_decimal_comma=(resolved_decimal == "comma") if resolved_decimal is not None else None,
+            skip=skip,
+            delimiter_source=delimiter_source,
+            ledger=file,
         )
         preview_config = csv_mapping
         try:
@@ -254,11 +326,19 @@ def answer(
                 LedgerError(f"Importer failed ({type(exc).__name__}): {exc}.", traceback=_traceback(exc)), logs
             ) from exc
         skipped_blank = importer.skipped_blank_rows
-        skipped_pending = len(importer.skipped_pending)
+        skipped_pending = len(importer.skipped_pending) + len(importer.skipped_unposted)
         if importer.skipped_pending:
             pending = "; ".join(importer.skipped_pending[:3]) + ("; …" if len(importer.skipped_pending) > 3 else "")
             notes.append(
-                f"Left out {skipped_pending} pending row(s) ({pending}); import them from the export they post in."
+                f"Left out {len(importer.skipped_pending)} pending row(s) ({pending}); import them from the "
+                "export they post in."
+            )
+        if importer.skipped_unposted:
+            # Declined or reverted charges never post: no export will bring them (w5/831).
+            unposted = "; ".join(importer.skipped_unposted[:3]) + ("; …" if len(importer.skipped_unposted) > 3 else "")
+            notes.append(
+                f"Left out {len(importer.skipped_unposted)} row(s) whose status says they never posted "
+                f"({unposted}): declined, failed or reverted charges have no amount to book."
             )
         if importer.pending_column is not None:
             column, count = importer.pending_column
@@ -272,6 +352,14 @@ def answer(
                 f"currency={importer.constant_currency} names no column of {source.name}, so every row "
                 f"posts in {importer.constant_currency}."
             )
+        if importer.ambiguous_dot_amounts is not None:
+            notes.append(importer.ambiguous_dot_amounts)
+        if importer.skipped_repeated_headers:
+            lines = "; ".join(str(line) for line in importer.skipped_repeated_headers[:3])
+            if len(importer.skipped_repeated_headers) > 3:
+                lines += "; …"
+            count = len(importer.skipped_repeated_headers)
+            notes.append(f"Skipped {count} repeated header line(s) ({lines}); they are page breaks, not data.")
         if importer.rejected_categories:
             examples = ", ".join(repr(name) for name in list(importer.rejected_categories)[:3])
             count = sum(importer.rejected_categories.values())
@@ -297,7 +385,11 @@ def answer(
                 importer = _importer(config, source, importer_name)
                 # NFC like the row accounts `_writable` normalizes, so an NFD
                 # source account still finds its own legs (w5/530).
-                account = unicodedata.normalize("NFC", str(importer.account(str(source))))
+                try:
+                    named = importer.account(str(source))
+                except SystemExit as exc:
+                    raise _method_exited(exc, f"{_name(importer)} account()") from exc
+                account = unicodedata.normalize("NFC", str(named))
                 entries = _extracted(importer, source, existing)
         except EngineError as exc:
             _with_output(exc, logs)
@@ -306,6 +398,17 @@ def answer(
             if not _is_missing_dependency(exc, config.parent):
                 # A wrong name or a relative import is a mistake in the
                 # configuration; nothing is missing, so nothing is to install.
+                shadow = config.parent / config.stem
+                if shadow.is_dir() and not (shadow / "__init__.py").exists() and config.stem in str(exc):
+                    # A same-named `.py` wins over a folder with no
+                    # `__init__.py`, so the config imports itself (w5/781).
+                    raise LedgerError(
+                        f"Importer failed ({type(exc).__name__}): {exc}. The configuration "
+                        f"{config.name} shadows the {shadow.name}/ folder beside it: Python imports "
+                        "the configuration file itself instead of the folder. Rename the config or "
+                        f"add {shadow.name}/__init__.py.",
+                        traceback=_traceback(exc),
+                    ) from exc
                 raise LedgerError(
                     f"Importer failed ({type(exc).__name__}): {exc}. The configuration runs as a script, so "
                     "a module beside it is imported by its plain name ('import helper'), not relatively.",
@@ -355,16 +458,20 @@ def answer(
     forget_source_lines()
     lifecycles = ledger_write._lifecycles(existing, snapshot.contents)
     shared = shared_locations(existing)
-    written = [
-        entry
-        for entry in existing
-        if not entry_generated(
-            entry,
-            type(entry).__name__.lower(),
-            shared,
-            require_declaration=isinstance(entry, Transaction),
-        )
-    ]
+    # A stable ID on a transaction the ledger writes is that transaction's,
+    # whatever a plugin did to its header: requiring the plugin-free payee and
+    # narration for the ID index too made a payee normalizer hide every
+    # written row, and the same export imported twice (w5/866). Content
+    # matches — twins, transfer counterparts — still need the declaration, or
+    # a forecast's rewritten same-date copy reads as a real payment (w5/662).
+    on_disk = [entry for entry in existing if not entry_generated(entry, type(entry).__name__.lower(), shared)]
+    declared = {
+        id(entry)
+        for entry in on_disk
+        if not isinstance(entry, Transaction)
+        or not entry_generated(entry, "transaction", shared, require_declaration=True)
+    }
+    written = [entry for entry in on_disk if id(entry) in declared]
     opening_balances = _opening_balances(written, account, roots[2])
     # Bank ids another account issued, reached here only through a transfer's
     # counter leg: never an exact match for this account's rows (w5/598).
@@ -375,39 +482,70 @@ def answer(
     # Transfers another account's import wrote, by the amounts they post here:
     # each bank words its side differently, so only date and amount pair them (w5/600).
     counterparts: dict[tuple[str, ...], list[Any]] = {}
-    for entry in written:
-        entry = normalize_entry_strings(entry)
+    for loaded in on_disk:
+        entry = normalize_entry_strings(loaded)
         if isinstance(entry, Transaction) and _source_legs(entry, account):
             elsewhere = _issued_elsewhere(entry, account, roots[:2])
-            if elsewhere:
-                counterparts.setdefault(_amounts_key(_fingerprint(entry, account)), []).append(entry)
+            if elsewhere and id(loaded) in declared:
+                counterparts.setdefault(_blind_key(_fingerprint(entry, account)[3]), []).append(entry)
+            # A transfer's `import-id-2` is its second balance-sheet leg's own
+            # id, so importing that account matches it exactly; scoped to the
+            # first leg's account, a migrated transfer's savings row was held
+            # as its other side, and `include` booked it twice (w5/818).
+            second = (entry.meta or {}).get("import-id-2") if elsewhere else None
             for identity in _identities(entry, account, keys):
-                if elsewhere and _is_native_identity(identity):
+                if elsewhere and _is_native_identity(identity) and identity != (account, "import-id", str(second)):
                     transfer_ids[identity] = entry
                 else:
                     identities[identity] = entry
                     dated.setdefault(identity, []).append(entry)
-            _index_twin(fingerprints, entry, account, ledger=True)
+            if id(loaded) in declared:
+                _index_twin(fingerprints, entry, account, ledger=True)
     if source.read_bytes() != source_bytes:
         raise ConflictError("The export changed during extraction; nothing was written. Retry.")
     source_hash = hashlib.sha256(source_bytes).hexdigest()
-    other_entries = {_directive_text(entry) for entry in written if not isinstance(entry, Transaction | Price)}
+    other_entries = {
+        _directive_key(entry, target.parent) for entry in written if not isinstance(entry, Transaction | Price)
+    }
     quotes = _written_quotes(existing)
     price_conflicts = False
     rows: list[dict[str, Any]] = []
+    padded_rows = 0
     texts: list[str] = []
     conflicts = False
     # Which side a conflicting id came from: the ledger, or an earlier row of
     # this same export (banks do reuse ids within one file).
     ledger_conflicts = False
     batch_conflicts = False
+    plugins_ran = bool(options.get("plugin"))
+    written_index: dict[tuple[str, str, str], list[Any]] | None = None
+
+    def written_source(key: tuple[str, str, str]) -> list[Any]:
+        # Parsed on first need: most imports never disagree with the view.
+        nonlocal written_index
+        if written_index is None:
+            written_index = _written_identities(snapshot, account, keys, roots[:2])
+        return written_index.get(key, [])
+
     hashed = _hash_rows(entries, account, keys, Transaction)
     claimed, owners = _claim_payeeless_ids(hashed, identities, account)
     batch_rows: dict[int, int] = {}
     first_uses = _first_uses(entries, Transaction)
+    # Each transfer another account's import wrote has one other side here, and
+    # each row is the other side of at most one transfer (w5/821, w5/882).
+    pairs: dict[int, int] | None = None
+
+    def paired(found: Any) -> int | None:
+        nonlocal pairs
+        if pairs is None:
+            pairs = _assign_counterparts(counterparts, transfer_ids, entries, account, keys)
+        return pairs.get(id(found))
+
     stage_opens = reports_unused_accounts(options)
     # Blocked rows with what they were before the block, for the second look below.
     held: list[tuple[dict[str, Any], Any, str, str | None]] = []
+    # The rows this import writes so far, which an assertion after them counts.
+    included: list[Any] = []
     for index, entry in enumerate(entries):
         entry = normalize_entry_strings(entry)
         status, reason, match = "new", None, None
@@ -449,7 +587,21 @@ def answer(
             hits = [
                 (key, found, same)
                 for key in ids
-                if (found := identities.get(key)) is not None
+                if (
+                    found := _under_id(
+                        key,
+                        identities,
+                        dated,
+                        entry,
+                        account,
+                        fingerprint,
+                        key in lookup_only,
+                        # The view proves a key only as far as plugins and the
+                        # loader left it alone; without either, a new key is new.
+                        source=written_source if key in identities or plugins_ran else None,
+                    )
+                )
+                is not None
                 # A stored narration-only id belongs to the row that claimed its
                 # entry, whichever other row's own id happens to spell it.
                 and not (id_source == "hash" and _is_generated_identity(key) and owners.get(id(found), index) != index)
@@ -518,11 +670,20 @@ def answer(
                     days = abs((entry.date - match.date).days)
                     if days >= _REUSED_REFERENCE_DAYS:
                         status = "possible_duplicate"
-                        reason = (
-                            f"Stable ID {matched_value} is already in the ledger on {match.date}, {days} days from "
-                            "this row; a reference reused on other dates, such as a monthly autopay's, is not a "
-                            "unique ID."
+                        reference = (
+                            f"{matched_value} is already in the ledger on {match.date}, {days} days from this row; "
+                            "a reference reused on other dates, such as a monthly autopay's, is not a unique ID."
                         )
+                        reason = f"Stable ID {reference}"
+                        # The ID hit a month away hid the entry this row
+                        # repeats on its own date, and `--duplicates include`
+                        # then booked that one twice (w5/822).
+                        twin = _possible_twin(fingerprints, entry, account, fingerprint, owners, index)
+                        if twin is not None:
+                            match = twin
+                            reason = (
+                                f"{_twin_reason(entry, twin, batch_rows.get(id(twin)), keys=keys)} Its ID {reference}"
+                            )
             elif (other_side := _transfer_side(ids, transfer_ids, entry, account, fingerprint)) is not None:
                 (_, _, matched_value), match = other_side
                 status, reason = (
@@ -534,10 +695,12 @@ def answer(
             elif (twin := _possible_twin(fingerprints, entry, account, fingerprint, owners, index)) is not None:
                 status, reason, match = (
                     "possible_duplicate",
-                    _twin_reason(entry, twin, batch_rows.get(id(twin)), ours=id_source != "hash", keys=keys),
+                    _twin_reason(entry, twin, batch_rows.get(id(twin)), keys=keys),
                     twin,
                 )
-            elif (counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint)) is not None:
+            elif (
+                counterpart := _transfer_counterpart(counterparts, entry, account, fingerprint, paired, index)
+            ) is not None:
                 status, reason, match = (
                     "possible_duplicate",
                     f"A transfer from {counterpart.postings[0].account} dated "
@@ -572,12 +735,34 @@ def answer(
                     f"{_quote_origin(other, batch_rows)}; refusing {_plain_amount(entry.amount)}."
                 )
             else:
-                recorded.append(entry)
-                batch_rows[id(entry)] = index + 1
+                # A disagreeing same-day quote in the other direction is the
+                # conflict `add price` refuses; an agreeing one is written,
+                # as `add price` writes it (w5/741). Recorded quotes and
+                # earlier rows of this import both count.
+                crossed = next(
+                    (
+                        quote
+                        for quote in quotes.get((entry.date, entry.amount.currency, entry.currency), [])
+                        if not reciprocal_agrees(entry.amount.number, quote.amount.number)
+                    ),
+                    None,
+                )
+                if crossed is not None:
+                    status, conflicts, price_conflicts = "conflict", True, True
+                    match = crossed
+                    reason = (
+                        f"{entry.amount.currency} already has a {entry.date} price of "
+                        f"{_plain_amount(crossed.amount)} at {_quote_origin(crossed, batch_rows)}, the other "
+                        f"direction of this pair; refusing {_plain_amount(entry.amount)}."
+                    )
+                else:
+                    recorded.append(entry)
+                    batch_rows[id(entry)] = index + 1
         elif not isinstance(entry, Transaction):
-            if text in other_entries:
+            directive_key = _directive_key(entry, target.parent)
+            if directive_key in other_entries:
                 status, reason = "duplicate", "Identical directive already exists."
-            other_entries.add(text)
+            other_entries.add(directive_key)
         include = status == "new" or (status == "possible_duplicate" and duplicates == "include")
         unblocked = (status, reason)
         if include and _entry_accounts(entry):
@@ -595,8 +780,18 @@ def answer(
             )
             if blocked_reason is not None:
                 status, reason, include = "blocked", blocked_reason, False
+        padded = None
+        if include and isinstance(entry, Balance):
+            # Written through the batch validation, which a pad passes: a
+            # wrong statement amount in a currency an already used pad has not
+            # padded was filled with a backdated adjustment, exit 0 (w5/871).
+            padded = _padded_balance_reason(entry, [*existing, *included], options, ledger=file)
+            if padded is not None:
+                status, reason, include = "blocked", padded, False
+                padded_rows += 1
         if include:
             texts.append(text)
+            included.append(entry)
         row_dict: dict[str, Any] = {
             "row": index + 1,
             "status": status,
@@ -621,7 +816,8 @@ def answer(
         if csv_mode:
             row_dict["rule"] = rule
         rows.append(row_dict)
-        if status == "blocked":
+        # A padded assertion stays blocked: opening an account fixes nothing about it.
+        if status == "blocked" and padded is None:
             held.append((row_dict, entry, *unblocked))
 
     # The ledger before the import is not the whole answer to "is this account
@@ -664,10 +860,33 @@ def answer(
     proposed = ledger_write.decoded_append(target, original, shown)
     validation_errors: list[str] = []
     validation_warnings: list[str] = []
+    # Quotes this import writes that no read of the result would use: a
+    # generated reciprocal, a later-sorting quote or a written one wins the day
+    # (w5/903). Judged on the candidate ledger the validation already loads.
+    from bea_engine.ledger.prices import unused_quote_advisories
+
+    advisories: list[str] = []
+    wanted = [
+        (item.date, item.currency, item.amount.currency, item.amount.number)
+        for item in included
+        if isinstance(item, Price) and item.amount.number is not None
+    ]
+    closes = [item for item in included if isinstance(item, Close)]
+
+    def inspect(candidate: list[Any]) -> None:
+        advisories.extend(unused_quote_advisories(candidate, existing, wanted))
+        advisories.extend(_funded_close_advisories(candidate, options, closes))
+
     try:
         validation_warnings = ledger_write.validate_append(
-            file, texts, allow_errors=allow_errors, into=into, snapshot=snapshot
+            file,
+            texts,
+            allow_errors=allow_errors,
+            into=into,
+            snapshot=snapshot,
+            inspect=inspect if wanted or closes else None,
         )
+        validation_warnings = [*validation_warnings, *advisories]
     except LedgerError as exc:
         # Only a validation failure belongs in the preview as text. Catching
         # every EngineError here flattened the class away, so a concurrent edit
@@ -761,9 +980,17 @@ def answer(
                     "those rows in the source file, or map a different id column"
                 )
             if price_conflicts:
+                from bea_engine.ledger.adding import one_price_per_day_plugin
+
+                loader = one_price_per_day_plugin(options)
                 fixes.append(
                     "a price differs from the quote already recorded for that commodity and day — drop the row, "
-                    "or record a second quote deliberately with bea add price --force"
+                    + (
+                        f"or edit the recorded quote at the location the row names ({loader} allows one price "
+                        "per pair and day, so a second quote cannot be recorded)"
+                        if loader is not None
+                        else "or record a second quote deliberately with bea add price --force"
+                    )
                 )
             conflict_fix = "; ".join(fixes)
             if conflicts and not (preview["possible_duplicates"] and duplicates == "review"):
@@ -780,15 +1007,19 @@ def answer(
                 )
             else:
                 guidance = "Import needs review; nothing was written."
-            if blocked == 1:
-                guidance += " 1 row is blocked by an unopened account or a currency mismatch; resolve it first."
-            elif blocked:
-                guidance += (
-                    f" {blocked} rows are blocked by unopened accounts or currency mismatches; resolve them first."
-                )
+            guidance += _blocked_summary(blocked, padded_rows)
+            # Invalid rows were dropped from the refusal it raised first, so
+            # fixing everything it listed met the next refusal (w5/858).
+            if validation_errors:
+                invalid = preview["invalid"]
+                if invalid:
+                    rows_word = "1 row would" if invalid == 1 else f"{invalid} rows would"
+                    guidance += f" {rows_word} also leave the ledger invalid; correct the source."
+                else:
+                    guidance += " The import would also leave the ledger invalid."
             raise ConflictError(
                 guidance,
-                details=review,
+                details=review + validation_errors,
                 ledger_errors=validation_warnings,
                 result=preview,
             )
@@ -815,6 +1046,30 @@ def answer(
     return preview
 
 
+def _funded_close_advisories(candidate: list[Any], options: Any, closes: list[Any]) -> list[str]:
+    """A warning for each imported close whose account still holds money once the whole batch is booked.
+
+    Native validation accepts a funded close, and later postings to the account
+    are then refused, so the money cannot be moved out afterwards; `add close`
+    refuses it. An import keeps its native behavior and says so instead
+    (w5/913). Judged on the candidate, so a same-day drain in the same import
+    keeps it quiet.
+    """
+    from bea_engine.ledger.adding import _plain, _remaining_balance
+
+    advisories = []
+    for close in closes:
+        held, stranded = _remaining_balance(candidate, options, close.account, close.date)
+        left = [f"{_plain(number)} {currency}" for currency, number in sorted(held.items())] or stranded
+        if left:
+            advisories.append(
+                f"{close.account} is closed on {close.date.isoformat()} while it still holds {', '.join(left)}; "
+                f"later transactions cannot move it out. Move the money on or before {close.date.isoformat()}, "
+                "or review the close."
+            )
+    return advisories
+
+
 def _unlocated(lines: list[str]) -> list[str]:
     """Refusal lines without the location of a row that was never written."""
     return [re.sub(r"^Proposed append \(not written\): ", "", line) for line in lines]
@@ -824,6 +1079,24 @@ def _named_rows(file: Path, texts: list[str], error: LedgerError, *, allow_error
     from bea_engine.ledger.adding import _named_rows as named_rows
 
     return named_rows(file, texts, error, allow_errors=allow_errors, into=into)
+
+
+def _native_units_as_none(entry: Any) -> Any:
+    """An entry whose omitted posting amounts are `None`, as the rest of the import reads them.
+
+    Beancount's own parser marks an omitted amount with its `MISSING` sentinel,
+    not `None`, so an importer returning parsed entries failed on the first
+    attribute read (w5/926). An amount with a stated number and an omitted
+    currency is kept: the number is real, and the printer spells it.
+    """
+    from beancount.core.number import MISSING
+
+    postings = getattr(entry, "postings", None)
+    if not postings or not any(posting.units is MISSING for posting in postings):
+        return entry
+    return entry._replace(
+        postings=[posting._replace(units=None) if posting.units is MISSING else posting for posting in postings]
+    )
 
 
 def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
@@ -836,20 +1109,65 @@ def _extracted(importer: Any, source: Path, existing: Any) -> list[Any]:
     """
     from beancount.core.data import ALL_DIRECTIVES
 
-    result = importer.extract(str(source), existing)
+    try:
+        result = importer.extract(str(source), existing)
+    except SystemExit as exc:
+        raise _method_exited(exc, f"{_name(importer)} extract()") from exc
     # One directive is a namedtuple, so `list()` took its fields for rows:
     # "row 1 is a dict" (w5/639).
-    if result is None or isinstance(result, str | bytes | dict) or isinstance(result, ALL_DIRECTIVES):
+    # Nor is a number a list: `list(0)` escaped as "'int' object is not iterable" (w5/857).
+    if (
+        result is None
+        or isinstance(result, str | bytes | dict)
+        or isinstance(result, ALL_DIRECTIVES)
+        or not isinstance(result, Iterable)
+    ):
         single = "; return [entry] for one" if isinstance(result, ALL_DIRECTIVES) else ""
         raise LedgerError(
             f"Importer {_name(importer)} extract() returned {_type_name(result)} instead of a list of "
             f"Beancount directives{single}."
         )
-    return copy.deepcopy(list(result))
+    return [_native_units_as_none(entry) for entry in copy.deepcopy(list(result))]
 
 
 def _type_name(value: Any) -> str:
     return "None" if value is None else f"a {type(value).__name__}"
+
+
+def _refuse_skipped_metadata(entry: Any, unwritable: str, logs: io.StringIO) -> None:
+    """Refuse the metadata values Beancount's printer passes over without raising.
+
+    A `dict` or `Inventory` value printed fine and vanished from the written
+    entry, so the import reported success while losing data (w5/728).
+    Dunder keys are the loader's own bookkeeping (`__tolerances__` is a
+    dict on entries that round-trip fine), so only payload keys refuse.
+    """
+    from beancount.core.inventory import Inventory
+
+    def skipped(key: Any, value: Any) -> str | None:
+        if isinstance(key, str) and key.startswith("__"):
+            return None
+        # Inventory subclasses dict, so it is named first.
+        if isinstance(value, Inventory):
+            return "an Inventory"
+        if isinstance(value, dict):
+            return "a dict"
+        return None
+
+    for key, value in (entry.meta or {}).items():
+        if (kind := skipped(key, value)) is not None:
+            raise _with_output(
+                LedgerError(f"{unwritable}: metadata {key!r} is {kind}, which Beancount cannot print."), logs
+            )
+    for number, posting in enumerate(getattr(entry, "postings", None) or []):
+        for key, value in (posting.meta or {}).items():
+            if (kind := skipped(key, value)) is not None:
+                raise _with_output(
+                    LedgerError(
+                        f"{unwritable}: posting {number + 1} metadata {key!r} is {kind}, which Beancount cannot print."
+                    ),
+                    logs,
+                )
 
 
 def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
@@ -861,7 +1179,9 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
     integer is the number it says, as `bea add transactions` already reads it.
     Whatever still cannot be printed — a float, an object, a `custom` whose
     values are plain tuples — is the importer's to fix, so the failure names
-    the importer and the row instead of reaching the generic handler.
+    the importer and the row instead of reaching the generic handler. A
+    `dict` or `Inventory` metadata value never reaches the printer's error:
+    it passes over them, so they are refused by name (w5/728).
     """
 
     def numbers(meta: Any) -> Any:
@@ -877,6 +1197,7 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
     import datetime
 
     from beancount.core.data import ALL_DIRECTIVES, Transaction
+    from beancount.core.number import MISSING
 
     if not isinstance(entry, ALL_DIRECTIVES):
         raise _with_output(
@@ -894,6 +1215,19 @@ def _writable(entry: Any, row: int, importer: Any, logs: io.StringIO) -> Any:
             LedgerError(f"{unwritable}: its date is {_type_name(entry.date)} ({entry.date!r}), not a datetime.date."),
             logs,
         )
+    _refuse_skipped_metadata(entry, unwritable, logs)
+    # Beancount prints no cost beside missing units, so the lot was dropped
+    # and the cash booked into the stock account, exit 0 (w5/855). `add
+    # transactions` refuses the same posting (w5/212).
+    for posting in getattr(entry, "postings", None) or []:
+        if posting.cost is not None and (posting.units is None or posting.units is MISSING):
+            raise _with_output(
+                LedgerError(
+                    f"{unwritable}: its {posting.account} posting has a cost but no units, and a cost cannot be "
+                    "written without them; give that posting its units."
+                ),
+                logs,
+            )
     try:
         # Accounts as the ledger reads them, NFC: an NFD `Expenses:Café` from a
         # PDF or a macOS file name was "not open", with a duplicate `add open`
@@ -952,7 +1286,23 @@ def _importer(config: Path, source: Path, name: str | None) -> Any:
         if not named:
             raise UsageError(f"No importer named {name!r}; available: {', '.join(selectors) or '(none)'}.")
         chosen = named
-    matches = [pair for pair in chosen if pair[1].identify(str(source))]
+    matches = []
+    for selector, importer in chosen:
+        try:
+            claimed = importer.identify(str(source))
+        except EngineError:
+            raise
+        except SystemExit as exc:
+            raise _method_exited(exc, f"{selector} identify()") from exc
+        except Exception as exc:
+            # A raising identify is a bug in that importer, not a declined
+            # claim: name it and the phase, as an extract failure does (w5/780).
+            raise LedgerError(
+                f"Importer {selector} identify() raised {type(exc).__name__}: {exc}.",
+                traceback=_traceback(exc),
+            ) from exc
+        if claimed:
+            matches.append((selector, importer))
     if not matches:
         selected = f"Importer {name!r} does not recognize" if name else "No configured importer recognizes"
         raise UsageError(f"{selected} {source.name}. Check --config and the export format.")
@@ -969,12 +1319,49 @@ def _importer(config: Path, source: Path, name: str | None) -> Any:
 
 def _selectors(configured: Sequence[Any]) -> list[str]:
     names = [_name(importer) for importer in configured]
+    for position, importer in enumerate(configured, start=1):
+        _require_interface(importer, position)
     seen: dict[str, int] = {}
     selectors = []
     for name in names:
         seen[name] = seen.get(name, 0) + 1
         selectors.append(name if names.count(name) == 1 else f"{name}#{seen[name]}")
     return selectors
+
+
+#: The methods `bea import` calls on every configured importer.
+_IMPORTER_METHODS = ("identify", "account", "extract")
+
+
+def _require_interface(importer: Any, position: int) -> None:
+    """Refuse a CONFIG entry that is not an importer before any importer runs.
+
+    `None`, a factory or a string got as far as `identify` and failed as a bare
+    `AttributeError` naming no entry, blocking the working importer beside it
+    (w5/857).
+    """
+    missing = [method for method in _IMPORTER_METHODS if not callable(getattr(importer, method, None))]
+    if not missing:
+        return
+    factory = (
+        " It is callable: if it builds an importer, list what it returns, CONFIG = [factory()]."
+        if callable(importer)
+        else ""
+    )
+    raise UsageError(
+        f"CONFIG entry {position} is {_type_name(importer)}, not an importer: it has no "
+        f"{'/'.join(missing)} method{'s' if len(missing) > 1 else ''}. List importer instances, "
+        f"CONFIG = [Importer(...)].{factory}"
+    )
+
+
+def _importer_classes() -> tuple[Any, Any]:
+    """beangulp's current `Importer` and legacy `ImporterProtocol`, or None where beangulp is absent."""
+    try:
+        from beangulp.importer import Importer, ImporterProtocol
+    except ImportError:
+        return None, None
+    return Importer, ImporterProtocol
 
 
 def _described(selector: str, importer: Any, source: Path) -> str:
@@ -1001,10 +1388,24 @@ def _name(importer: Any) -> str:
     kind = type(importer).__name__
     name = getattr(importer, "name", kind)
     if callable(name):
+        # Adapter asserts it wraps an ImporterProtocol, so suggesting it for
+        # anything else failed as a bare AssertionError (w5/857).
+        modern, legacy = _importer_classes()
+        if modern is not None and isinstance(importer, modern):
+            raise UsageError(
+                f"CONFIG entry {kind} is a beangulp.Importer whose name is a method; beangulp reads it as a "
+                f"property: add @property above {kind}.name."
+            )
+        if legacy is not None and isinstance(importer, legacy):
+            raise UsageError(
+                f"CONFIG entry {kind} is a Beancount v2 importer (its name is a method); wrap it as "
+                f"beangulp.Adapter({kind}(...)), or port it to the current Beangulp Importer interface "
+                "(a name property and file paths)."
+            )
         raise UsageError(
-            f"CONFIG entry {kind} is a Beancount v2 importer (its name is a method); wrap it as "
-            f"beangulp.Adapter({kind}(...)), or port it to the current Beangulp Importer interface "
-            "(a name property and file paths)."
+            f"CONFIG entry {kind} has a name method, as a Beancount v2 importer does; make name a property "
+            "and give it the current Beangulp methods identify/account/extract taking file paths, or subclass "
+            f"beangulp.importer.ImporterProtocol and wrap it as beangulp.Adapter({kind}(...))."
         )
     if not isinstance(name, str):
         raise UsageError(f"CONFIG entry {kind} has a name that is {_type_name(name)}; its name must be a str.")
@@ -1034,7 +1435,31 @@ def _source_postings(entry: Any, account: str) -> list[Any]:
     return [p for p in _source_legs(entry, account) if _has_explicit_units(p)]
 
 
-_Lot = tuple[Decimal | None, str | None, str | None]
+_Lot = tuple[Decimal | None, str | None, str | None, datetime.date | None]
+
+
+def _lot_stated(
+    posting: Any,
+) -> tuple[Decimal | None, Decimal | None, Decimal | None, str | None, str | None, datetime.date | None] | None:
+    """A source posting's cost as stated: per-unit, total, units, currency, label, acquisition date.
+
+    None for a posting held at no cost. Each field is None unless stated in
+    that type; Cost and CostSpec spell the per-unit field differently.
+    """
+    cost = posting.cost
+    if cost is None:
+        return None
+    per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
+    total = getattr(cost, "number_total", None)
+    units = posting.units.number
+    return (
+        per if isinstance(per, Decimal) else None,
+        total if isinstance(total, Decimal) else None,
+        units if isinstance(units, Decimal) else None,
+        cost.currency if isinstance(cost.currency, str) else None,
+        getattr(cost, "label", None) or None,
+        cost.date if isinstance(getattr(cost, "date", None), datetime.date) else None,
+    )
 
 
 def _lot(posting: Any) -> _Lot | None:
@@ -1043,20 +1468,35 @@ def _lot(posting: Any) -> _Lot | None:
     None for a posting held at no cost. A field the cost leaves open is None:
     an importer's `{}` or `{USD}` states less than the ledger's copy of the
     same entry, whose booking filled the rest in. The lot date is left out,
-    since booking always fills it in.
+    since booking always fills it in. A compound cost states per-unit and
+    total, and the lot it names is their sum: `{100 # 5 USD}` on 5 units is
+    101 per unit, as booking books it (w5/742).
     """
-    cost = posting.cost
-    if cost is None:
+    stated = _lot_stated(posting)
+    if stated is None:
         return None
-    per = getattr(cost, "number_per", None) if hasattr(cost, "number_per") else getattr(cost, "number", None)
-    total = getattr(cost, "number_total", None)
-    if not isinstance(per, Decimal) and isinstance(total, Decimal) and isinstance(posting.units.number, Decimal):
-        per = total / abs(posting.units.number) if posting.units.number else None
-    return (
-        per if isinstance(per, Decimal) else None,
-        cost.currency if isinstance(cost.currency, str) else None,
-        getattr(cost, "label", None) or None,
-    )
+    per, total, units, currency, label, acquired = stated
+    if per is not None and total is not None and units:
+        per = per + total / abs(units)
+    elif per is None and total is not None and units:
+        per = total / abs(units)
+    return (per, currency, label, acquired)
+
+
+def _lot_per_only(posting: Any) -> _Lot | None:
+    """The pre-w5/742 lot: number_per alone, or the total split when per is missing.
+
+    Compound rows imported before the fix carry ids hashed this way; the
+    spelling stays a lookup-only key so re-imports still match (lot-gated,
+    like the units-only spellings).
+    """
+    stated = _lot_stated(posting)
+    if stated is None:
+        return None
+    per, total, units, currency, label, acquired = stated
+    if per is None and total is not None and units:
+        per = total / abs(units)
+    return (per, currency, label, acquired)
 
 
 def _price_text(posting: Any) -> str:
@@ -1066,29 +1506,59 @@ def _price_text(posting: Any) -> str:
     return ""
 
 
-def _lot_text(posting: Any) -> str:
+def _lot_text(posting: Any, *, per_only: bool = False, historic: bool = False) -> str:
     """A source posting's cost or price, as it bears on which source row this is.
 
     Two same-day buys of `10 AAPL` at 100 and 120 USD are two rows; hashing
     units alone gave them one id, and the second was skipped as an exact
-    duplicate with exit 0 (w5/349). A cost is written only when it states
-    both its number and currency, so an open `{}` adds nothing.
+    duplicate with exit 0 (w5/349). Whatever a cost states belongs here: a
+    number, a currency, an acquisition date and a label each pick a lot, so
+    sales selecting `{"X"}` and `{"Y"}`, or `{100}` and `{120}`, are two rows
+    (w5/897, w5/899). A cost that states nothing (`{}`) adds nothing, and
+    stays open against the lot booking chose.
+
+    `historic` is the spelling before the date and partial constraints
+    counted: a cost only when it stated both number and currency, never a
+    date. Ids written then are still looked up by it.
     """
-    lot = _lot(posting)
+    lot = _lot_per_only(posting) if per_only else _lot(posting)
     cost = ""
-    if lot is not None and lot[0] is not None and lot[1] is not None:
-        label = f', "{lot[2]}"' if lot[2] else ""
-        cost = f" {{{_exact_amount(lot[0], lot[1])}{label}}}"
+    if lot is not None:
+        number, currency, label, acquired = lot
+        if historic:
+            if number is not None and currency is not None:
+                tag = f', "{label}"' if label else ""
+                cost = f" {{{_exact_amount(number, currency)}{tag}}}"
+        else:
+            parts = []
+            if number is not None and currency is not None:
+                parts.append(_exact_amount(number, currency))
+            elif number is not None:
+                parts.append(_exact_amount(number, "").strip())
+            elif currency is not None:
+                parts.append(currency)
+            if acquired is not None:
+                parts.append(acquired.isoformat())
+            if label:
+                parts.append(f'"{label}"')
+            if parts:
+                cost = f" {{{', '.join(parts)}}}"
     return cost + _price_text(posting)
 
 
-_Leg = tuple[str, _Lot | None]
+#: A source posting: its units and price as text, its stated lot, and the child account it posts to
+#: when an importer files its rows under a parent (empty for the account itself) (w5/912).
+_Leg = tuple[str, _Lot | None, str]
 
 
 def _legs(entry: Any, account: str) -> tuple[_Leg, ...]:
     """Each source posting's units and price as text, beside its stated lot."""
     return tuple(
-        (_exact_amount(p.units.number, p.units.currency) + _price_text(p), _lot(p))
+        (
+            _exact_amount(p.units.number, p.units.currency) + _price_text(p),
+            _lot(p),
+            "" if p.account == account else p.account,
+        )
         for p in _source_postings(entry, account)
     )
 
@@ -1107,17 +1577,55 @@ def _legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
     `-4 HOOL {150 USD}` once booked, and comparing the two as text made a
     hand-entered twin new and bea's own write a conflict (w5/467). Lots both
     sides state at 100 and 120 USD still differ (w5/349).
+
+    Each booked leg answers for one incoming leg. A greedy pass handed the
+    first compatible booked leg to whichever incoming leg came first, so two
+    `{}` fills over three lots, or a `{"X"}` and a `{100 USD}` selector that
+    both fit one lot, failed though an assignment exists (w5/896); the
+    assignment is searched, the more specific incoming legs first.
     """
-    left = list(theirs)
-    # A stated lot picks first, so an open one cannot take the leg it needs.
-    for text, lot in sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None)):
-        match = next((i for i, (other, found) in enumerate(left) if other == text and _lots_agree(lot, found)), None)
-        picked = [match] if match is not None else _split_booking(text, lot, left)
-        if not picked:
-            return False
-        for index in sorted(picked, reverse=True):
-            del left[index]
-    return not left
+    order = sorted(ours, key=lambda leg: 0 if leg[1] is None else leg[1].count(None))
+
+    def assign(position: int, left: list[_Leg]) -> bool:
+        if position == len(order):
+            return not left
+        text, lot, owner = order[position]
+        for chosen in _booked_for(text, lot, owner, left):
+            remaining = [leg for index, leg in enumerate(left) if index not in chosen]
+            if assign(position + 1, remaining):
+                return True
+        return False
+
+    return assign(0, list(theirs))
+
+
+def _booked_for(text: str, lot: _Lot | None, owner: str, left: list[_Leg]) -> Iterator[set[int]]:
+    """Each way the booked legs can stand for one incoming leg: one leg of its own, or the lots it spans."""
+    for index, (other, found, holder) in enumerate(left):
+        if other == text and holder == owner and _lots_agree(lot, found):
+            yield {index}
+    if lot is None or lot[0] is not None:
+        return
+    number, currency, price = _units_of(text)
+    compatible = [
+        index
+        for index, (other, found, holder) in enumerate(left)
+        if found is not None
+        and holder == owner
+        and _units_of(other)[1:] == (currency, price)
+        and _lots_agree(lot, found)
+    ]
+    # A sale booked across lots takes them in order, so these are the larger
+    # candidate sets first; a long run of lots keeps the all-or-nothing reading.
+    sizes = range(len(compatible), 1, -1) if len(compatible) <= _SPLIT_SEARCH_LEGS else [len(compatible)]
+    for size in sizes:
+        for subset in combinations(compatible, size):
+            if sum(_units_of(left[index][0])[0] for index in subset) == number:
+                yield set(subset)
+
+
+#: How many compatible booked legs are searched for subsets before only the whole set is tried.
+_SPLIT_SEARCH_LEGS = 12
 
 
 def _units_of(text: str) -> tuple[Decimal, str, str]:
@@ -1125,29 +1633,6 @@ def _units_of(text: str) -> tuple[Decimal, str, str]:
     units, _, price = text.partition(" @ ")
     number, currency = units.split(" ", 1)
     return Decimal(number), currency, price
-
-
-def _split_booking(text: str, lot: _Lot | None, left: list[_Leg]) -> list[int]:
-    """The legs an open-cost leg was booked into, or none.
-
-    Booking reduces as many lots as a `{}` sale spans, so the ledger holds one
-    posting per lot where the importer has one: `-20 HOOL {}` was booked as
-    `-10 HOOL {150 USD}` and `-10 HOOL {155 USD}`, re-importing bea's own
-    write was a conflict, and a hand-entered FIFO twin was written again
-    (w5/603). They are the legs of its currency and price whose lots agree
-    with what it states, and their units must add up to its own.
-    """
-    if lot is None or lot[0] is not None:
-        return []
-    number, currency, price = _units_of(text)
-    picked = [
-        index
-        for index, (other, found) in enumerate(left)
-        if found is not None and _units_of(other)[1:] == (currency, price) and _lots_agree(lot, found)
-    ]
-    if len(picked) < 2 or sum(_units_of(left[index][0])[0] for index in picked) != number:
-        return []
-    return picked
 
 
 def _fingerprint(entry: Any, account: str) -> tuple[Any, ...]:
@@ -1216,11 +1701,51 @@ def _directive_text(entry: Any) -> str:
     return unicodedata.normalize("NFC", format_entry(entry))
 
 
+def _directive_key(entry: Any, base: Path | None = None) -> str:
+    """What "identical directive" compares: the printed text with order made irrelevant.
+
+    Metadata is a mapping, so reordering its keys does not change the directive,
+    and an opening's allowed currencies are a set, so their order and repeats do
+    not either; the text appended keeps the order it was given (w5/916). Values,
+    types, booking, balance precision and tolerance all still count.
+
+    A document's relative filename becomes absolute, against the file that holds
+    the directive, when the ledger loads, so a loaded document is compared with
+    the importer's spelling resolved against the destination file (`base`) the
+    same lexical way (w5/917).
+    """
+    from beancount.core.data import Document, Open
+
+    meta = getattr(entry, "meta", None)
+    if meta:
+        entry = entry._replace(meta={key: meta[key] for key in sorted(meta)})
+    if isinstance(entry, Open) and entry.currencies:
+        entry = entry._replace(currencies=sorted(set(entry.currencies)))
+    if isinstance(entry, Document) and base is not None:
+        joined = (
+            entry.filename if os.path.isabs(entry.filename) else os.path.join(os.path.abspath(base), entry.filename)
+        )
+        entry = entry._replace(filename=os.path.normpath(joined))
+    return _directive_text(entry)
+
+
 def _match_text(value: str | None) -> str:
     return unicodedata.normalize("NFC", " ".join((value or "").casefold().split()))
 
 
 def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, str, str]]:
+    """The stable identifiers an entry carries, as lookup keys.
+
+    The loader reads ledger text as NFC while an incoming row keeps the form it
+    was typed in, so a decomposed `référence` never found the composed one the
+    ledger holds: an unchanged row fell through to fuzzy matching and a changed
+    amount was written as new. Both sides are keyed in NFC (w5/919); the text
+    that is written keeps the authored bytes.
+    """
+
+    def nfc(value: Any) -> str:
+        return unicodedata.normalize("NFC", str(value))
+
     meta = entry.meta or {}
     identities = []
     for key in ["import-id", *keys]:
@@ -1228,13 +1753,13 @@ def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, st
         if value in (None, ""):
             continue
         if key == "import-id":
-            identities.append((account, "import-id", str(value)))
+            identities.append((account, "import-id", nfc(value)))
         else:
-            identities.append((account, "bank", f"{_IDENTITY_KINDS.get(key, key)}:{value}"))
+            identities.append((account, "bank", f"{_IDENTITY_KINDS.get(key, key)}:{nfc(value)}"))
     if meta.get("import-id-2") not in (None, ""):
-        identities.append((account, "import-id", str(meta["import-id-2"])))
+        identities.append((account, "import-id", nfc(meta["import-id-2"])))
     if meta.get("bea_import_id"):
-        identities.append((account, "file", str(meta["bea_import_id"])))
+        identities.append((account, "file", nfc(meta["bea_import_id"])))
     # beancount-migrate writes the same digest under its source's prefix
     # (`monarch:sha256:…`), so a later bank import of that row must find it.
     for value in (meta.get("import-id"), meta.get("import-id-2")):
@@ -1247,32 +1772,48 @@ def _identities(entry: Any, account: str, keys: list[str]) -> list[tuple[str, st
 # `bea import` writes `csv:`, beancount-migrate `mint:`/`monarch:`/`qbo:`, and
 # `<source>:` for any other source (`ynab:`, `actual:`). Listing four missed
 # the generic path, and every overlap row after such a migration was written
-# again (w5/601).
-_GENERATED_ID = re.compile(r"[a-z][a-z0-9-]*:sha256:([0-9a-f]{16})")
+# again (w5/601). A source name may hold `_` as well as `-` (`lunch_money:`),
+# and leaving it out wrote such a migration's overlap rows again (w5/823).
+_GENERATED_ID = re.compile(r"[a-z][a-z0-9_-]*:sha256:([0-9a-f]{16})")
 
 
 def _is_generated_identity(key: tuple[str, str, str]) -> bool:
     return key[1] == "digest" or (key[1] == "import-id" and _GENERATED_ID.fullmatch(key[2]) is not None)
 
 
-def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, ours: bool, keys: list[str]) -> str:
+def _twin_reason(entry: Any, twin: Any, earlier: int | None, *, keys: list[str]) -> str:
     """Why a row may repeat `twin`, naming only the bank IDs that exist.
 
     Two same-day charges with no ID column read "different bank IDs do not
-    rule out a duplicate", about IDs neither row had (w5/615).
+    rule out a duplicate", about IDs neither row had (w5/615). Both rows are
+    judged alike: an importer's own generated `csv:sha256:` id is no bank ID
+    on either side (w5/832).
     """
-    theirs = _native_import_id(twin.meta or {}, keys) is not None or (
-        bool(twin.meta.get("import-id")) and _GENERATED_ID.fullmatch(str(twin.meta["import-id"])) is None
-    )
+    ours, theirs = _carries_bank_id(entry.meta or {}, keys), _carries_bank_id(twin.meta or {}, keys)
     if ours and theirs:
         ids = "their bank IDs differ, which does not rule out a duplicate"
     elif ours or theirs:
         ids = "only one of them carries a bank ID"
     else:
         ids = "neither row has a bank ID" if earlier is not None else "neither has a bank ID"
-    named = "payee" if _match_text(entry.payee) else "narration"
     where = f" row {earlier} of this import" if earlier is not None else ""
-    return f"Date, {named} and source amount match{where}; {ids}."
+    # The fields that met on both sides: a row with a payee meets a
+    # payee-less entry on their narrations, and a narration-only row meets
+    # an entry on its payee, so the row alone cannot name them (w5/824).
+    payee, narration = _match_text(entry.payee), _match_text(entry.narration)
+    if payee and payee == _match_text(twin.payee):
+        return f"Date, payee and source amount match{where}; {ids}."
+    if narration == _match_text(twin.narration):
+        return f"Date, narration and source amount match{where}; {ids}."
+    field, its = ("payee", "narration") if payee and payee == _match_text(twin.narration) else ("narration", "payee")
+    other = where.lstrip() or "the ledger entry"
+    return f"Date and source amount match {other}, and this row's {field} is its {its}; {ids}."
+
+
+def _carries_bank_id(meta: dict[str, Any], keys: list[str]) -> bool:
+    """Whether a row's metadata holds an ID a bank issued, not one generated from its content."""
+    stored = meta.get("import-id")
+    return _native_import_id(meta, keys) is not None or (bool(stored) and _GENERATED_ID.fullmatch(str(stored)) is None)
 
 
 def _is_native_identity(key: tuple[str, str, str]) -> bool:
@@ -1301,10 +1842,13 @@ def _issued_elsewhere(entry: Any, account: str, balance_roots: tuple[str, ...]) 
     another balance-sheet account is that account's import, a transfer, and
     its bank id is scoped there: checking's `1001` deduped savings' own
     `1001`, a different deposit, as an exact duplicate (w5/598). An income or
-    expense leg first is no such evidence: some importers list it first.
+    expense leg first is no such evidence: some importers list it first. Nor
+    is a first posting anywhere under `account`: a brokerage importer filed
+    under `Assets:Broker` lists its `Assets:Broker:HOOL` leg first, and its own
+    re-import was held as the other side of a transfer (w5/818).
     """
     first = entry.postings[0] if entry.postings else None
-    if first is None or any(first is leg for leg in _source_legs(entry, account)):
+    if first is None or first.account == account or first.account.startswith(f"{account}:"):
         return False
     return first.account.split(":", 1)[0] in balance_roots
 
@@ -1327,7 +1871,7 @@ def _transfer_side(
         if (
             found is not None
             and abs((found.date - entry.date).days) <= _TRANSFER_DAYS
-            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+            and _transfer_legs_agree(fingerprint[3], _fingerprint(found, account)[3])
         ):
             return key, found
     return None
@@ -1340,7 +1884,7 @@ _COUNTERPART_DAYS = 3
 def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
     """The source amounts, summed by currency and price: one sale booked across lots is one amount (w5/603)."""
     totals: dict[tuple[str, str], Decimal] = {}
-    for text, _ in fingerprint[3]:
+    for text, _, _ in fingerprint[3]:
         number, currency, price = _units_of(text)
         totals[currency, price] = totals.get((currency, price), Decimal(0)) + number
     return tuple(
@@ -1351,25 +1895,110 @@ def _amounts_key(fingerprint: tuple[Any, ...]) -> tuple[str, ...]:
     )
 
 
+def _blind_key(legs: Sequence[_Leg]) -> tuple[str, ...]:
+    """The source amounts summed by currency alone, the price and lot a leg states left out (w5/931)."""
+    totals: dict[str, Decimal] = {}
+    for text, _, _ in legs:
+        number, currency, _price = _units_of(text)
+        totals[currency] = totals.get(currency, Decimal(0)) + number
+    return tuple(sorted(_exact_amount(number, currency) for currency, number in totals.items()))
+
+
+def _transfer_legs_agree(ours: Sequence[_Leg], theirs: Sequence[_Leg]) -> bool:
+    """Whether a statement row is the other side of a booked transfer's cash movement.
+
+    A bank states the units it moved, not the exchange price or lot the other
+    side's booking attached to them, so a row that states neither agrees with
+    any price or cost on the booked posting: the booked `100 EUR @ 1.10 USD`
+    is the 100 EUR the receiving statement lists, and booking it again doubled
+    the cash. A row that does state a price or lot is compared as written.
+    Source-fact comparison under a native ID stays strict (w5/931).
+    """
+    if _blind_key(ours) != _blind_key(theirs):
+        return False
+    if all(" @" not in text and (lot is None or all(field is None for field in lot)) for text, lot, _ in ours):
+        return True
+    return _legs_agree(ours, theirs)
+
+
 def _transfer_counterpart(
-    counterparts: dict[tuple[str, ...], list[Any]], entry: Any, account: str, fingerprint: tuple[Any, ...]
+    counterparts: dict[tuple[str, ...], list[Any]],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+    paired: Callable[[Any], int | None],
+    index: int,
 ) -> Any:
     """A transfer another account's import wrote that posts this row's amount here, days apart at most.
 
     "TRANSFER TO SAVINGS" and "TRANSFER FROM CHECKING" share no word, so the
     second side of every transfer imported from both banks was booked again
     with exit 0 (w5/600). For review only: the same amount near the same day
-    can be a separate payment.
+    can be a separate payment. A transfer has one other side, so it is offered
+    only to row `index` when `paired` names that row: one transfer taken for
+    every same-amount row near it cost a deposit beside it under `--duplicates
+    skip` (w5/821). The nearest transfer comes first.
     """
-    return next(
-        (
-            found
-            for found in reversed(counterparts.get(_amounts_key(fingerprint), []))
-            if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
-            and _legs_agree(fingerprint[3], _fingerprint(found, account)[3])
-        ),
-        None,
-    )
+    near = [
+        found
+        for found in reversed(counterparts.get(_blind_key(fingerprint[3]), []))
+        if abs((found.date - entry.date).days) <= _COUNTERPART_DAYS
+        and _transfer_legs_agree(fingerprint[3], _fingerprint(found, account)[3])
+    ]
+    near.sort(key=lambda found: abs((found.date - entry.date).days))
+    return next((found for found in near if paired(found) == index), None)
+
+
+def _assign_counterparts(
+    counterparts: dict[tuple[str, ...], list[Any]],
+    transfer_ids: dict[tuple[str, str, str], Any],
+    rows: Sequence[Any],
+    account: str,
+    keys: list[str],
+) -> dict[int, int]:
+    """Which row of this import is each transfer's other side, one to one: `id(transfer)` to row index.
+
+    A transfer sharing its issuer's reference with a row is that row's other
+    side whatever else sits nearer, so those pairs are fixed first. The rest
+    pair by date, nearest first, and the earlier row and transfer when two
+    are as near; a transfer and a row are each used once. Picking each
+    transfer's nearest row alone sent two transfers to one row and left the
+    other row booked as a third transfer, and a same-day deposit took the
+    transfer its shared reference already named (w5/882).
+    """
+    from beancount.core.data import Transaction
+
+    prints: dict[int, tuple[Any, ...]] = {}
+    for index, row in enumerate(rows):
+        if isinstance(row, Transaction) and _source_legs(row, account):
+            try:
+                prints[index] = _fingerprint(row, account)
+            except LedgerError:
+                continue
+    assigned: dict[int, int] = {}
+    taken: set[int] = set()
+    for index, printed in prints.items():
+        side = _transfer_side(_identities(rows[index], account, keys), transfer_ids, rows[index], account, printed)
+        if side is not None and id(side[1]) not in assigned:
+            assigned[id(side[1])] = index
+            taken.add(index)
+    candidates: list[tuple[int, int, int, Any]] = []
+    transfers = {id(found): found for found_list in counterparts.values() for found in found_list}
+    for order, found in enumerate(transfers.values()):
+        if id(found) in assigned:
+            continue
+        legs = _fingerprint(found, account)
+        for index, printed in prints.items():
+            days = abs((found.date - rows[index].date).days)
+            if index in taken or days > _COUNTERPART_DAYS:
+                continue
+            if _transfer_legs_agree(printed[3], legs[3]):
+                candidates.append((days, index, order, found))
+    for _days, index, _order, found in sorted(candidates, key=lambda item: item[:3]):
+        if index not in taken and id(found) not in assigned:
+            assigned[id(found)] = index
+            taken.add(index)
+    return assigned
 
 
 def _relative_days(written: Any, row: Any) -> str:
@@ -1377,6 +2006,82 @@ def _relative_days(written: Any, row: Any) -> str:
     if days == 0:
         return "the same day"
     return f"{abs(days)} day{'s' if abs(days) != 1 else ''} {'earlier' if days > 0 else 'later'}"
+
+
+def _under_id(
+    key: tuple[str, str, str],
+    identities: dict[tuple[str, str, str], Any],
+    dated: dict[tuple[str, str, str], list[Any]],
+    entry: Any,
+    account: str,
+    fingerprint: tuple[Any, ...],
+    lookup_only: bool,
+    source: Callable[[tuple[str, str, str]], list[Any]] | None = None,
+) -> Any:
+    """The entry a native ID names for this row: the nearest one under it that agrees, else the latest.
+
+    A reused reference names several entries, and judging the row against the
+    latest alone made January's re-import a conflict with February's
+    different amount, which held back every other row of the file (w5/822).
+
+    The loaded entries are the ledger after its plugins and the loader's
+    arithmetic: a filtered transaction is gone, a stripped price or an
+    allocated template differs, a wide negative amount is rounded. When none
+    of them agrees, the transactions the files spell decide (w5/881), so a
+    row already written is a duplicate, and a real change still conflicts.
+    """
+    found = identities.get(key)
+    if found is not None and not _is_native_identity(key):
+        return found
+    agreeing = [
+        other for other in dated.get(key, []) if _same_row(key, other, account, fingerprint, lookup_only=lookup_only)
+    ]
+    if not agreeing and source is not None:
+        agreeing = [
+            other for other in source(key) if _same_row(key, other, account, fingerprint, lookup_only=lookup_only)
+        ]
+    return min(agreeing, key=lambda other: abs((entry.date - other.date).days)) if agreeing else found
+
+
+def _written_identities(
+    snapshot: Any, account: str, keys: list[str], balance_roots: tuple[str, ...]
+) -> dict[tuple[str, str, str], list[Any]]:
+    """The ledger's own transactions by stable ID, read from the files without plugins or rounding.
+
+    Parsed at full precision: the default 28 digits rounded a wide negative
+    amount on reload, so an unchanged re-import read as changed data.
+    """
+    from decimal import MAX_PREC, localcontext
+
+    from beancount.core.data import Transaction
+    from beancount.parser import parser
+
+    index: dict[tuple[str, str, str], list[Any]] = {}
+    for path, content in sorted(snapshot.contents.items()):
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        with localcontext() as exact:
+            exact.prec = MAX_PREC
+            parsed, _, _ = parser.parse_string(unicodedata.normalize("NFC", text), report_filename=str(path))
+        for raw in parsed:
+            if not isinstance(raw, Transaction) or not _source_legs(raw, account):
+                continue
+            # An open lot (`{}`) agrees with any value; the booked entry knows
+            # which lot it took, so only the loaded view can tell a changed one.
+            if any(
+                (stated := _lot_stated(leg)) is not None and stated[0] is None and stated[1] is None
+                for leg in raw.postings
+                if _has_explicit_units(leg)
+            ):
+                continue
+            written = normalize_entry_strings(raw)
+            elsewhere = _issued_elsewhere(written, account, balance_roots)
+            for identity in _identities(written, account, keys):
+                if not (elsewhere and _is_native_identity(identity)):
+                    index.setdefault(identity, []).append(written)
+    return index
 
 
 def _same_row(
@@ -1397,6 +2102,10 @@ def _same_row(
     if not _legs_agree(fingerprint[3], found_print[3]):
         return False
     if generated:
+        # An older id spelled a description without framing its `|`, so it can
+        # name a different payee and narration split; those must agree (w5/900).
+        if lookup_only and _needs_framing(found_print[1], found_print[2], fingerprint[1], fingerprint[2]):
+            return bool(found_print[:3] == fingerprint[:3])
         return bool(found_print[0] == fingerprint[0])
     if key[1] in {"bank", "import-id"}:
         return True
@@ -1472,11 +2181,13 @@ def _posting_currency(posting: Any, entry: Any) -> str | None:
     fills it with the balancing weight, so its currency is the single weight
     currency of the other legs; with several, it cannot be told before booking.
     """
-    if posting.units is not None:
+    from beancount.core.number import MISSING
+
+    if posting.units is not None and posting.units.currency is not MISSING:
         return str(posting.units.currency)
     weights = set()
     for other in entry.postings:
-        if other.units is None:
+        if other.units is None or other.units.currency is MISSING:
             continue
         if other.cost is not None and getattr(other.cost, "currency", None):
             weights.add(other.cost.currency)
@@ -1542,17 +2253,77 @@ def _entries_after(
             entries, _, _ = managed_load.load_file(root)
     back = {str(copy): str(source) for copy, source in staged.items()}
     spans = list(zip(ledger_write.appended_spans(original, texts), rows, strict=True))
-    written = os.path.normpath(target)
+    # Every name the destination goes by: the load names it as the root was
+    # spelled, through a linked directory, while `target` is resolved, so no
+    # appended row matched and a blocked row cited a line only the staged
+    # copy has (w5/856).
+    written = {os.path.normpath(target)} | {
+        os.path.normpath(path) for path in snapshot.contents if snapshot._stands_for(path, target)
+    }
     result = []
     for entry in entries:
         entry = managed_load._remap_entry(entry, back)
         meta = getattr(entry, "meta", None) or {}
-        if os.path.normpath(str(meta.get("filename"))) == written and isinstance(meta.get("lineno"), int):
+        if os.path.normpath(str(meta.get("filename"))) in written and isinstance(meta.get("lineno"), int):
             row = next((row for (first, last), row in spans if first <= meta["lineno"] <= last), None)
             if row is not None:
                 entry = entry._replace(meta={**meta, _IMPORT_ROW: row})
         result.append(entry)
     return result
+
+
+def _blocked_summary(blocked: int, padded: int) -> str:
+    """The apply refusal's sentence about blocked rows, naming each cause that applies (w5/873)."""
+    if not blocked:
+        return ""
+    causes = []
+    if blocked > padded:
+        causes.append(
+            "an unopened account or a currency mismatch"
+            if blocked - padded == 1
+            else "unopened accounts or currency mismatches"
+        )
+    if padded:
+        causes.append(
+            "a pad that would silently fill the gap" if padded == 1 else "pads that would silently fill the gap"
+        )
+    rows = "1 row is" if blocked == 1 else f"{blocked} rows are"
+    return f" {rows} blocked by {' and '.join(causes)}; resolve {'it' if blocked == 1 else 'them'} first."
+
+
+def _padded_balance_reason(balance: Any, entries: list[Any], options: Any, *, ledger: Path) -> str | None:
+    """Why a used pad would silently fill this imported assertion's gap, or None.
+
+    The rule `add balance` refuses by (w5/796): a pad an earlier assertion
+    already used still pads a currency it has not padded yet. A staged pad,
+    no assertion on the account between it and this one, completes silently
+    as the two-step intends.
+    """
+    from beancount.core.data import Balance
+
+    from bea_engine.ledger.adding import _balance_tolerance, _covering_pad, _plain
+
+    account, date = balance.account, balance.date
+    number, currency = balance.amount.number, balance.amount.currency
+    cover = _covering_pad(entries, account, date, currency)
+    if cover is None:
+        return None
+    held = ledger_write.book_units(entries, account, currency, date)
+    if abs(number - held) <= _balance_tolerance(balance, options):
+        return None
+    if not any(
+        isinstance(entry, Balance) and entry.account == account and cover.date < entry.date < date for entry in entries
+    ):
+        return None
+    pad_at = f"{cover.meta.get('filename')}:{cover.meta.get('lineno')}"
+    return (
+        f"{account} holds {_plain(held)} {currency} on {date} but this row asserts {_plain(number)}; the pad at "
+        f"{pad_at} ({cover.date} from {cover.source_account}) would silently insert the {_plain(number - held)} "
+        f"{currency} difference. Fix the statement amount or record the missing transaction; "
+        f"{bea_command(ledger)} add balance --account {shlex.quote(account)} --date {date.isoformat()} "
+        f"--amount {shlex.quote(f'{_plain(number)} {currency}')} --pad-from {shlex.quote(cover.source_account)} "
+        "pads it explicitly."
+    )
 
 
 def _entry_accounts(entry: Any, *, active_only: bool = False) -> list[tuple[str, str | None]]:
@@ -1832,7 +2603,17 @@ def _exact_amount(number: Decimal, currency: str) -> str:
     The currency is part of the identity. Without it, `1 ETH` and `1 BTC` on
     one date with one description shared a digest.
     """
-    return f"{_exactly_normalized(number):f} {currency}"
+    value = _exactly_normalized(number)
+    if not value:
+        # Zero has no sign as money: `-0.00` and `0.00` are one amount. The ids
+        # written before this kept the sign, which a legacy spelling still finds
+        # (w5/920).
+        value = Decimal("-0") if _NEGATIVE_ZERO.get() else Decimal(0)
+    return f"{value:f} {currency}"
+
+
+#: Set while an older release's spelling of a signed zero is rebuilt for a lookup-only id.
+_NEGATIVE_ZERO: ContextVar[bool] = ContextVar("negative_zero", default=False)
 
 
 def _exactly_normalized(number: Decimal) -> Decimal:
@@ -1900,6 +2681,10 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
     Hashing ahead of the loop lets a group of rows claim stored ids together.
     """
     seen: dict[str, int] = {}
+    # Rows with a `|` or `\\` in a payee or narration number their ids twice: with
+    # the fields framed (the canonical id) and as older releases wrote them,
+    # which stays a lookup-only spelling (w5/900).
+    unframed_seen: dict[str, int] = {}
     hashed: dict[int, _HashedRow] = {}
     for index, raw in enumerate(entries):
         entry = normalize_entry_strings(raw)
@@ -1907,7 +2692,15 @@ def _hash_rows(entries: list[Any], account: str, keys: list[str], transaction: t
             continue
         if entry.meta.get("import-id") or _native_import_id(entry.meta, keys) is not None:
             continue
-        hashed[index] = _hash_import_ids(entry, account, seen)
+        if not _needs_framing(raw.narration, raw.payee, entry.narration, entry.payee):
+            hashed[index] = _hash_import_ids(entry, account, seen, raw_narration=raw.narration, raw_payee=raw.payee)
+            continue
+        framed = _hash_import_ids(entry, account, seen, raw_narration=raw.narration, raw_payee=raw.payee, framed=True)
+        older = _hash_import_ids(entry, account, unframed_seen, raw_narration=raw.narration, raw_payee=raw.payee)
+        hashed[index] = replace(
+            framed,
+            narration_only=tuple(dict.fromkeys([*framed.narration_only, older.canonical, *older.narration_only])),
+        )
     return hashed
 
 
@@ -1973,7 +2766,25 @@ def _claim_payeeless_ids(
     return claimed, owners
 
 
-def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedRow:
+def _frame(text: str, framed: bool) -> str:
+    """A description field with the separator and its escape made literal, so field boundaries are unambiguous."""
+    return text.replace("\\", "\\\\").replace("|", "\\|") if framed else text
+
+
+def _needs_framing(*fields: str | None) -> bool:
+    """Whether a payee or narration holds the hash separator `|` or the backslash that escapes it (w5/900)."""
+    return any(char in (field or "") for field in fields for char in "|\\")
+
+
+def _hash_import_ids(
+    entry: Any,
+    account: str,
+    seen: dict[str, int],
+    *,
+    raw_narration: str | None,
+    raw_payee: str | None,
+    framed: bool = False,
+) -> _HashedRow:
     """The canonical import id, plus every older spelling to also match on.
 
     The canonical digest hashes the exact amount with its commodity, and hashes
@@ -1984,9 +2795,10 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     Older releases wrote different digests, so those are returned alongside as
     lookup-only keys and no re-hash pass is needed. They are listed newest
     first, and only formats that a released `bea` actually wrote are listed:
-    NFC normalization shipped before exact amounts, so a ledger may predate
-    exactness, or predate both, but there is no exact-amount/un-normalized
-    combination in the wild to look for.
+    releases since 0.3.1 hashed the description after control-character
+    escaping, so those spellings lead; NFC normalization shipped before exact
+    amounts, so a ledger may predate exactness, or predate both, but there is
+    no exact-amount/un-normalized combination in the wild to look for.
 
     Older spellings stay numbered over every row sharing the narration-only
     base, as the releases that wrote them numbered it: the older spelling of
@@ -2000,16 +2812,55 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     export does not change its id. Either way the narration-only spellings are
     returned for the group-wide claim instead of as plain lookups.
     """
-    legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
+    # A row an importer files under a parent account is its child postings, and
+    # which child each posts to is part of what the row is (w5/912).
+    legs = sorted(
+        (p.units.number, p.units.currency, _lot_text(p) + ("" if p.account == account else f" [{p.account}]"))
+        for p in _source_postings(entry, account)
+    )
+    blind_legs = sorted((p.units.number, p.units.currency, _lot_text(p)) for p in _source_postings(entry, account))
+
+    def spelled_with_negative_zero() -> str:
+        # The release before zero lost its sign printed every zero amount, cost
+        # and price as `-0` for a `-0.00` source, and an export that now reads
+        # `0.00` must still find that id (w5/920).
+        token = _NEGATIVE_ZERO.set(True)
+        try:
+            rebuilt = sorted(
+                (p.units.number, p.units.currency, _lot_text(p) + ("" if p.account == account else f" [{p.account}]"))
+                for p in _source_postings(entry, account)
+            )
+            return "+".join(_exact_amount(number, currency) + lot for number, currency, lot in rebuilt)
+        finally:
+            _NEGATIVE_ZERO.reset(token)
+
+    per_legs = sorted(
+        (p.units.number, p.units.currency, _lot_text(p, per_only=True, historic=True))
+        for p in _source_postings(entry, account)
+    )
+    undated_legs = sorted(
+        (p.units.number, p.units.currency, _lot_text(p, historic=True)) for p in _source_postings(entry, account)
+    )
     amounts = [(number, currency) for number, currency, _ in legs]
-    raw_description = " ".join(str(entry.narration or entry.payee or "").upper().split())
+    # The digest hashes the description before `single_line` escapes it: a tab
+    # is whitespace to collapse (as IMPORTING.md and dedup.md define), not the
+    # literal `\x09` the ledger stores (w5/756).
+    raw_description = " ".join(str(raw_narration or raw_payee or "").upper().split())
     # Normalize after upper(): uppercasing NFD text can itself emit a
     # non-canonical form, and the digest has to be stable byte-for-byte.
-    description = unicodedata.normalize("NFC", raw_description)
+    description = _frame(unicodedata.normalize("NFC", raw_description), framed)
+    escaped = _frame(
+        unicodedata.normalize("NFC", " ".join(str(entry.narration or entry.payee or "").upper().split())), framed
+    )
+    escaped_payee = _frame(unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split())), framed)
     nfc_account = unicodedata.normalize("NFC", account)
     date = entry.date.isoformat()
     units_only = _amounts_exact(amounts)
     exact = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in legs)
+    per_only = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in per_legs)
+    undated = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in undated_legs)
+    blind = "+".join(_exact_amount(number, currency) + lot for number, currency, lot in blind_legs)
+    negative_zero = spelled_with_negative_zero()
 
     single_base = _hash_base(date, exact, description, nfc_account)
     seen[single_base] = seen.get(single_base, 0) + 1
@@ -2018,6 +2869,14 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
     two_decimal = _amounts_two_decimal(amounts)
     known = {single_base}
     older: list[str] = []
+    escaped_base = _hash_base(date, exact, escaped, nfc_account)
+    if escaped_base != single_base:
+        # Numbered over the escaped base as the releases that wrote it
+        # numbered it, so the K-th such row reproduces its stored id.
+        counter = f"escaped\\0{escaped_base}"
+        seen[counter] = seen.get(counter, 0) + 1
+        known.add(escaped_base)
+        older.append(_digest_import_id(escaped_base, seen[counter]))
     rounded_base = _hash_base(date, _amounts_rounded(amounts), description, nfc_account)
     if rounded_base != single_base:
         # Amounts past 28 significant digits were hashed rounded, and those
@@ -2042,11 +2901,48 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
         counter = f"units\0{units_base}"
         seen[counter] = seen.get(counter, 0) + 1
         older.append(_digest_import_id(units_base, seen[counter]))
+    if negative_zero != exact:
+        negative_base = _hash_base(date, negative_zero, description, nfc_account)
+        negative_counter = f"negzero\0{negative_base}"
+        seen[negative_counter] = seen.get(negative_counter, 0) + 1
+        older.append(_digest_import_id(negative_base, seen[negative_counter]))
+    if blind != exact:
+        # Written before the child account a parent-filed row posts to was part
+        # of the id: lookup-only and content-checked like every older spelling,
+        # so it matches the same child distribution and never another's (w5/912).
+        blind_base = _hash_base(date, blind, description, nfc_account)
+        blind_counter = f"blind\0{blind_base}"
+        seen[blind_counter] = seen.get(blind_counter, 0) + 1
+        older.append(_digest_import_id(blind_base, seen[blind_counter]))
+    if undated != exact:
+        # Written before the acquisition date an importer states was part of
+        # the id: lookup-only and lot-gated like every older spelling, so it
+        # matches the same lot and never a different dated one (w5/897).
+        undated_base = _hash_base(date, undated, description, nfc_account)
+        undated_counter = f"undated\0{undated_base}"
+        seen[undated_counter] = seen.get(undated_counter, 0) + 1
+        older.append(_digest_import_id(undated_base, seen[undated_counter]))
+    per_base = _hash_base(date, per_only, description, nfc_account)
+    # Numbered over every row sharing the per-only base, as the releases that
+    # wrote it numbered it — including rows whose spelling did not change — so
+    # a mixed export reproduces the stored occurrence.
+    per_counter = f"per\0{per_base}"
+    seen[per_counter] = seen.get(per_counter, 0) + 1
+    if per_only != exact:
+        # Written before a compound cost counted its total: lookup-only, and
+        # lot-gated like every older spelling, so it matches the same lot
+        # and never a different one (w5/742).
+        older.append(_digest_import_id(per_base, seen[per_counter]))
     single = _digest_import_id(single_base, occurrence)
 
-    payee = unicodedata.normalize("NFC", " ".join(str(entry.payee or "").upper().split()))
-    if payee and str(entry.narration or "").strip():
+    payee = _frame(unicodedata.normalize("NFC", " ".join(str(raw_payee or "").upper().split())), framed)
+    if payee and str(raw_narration or "").strip():
         base = _hash_base(date, exact, f"{payee}|{description}", nfc_account)
+        paired_escaped = _hash_base(date, exact, f"{escaped_payee}|{escaped}", nfc_account)
+        if paired_escaped != base:
+            paired_counter = f"escaped-paired\\0{paired_escaped}"
+            seen[paired_counter] = seen.get(paired_counter, 0) + 1
+            older.append(_digest_import_id(paired_escaped, seen[paired_counter]))
         # Keyed apart from the narration-only counter, so a paired base can never
         # share an occurrence count with a narration that happens to contain `|`.
         counter = f"paired\0{base}"
@@ -2055,6 +2951,26 @@ def _hash_import_ids(entry: Any, account: str, seen: dict[str, int]) -> _HashedR
             units_counter = f"paired-units\0{units_paired}"
             seen[units_counter] = seen.get(units_counter, 0) + 1
             older.append(_digest_import_id(units_paired, seen[units_counter]))
+        if negative_zero != exact:
+            negative_paired = _hash_base(date, negative_zero, f"{payee}|{description}", nfc_account)
+            negative_paired_counter = f"paired-negzero\0{negative_paired}"
+            seen[negative_paired_counter] = seen.get(negative_paired_counter, 0) + 1
+            older.append(_digest_import_id(negative_paired, seen[negative_paired_counter]))
+        if blind != exact:
+            blind_paired = _hash_base(date, blind, f"{payee}|{description}", nfc_account)
+            blind_paired_counter = f"paired-blind\0{blind_paired}"
+            seen[blind_paired_counter] = seen.get(blind_paired_counter, 0) + 1
+            older.append(_digest_import_id(blind_paired, seen[blind_paired_counter]))
+        if undated != exact:
+            undated_paired = _hash_base(date, undated, f"{payee}|{description}", nfc_account)
+            undated_paired_counter = f"paired-undated\0{undated_paired}"
+            seen[undated_paired_counter] = seen.get(undated_paired_counter, 0) + 1
+            older.append(_digest_import_id(undated_paired, seen[undated_paired_counter]))
+        per_paired = _hash_base(date, per_only, f"{payee}|{description}", nfc_account)
+        per_paired_counter = f"paired-per\0{per_paired}"
+        seen[per_paired_counter] = seen.get(per_paired_counter, 0) + 1
+        if per_only != exact:
+            older.append(_digest_import_id(per_paired, seen[per_paired_counter]))
     else:
         # Numbered apart from payee-bearing rows. Releases that counted those
         # too wrote `single`, which stays one of the spellings to look for.

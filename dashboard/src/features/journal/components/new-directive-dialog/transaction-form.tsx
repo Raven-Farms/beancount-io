@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,8 +22,8 @@ import {
   SelectValue,
 } from "@/common/components/ui/select";
 import { DatePicker } from "@/common/components/ui/date-picker";
+import { todayIsoDate } from "@/common/components/ui/date-picker-utils";
 import { Plus, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import {
   BulkEntriesDocument,
   LedgerEntryType,
@@ -53,19 +53,24 @@ import {
   findUnbalancedResiduals,
   findUnresolvedEligibleAmount,
   isEligiblePosting,
+  postingCurrency,
 } from "./transaction-auto-balance";
 import { parseDecimalNumber } from "@/common/lib/beancount/decimal-number";
+import { isCompositionKey } from "@/common/lib/keyboard/is-composition-key";
 import { AccountAvailabilityNotice } from "./account-availability-notice";
-import { entryDay, useAccountAvailability } from "./use-account-availability";
+import { useAccountAvailability } from "./use-account-availability";
+import { usePendingSubmit } from "@/common/hooks/use-pending-submit";
 
 interface TransactionFormProps {
   ledgerId: string;
   onSuccess?: () => void;
+  /** Reports a write in flight, so the dialog can hold its tabs and close. */
+  onPendingChange?: (pending: boolean) => void;
 }
 
 type TransactionFormData = {
-  date: Date;
-  flag: string;
+  date: string;
+  flag: "*" | "!";
   payee?: string;
   narration?: string;
   postings: {
@@ -80,11 +85,16 @@ type TransactionFormData = {
  * Fields: date, payee, narration, postings (array)
  * Features: auto-balance, smart posting management, keyboard shortcuts
  */
-export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
+export function TransactionForm({
+  ledgerId,
+  onSuccess,
+  onPendingChange,
+}: TransactionFormProps) {
   const { t } = useTranslations();
   const formatError = useErrorMessage();
   const [addTransaction] = useMutation(BulkEntriesDocument);
   const [error, setError] = useState<string | null>(null);
+  const postingRowsRef = useRef<HTMLDivElement>(null);
   const { primaryCurrency } = useLedger();
 
   // Zod validation schema for posting with translations
@@ -108,8 +118,10 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
   const transactionSchema = useMemo(
     () =>
       z.object({
-        date: z.date(),
-        flag: z.string().trim(),
+        date: z.iso.date(),
+        // Beancount has no blank transaction status: only Cleared and
+        // Pending survive a save (w4/270).
+        flag: z.enum(["*", "!"]),
         payee: z.string().trim().optional(),
         narration: z.string().trim().optional(),
         postings: z.array(postingSchema).min(2),
@@ -120,7 +132,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
-      date: new Date(),
+      date: todayIsoDate(),
       flag: "*",
       postings: [
         {
@@ -186,7 +198,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
   }, [watchedPostings, append, primaryCurrency]);
 
   const accounts = useAccountAvailability(ledgerId);
-  const day = entryDay(form.watch("date"));
+  const day = form.watch("date") || null;
   const postingAccounts = (watchedPostings ?? []).map(
     (posting) => posting.account,
   );
@@ -203,9 +215,8 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
     setError(null);
 
     try {
-      const entryDate = entryDay(data.date);
       const named = data.postings.map((posting) => posting.account);
-      if (accounts.blocks(named, entryDate)) return;
+      if (accounts.blocks(named, data.date)) return;
 
       const { balances, incomplete } = computeAutoBalance(
         data.postings,
@@ -250,7 +261,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
           account: posting.account,
           units: {
             number: parseDecimalNumber(posting.amount) ?? posting.amount,
-            currency: posting.currency,
+            currency: postingCurrency(posting, primaryCurrency),
           },
         }));
 
@@ -262,7 +273,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
 
       // Create transaction input
       const transactionInput: LedgerTransactionInput = {
-        date: format(data.date, "yyyy-MM-dd"),
+        date: data.date,
         flag: data.flag,
         payee: data.payee,
         narration: data.narration,
@@ -272,7 +283,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
       const variables: BulkEntriesMutationVariables = {
         ledgerId,
         entries: [
-          ...accounts.openEntries(named, entryDate),
+          ...accounts.openEntries(named, data.date),
           { type: LedgerEntryType.Transaction, transaction: transactionInput },
         ],
       };
@@ -282,7 +293,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
       if (result.data?.bulkEntries.success) {
         // Reset form
         form.reset({
-          date: new Date(),
+          date: todayIsoDate(),
           flag: "*",
           payee: "",
           narration: "",
@@ -302,6 +313,7 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
         accounts.reset();
         track("directive_added", { directive_type: "transaction" });
         onSuccess?.();
+        return true;
       } else {
         // Payload message is intentional server feedback — safe to show.
         setError(
@@ -321,22 +333,37 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    // An Enter the input method is consuming confirms its composition, not
+    // the transaction (w4/965).
+    if (isCompositionKey(e.nativeEvent)) return;
     // Ctrl+Enter or Cmd+Enter to submit
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
-      void form.handleSubmit(onSubmit)();
+      void submit();
     }
   };
 
+  // An explicit Add moves on to the row it made. Its own button becomes that
+  // row's neighbour's Remove once there are three rows, so leaving focus
+  // there let the next Enter delete a posting (w4/967). The automatic blank
+  // row above stays unfocused.
   const addPosting = () => {
+    const added = fields.length;
     append(
       {
         account: "",
         amount: "",
         currency: primaryCurrency,
       },
-      { shouldFocus: false }, // Don't auto-focus the new row to prevent scroll
+      { shouldFocus: false }, // Focus moves below, without RHF's scroll.
     );
+    requestAnimationFrame(() => {
+      postingRowsRef.current
+        ?.querySelector<HTMLElement>(
+          `[data-posting-row="${added}"] input`, // its account, first in the row
+        )
+        ?.focus();
+    });
   };
 
   const removePosting = (index: number) => {
@@ -345,272 +372,273 @@ export function TransactionForm({ ledgerId, onSuccess }: TransactionFormProps) {
     }
   };
 
+  const { submit, pending } = usePendingSubmit(form, onSubmit, onPendingChange);
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        onKeyDown={handleKeyDown}
-        className="space-y-6 pt-1 px-1"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      <form onSubmit={submit} onKeyDown={handleKeyDown}>
+        <fieldset disabled={pending} className="min-w-0 space-y-6 pt-1 px-1">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={(newDate) => field.onChange(newDate)}
-                    required
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="flag"
-            render={({ field }) => (
-              <FormItem>
-                <Select onValueChange={field.onChange} value={field.value}>
+          <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">{t("journal.date")}</FormLabel>
                   <FormControl>
-                    <SelectTrigger
-                      className="h-9 w-9 [&>svg]:hidden"
-                      aria-label={t("common.status")}
-                    >
-                      <SelectValue>
-                        <span aria-hidden="true">
-                          {field.value === "*" && "*"}
-                          {field.value === "!" && "!"}
-                          {field.value === " " && " "}
-                        </span>
-                        <span className="sr-only">
-                          {field.value === "*" && t("journal.clearedStatus")}
-                          {field.value === "!" && t("journal.pendingStatus")}
-                          {field.value === " " && t("journal.blankStatus")}
-                        </span>
-                      </SelectValue>
-                    </SelectTrigger>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(newDate) => field.onChange(newDate)}
+                      required
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="*">
-                      * {t("journal.clearedStatus")}
-                    </SelectItem>
-                    <SelectItem value="!">
-                      ! {t("journal.pendingStatus")}
-                    </SelectItem>
-                    <SelectItem value=" ">
-                      {t("journal.blankStatus")}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="payee"
-            render={({ field }) => (
-              <FormItem className="flex-1" data-transaction-payee>
-                <FormLabel className="sr-only">{t("journal.payee")}</FormLabel>
-                <FormControl>
-                  <PayeesCombobox
-                    ledgerId={ledgerId}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.payeePlaceholder")}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="flag"
+              render={({ field }) => (
+                <FormItem>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger
+                        className="h-9 w-9 [&>svg]:hidden"
+                        aria-label={t("common.status")}
+                      >
+                        <SelectValue>
+                          <span aria-hidden="true">
+                            {field.value === "*" && "*"}
+                            {field.value === "!" && "!"}
+                          </span>
+                          <span className="sr-only">
+                            {field.value === "*" && t("journal.clearedStatus")}
+                            {field.value === "!" && t("journal.pendingStatus")}
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="*">
+                        * {t("journal.clearedStatus")}
+                      </SelectItem>
+                      <SelectItem value="!">
+                        ! {t("journal.pendingStatus")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="narration"
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormLabel className="sr-only">
-                  {t("journal.narration")}
-                </FormLabel>
-                <FormControl>
-                  <NarrationsCombobox
-                    ledgerId={ledgerId}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    placeholder={t("journal.narrationPlaceholder")}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="payee"
+              render={({ field }) => (
+                <FormItem className="flex-1" data-transaction-payee>
+                  <FormLabel className="sr-only">
+                    {t("journal.payee")}
+                  </FormLabel>
+                  <FormControl>
+                    <PayeesCombobox
+                      ledgerId={ledgerId}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.payeePlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">{t("common.postings")}</h3>
+            <FormField
+              control={form.control}
+              name="narration"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel className="sr-only">
+                    {t("journal.narration")}
+                  </FormLabel>
+                  <FormControl>
+                    <NarrationsCombobox
+                      ledgerId={ledgerId}
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      placeholder={t("journal.narrationPlaceholder")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
-          <ScrollArea className="h-[220px]">
-            <div className="space-y-2 pr-4 pt-1 pl-1">
-              {fields.map((field, index) => {
-                const autoBalance = autoBalanceInfo.balances.get(index);
-                const isLastRow = index === fields.length - 1;
-
-                return (
-                  <div key={field.id} className="space-y-1">
-                    <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
-                      <div className="flex items-center justify-center w-6 h-9 text-xs text-muted-foreground font-medium shrink-0">
-                        {index + 1}
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name={`postings.${index}.account`}
-                        render={({ field }) => (
-                          <FormItem className="flex-2">
-                            <FormLabel className="sr-only">
-                              {t("journal.postingAccount", {
-                                number: index + 1,
-                              })}
-                            </FormLabel>
-                            <FormControl>
-                              <AccountCombobox
-                                ledgerId={ledgerId}
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                placeholder={t("journal.accountPlaceholder")}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`postings.${index}.amount`}
-                        render={({ field }) => (
-                          <FormItem className="flex-1 relative">
-                            <FormLabel className="sr-only">
-                              {t("journal.postingAmount", {
-                                number: index + 1,
-                              })}
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="any"
-                                placeholder={
-                                  autoBalance
-                                    ? autoBalance.amount
-                                    : t("journal.amountPlaceholder")
-                                }
-                                className={
-                                  autoBalance && !field.value
-                                    ? "text-muted-foreground italic"
-                                    : ""
-                                }
-                                {...field}
-                              />
-                            </FormControl>
-                            {autoBalance && !field.value && (
-                              <div className="absolute right-2 top-2 text-xs text-muted-foreground pointer-events-none">
-                                {t("journal.autoAmount")}
-                              </div>
-                            )}
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`postings.${index}.currency`}
-                        render={({ field }) => (
-                          <FormItem className="w-48">
-                            <FormLabel className="sr-only">
-                              {t("journal.postingCurrency", {
-                                number: index + 1,
-                              })}
-                            </FormLabel>
-                            <FormControl>
-                              <CurrencyCombobox
-                                ledgerId={ledgerId}
-                                value={field.value}
-                                onValueChange={field.onChange}
-                                placeholder={t("journal.currencyPlaceholder")}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {fields.length > 2 ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removePosting(index)}
-                          className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive shrink-0"
-                          aria-label={t("journal.removePosting", {
-                            number: index + 1,
-                          })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : isLastRow ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={addPosting}
-                          className="h-9 w-9 p-0 text-muted-foreground hover:text-primary shrink-0"
-                          aria-label={t("journal.addPosting")}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <div className="h-9 w-9 shrink-0" />
-                      )}
-                    </div>
-                    <AccountAvailabilityNotice
-                      check={accounts}
-                      account={watchedPostings?.[index]?.account ?? ""}
-                      day={day}
-                      className="md:pl-8"
-                    />
-                  </div>
-                );
-              })}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">{t("common.postings")}</h3>
             </div>
-          </ScrollArea>
-        </div>
 
-        <div className="flex justify-end">
-          <Button
-            type="submit"
-            disabled={accounts.blocks(postingAccounts, day)}
-            loading={form.formState.isSubmitting}
-          >
-            {t("journal.createTransactionEntry")}
-          </Button>
-        </div>
+            <ScrollArea className="h-[220px]">
+              <div ref={postingRowsRef} className="space-y-2 pr-4 pt-1 pl-1">
+                {fields.map((field, index) => {
+                  const autoBalance = autoBalanceInfo.balances.get(index);
+                  const isLastRow = index === fields.length - 1;
+
+                  return (
+                    <div
+                      key={field.id}
+                      data-posting-row={index}
+                      className="space-y-1"
+                    >
+                      <div className="grid grid-cols-1 gap-2 md:flex md:items-start md:gap-2">
+                        <div className="flex items-center justify-center w-6 h-9 text-xs text-muted-foreground font-medium shrink-0">
+                          {index + 1}
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`postings.${index}.account`}
+                          render={({ field }) => (
+                            <FormItem className="flex-2">
+                              <FormLabel className="sr-only">
+                                {t("journal.postingAccount", {
+                                  number: index + 1,
+                                })}
+                              </FormLabel>
+                              <FormControl>
+                                <AccountCombobox
+                                  ledgerId={ledgerId}
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  placeholder={t("journal.accountPlaceholder")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`postings.${index}.amount`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1 relative">
+                              <FormLabel className="sr-only">
+                                {t("journal.postingAmount", {
+                                  number: index + 1,
+                                })}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  placeholder={
+                                    autoBalance
+                                      ? autoBalance.amount
+                                      : t("journal.amountPlaceholder")
+                                  }
+                                  className={
+                                    autoBalance && !field.value
+                                      ? "text-muted-foreground italic"
+                                      : ""
+                                  }
+                                  {...field}
+                                />
+                              </FormControl>
+                              {autoBalance && !field.value && (
+                                <div className="absolute right-2 top-2 text-xs text-muted-foreground pointer-events-none">
+                                  {t("journal.autoAmount")}
+                                </div>
+                              )}
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`postings.${index}.currency`}
+                          render={({ field }) => (
+                            <FormItem className="w-48">
+                              <FormLabel className="sr-only">
+                                {t("journal.postingCurrency", {
+                                  number: index + 1,
+                                })}
+                              </FormLabel>
+                              <FormControl>
+                                <CurrencyCombobox
+                                  ledgerId={ledgerId}
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                  placeholder={t("journal.currencyPlaceholder")}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {fields.length > 2 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePosting(index)}
+                            className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                            aria-label={t("journal.removePosting", {
+                              number: index + 1,
+                            })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : isLastRow ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={addPosting}
+                            className="h-9 w-9 p-0 text-muted-foreground hover:text-primary shrink-0"
+                            aria-label={t("journal.addPosting")}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <div className="h-9 w-9 shrink-0" />
+                        )}
+                      </div>
+                      <AccountAvailabilityNotice
+                        check={accounts}
+                        account={watchedPostings?.[index]?.account ?? ""}
+                        day={day}
+                        className="md:pl-8"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={accounts.blocks(postingAccounts, day)}
+              loading={pending}
+            >
+              {t("journal.createTransactionEntry")}
+            </Button>
+          </div>
+        </fieldset>
       </form>
     </Form>
   );

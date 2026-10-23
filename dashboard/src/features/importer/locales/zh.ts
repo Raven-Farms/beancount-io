@@ -103,17 +103,17 @@ const zhImporter: Record<string, TranslationEntry> = {
   },
   "importer.aiOffer.description": {
     message:
-      "智能导入可免费读取包含日期、收款人、描述和金额列的 CSV 文件。此文件也可以用 AI 读取，但会消耗你的 AI 令牌。",
+      "智能导入可免费读取包含日期、收款人、描述和金额列的 CSV 文件。此文件也可以用 AI 读取，但会消耗你的 AI 词元。",
     description:
       "Explains the free CSV format and that AI parsing spends AI tokens",
   },
   "importer.aiOffer.parseWithAi": {
-    message: "用 AI 解析（消耗 AI 令牌）",
+    message: "用 AI 解析（消耗 AI 词元）",
     description:
       "Button that parses the unreadable CSV with AI, spending AI tokens",
   },
   "importer.error.aiQuotaReached": {
-    message: "你已用完本月的 AI 令牌",
+    message: "你已用完本月的 AI 词元",
     description:
       "Title when AI parsing of a CSV is refused because the month's AI tokens are used up",
   },
@@ -131,9 +131,15 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "当前文件类型需要AI分析",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "升级到高级版",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "升级到{plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "升级你的计划",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message: "使用AI自动解析PDF、OFX和图像文件",
@@ -162,6 +168,15 @@ const zhImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "文件解析失败",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "文件不是 UTF-8 文本",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "此 CSV 包含无效的 UTF-8 字符，导入会改变收款方和描述文本。请在银行或电子表格应用中重新另存为 CSV UTF-8，然后上传该文件。",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message: "处理你的文件时发生服务器错误。请稍后几秒钟重试。",
@@ -299,6 +314,18 @@ const zhImporter: Record<string, TranslationEntry> = {
     message: "所有交易的货币",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} 行（{rows}）以 {symbol}（{currencies}）计价，但本次导入会将其记为 {currency}。",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "一次导入只能记一种货币。请选择这些行所用的货币，或取消选择它们并单独导入。尚未导入任何内容。",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "分配目标账户",
     description: "Heading for account mapping section",
@@ -423,6 +450,11 @@ const zhImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "成功分类了{count}笔交易",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "没有足够可信的建议可用于填写目标账户。",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "AI分类失败",

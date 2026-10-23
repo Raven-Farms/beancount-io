@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useQuery } from "@apollo/client/react";
+import { Button } from "@/common/components/ui/button";
 import { User, Palette, CreditCard, Clock, AlertCircle } from "lucide-react";
 import {
   Card,
@@ -14,7 +16,7 @@ import {
 } from "@/graphql/definitions";
 import { UserProfileSection } from "./user-profile-section";
 import { AppearanceSection } from "./appearance-section";
-import { SubscriptionSection } from "./subscription-section";
+import { BillingSummaryLink } from "./billing-summary-link";
 import { SessionSection } from "./session-section";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { getErrorMessageKey } from "@/common/lib/errors/error-message";
@@ -123,7 +125,15 @@ function GeneralSettingsSkeleton() {
  * Error state component
  * Displays error message when failed to load user data
  */
-function GeneralSettingsError({ error }: { error: unknown }) {
+function GeneralSettingsError({
+  error,
+  retrying,
+  onRetry,
+}: {
+  error: unknown;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
   const { t } = useTranslations();
   return (
     <div className="space-y-6">
@@ -145,8 +155,19 @@ function GeneralSettingsError({ error }: { error: unknown }) {
                 {t("userSettings.failedToLoadSettings")}
               </h3>
               <p className="text-muted-foreground">
-                {t(getErrorMessageKey(error))}
+                {error ? t(getErrorMessageKey(error)) : null}
               </p>
+              {/* Re-run this page's own read in place (w4/257). */}
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                onClick={onRetry}
+                disabled={retrying}
+                loading={retrying}
+              >
+                {t("common.tryAgain")}
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -161,7 +182,7 @@ function GeneralSettingsError({ error }: { error: unknown }) {
  */
 export default function GeneralSettingsPage() {
   const { t } = useTranslations();
-  const { data, loading, error } = useQuery<GetCurrentUserQuery>(
+  const { data, loading, error, refetch } = useQuery<GetCurrentUserQuery>(
     GetCurrentUserDocument,
     {
       fetchPolicy: "cache-and-network", // Fetch fresh data but show stale while fetching
@@ -169,6 +190,14 @@ export default function GeneralSettingsPage() {
     },
   );
   const { isReactNative } = useReactNativeContext();
+  const [retrying, setRetrying] = useState(false);
+  const retry = () => {
+    if (retrying) return;
+    setRetrying(true);
+    void refetch()
+      .catch(() => undefined)
+      .finally(() => setRetrying(false));
+  };
 
   return (
     <>
@@ -179,13 +208,17 @@ export default function GeneralSettingsPage() {
       />
       <div className="space-y-6">
         <h1 className="text-2xl font-semibold">{t("userSettings.general")}</h1>
-        {loading ? (
+        {error || (retrying && !data) ? (
+          <GeneralSettingsError
+            error={error}
+            retrying={retrying}
+            onRetry={retry}
+          />
+        ) : loading ? (
           <GeneralSettingsSkeleton />
-        ) : error ? (
-          <GeneralSettingsError error={error} />
         ) : (
           <div className="space-y-4">
-            {!isReactNative && config.billingEnabled && <SubscriptionSection />}
+            {!isReactNative && config.billingEnabled && <BillingSummaryLink />}
             <UserProfileSection userData={data} />
             <AppearanceSection />
             <SessionSection />

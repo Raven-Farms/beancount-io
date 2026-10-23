@@ -136,9 +136,15 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "نوع فایل فعلی نیاز به تجزیه با هوش مصنوعی دارد",
     description: "Description of why premium is required",
   },
-  "importer.error.upgradeToPremium": {
-    message: "ارتقا به ممتاز",
-    description: "Label for premium upgrade option",
+  "importer.error.upgradeToPlan": {
+    message: "ارتقا به {plan}",
+    description:
+      "Heading over the paywall's upgrade button; {plan} is the plan the button recommends (the next tier up).",
+  },
+  "importer.error.upgradePlan": {
+    message: "ارتقای طرح",
+    description:
+      "Heading over the paywall's upgrade button when no higher self-serve plan exists.",
   },
   "importer.error.upgradeDescription": {
     message:
@@ -169,6 +175,15 @@ const faImporter: Record<string, TranslationEntry> = {
   "importer.error.failedToParse": {
     message: "تجزیه فایل ناموفق بود",
     description: "Title for parse failure error",
+  },
+  "importer.error.notUtf8": {
+    message: "فایل متن UTF-8 نیست",
+    description: "Title when an uploaded CSV is not UTF-8 text",
+  },
+  "importer.error.notUtf8Description": {
+    message:
+      "این CSV نویسه‌هایی دارد که UTF-8 معتبر نیستند، بنابراین وارد کردن آن متن دریافت‌کننده‌ها و توضیحات را تغییر می‌دهد. آن را دوباره از بانک یا برنامهٔ صفحه‌گسترده با قالب CSV UTF-8 ذخیره کنید و همان فایل را بارگذاری کنید.",
+    description: "How to re-save a CSV that is not UTF-8 text",
   },
   "importer.error.serverError": {
     message:
@@ -310,6 +325,24 @@ const faImporter: Record<string, TranslationEntry> = {
     message: "ارز برای همه تراکنش‌ها",
     description: "Hint text for currency field",
   },
+  "importer.configure.currencyConflict_one": {
+    message:
+      "{count} ردیف ({rows}) به {symbol} ({currencies}) نوشته شده است، اما این واردسازی آن را به {currency} ثبت می‌کند.",
+    description:
+      "Import refusal: a selected row's amount carries a currency symbol that is not the chosen import currency. {count} is 1, {rows} the row number, {symbol} the symbol from the bank file (€, £…), {currencies} the currencies it can mean, {currency} the selected currency code",
+  },
+  "importer.configure.currencyConflict_other": {
+    message:
+      "{count} ردیف ({rows}) به {symbol} ({currencies}) نوشته شده‌اند، اما این واردسازی آن‌ها را به {currency} ثبت می‌کند.",
+    description:
+      "Import refusal for several selected rows whose amounts carry a currency symbol other than the chosen import currency. {rows} lists their row numbers, possibly ending in …",
+  },
+  "importer.configure.currencyConflictRemedy": {
+    message:
+      "هر واردسازی فقط یک ارز را ثبت می‌کند. ارزی را که این ردیف‌ها به آن نوشته شده‌اند انتخاب کنید، یا انتخاب آن‌ها را بردارید و جداگانه واردشان کنید. چیزی وارد نشده است.",
+    description:
+      "How to resolve a currency conflict before importing: no conversion happens, so the user picks the matching currency or splits the file",
+  },
   "importer.configure.assignTargetAccounts": {
     message: "اختصاص حساب‌های مقصد",
     description: "Heading for account mapping section",
@@ -447,6 +480,11 @@ const faImporter: Record<string, TranslationEntry> = {
   "importer.accountMapping.aiSuccessDescription_other": {
     message: "{count} تراکنش با موفقیت دسته‌بندی شدند",
     description: "Toast description for multiple transactions categorization",
+  },
+  "importer.accountMapping.aiNoneApplied": {
+    message: "هیچ پیشنهادی آن‌قدر مطمئن نبود که یک حساب مقصد را پر کند.",
+    description:
+      "Toast description when AI Fill completed but no suggestion was confident enough to fill a target",
   },
   "importer.accountMapping.aiFailed": {
     message: "دسته‌بندی با هوش مصنوعی ناموفق بود",

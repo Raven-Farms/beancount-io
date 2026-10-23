@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "year": 2026,
+  "currency": "USD",
+  "household": {
+    "brokerage": "Assets:Brokerage (USD,VTI, FIFO)",
+    "crypto": "Assets:Crypto:Wallet (BTC,ETH, STRICT default)",
+    "property": "OakSt (commodity OAKST), Assets:Property:OakSt, Assets:Escrow:OakSt, Liabilities:Mortgage:OakSt"
+  },
+  "checkpoints": {
+    "initialized": {
+      "checking_usd": "150000.00",
+      "note": "14 starter accounts plus investor/property opens; bea check passes"
+    },
+    "seeded": {
+      "brokerage_cash_usd": "1000.00",
+      "vti_lots": [
+        ["100.00", "2023-05-01", "10"],
+        ["120.00", "2024-06-15", "5"]
+      ],
+      "btc_lots": [["40000.00", "2025-01-10", "0.500000"]],
+      "opening_equity_usd": "-172600.00"
+    },
+    "purchased": {
+      "checking_usd": "35000.00",
+      "mortgage_usd": "-400000.00",
+      "escrow_usd": "3000.00",
+      "property_basis_usd": "510000.00"
+    },
+    "imported": {
+      "brokerage_cash_usd": "32.50",
+      "booked_gains_usd": "1000.00",
+      "vti_lots_left": [
+        ["100.00", "2023-05-01", "5"],
+        ["120.00", "2024-06-15", "5"],
+        ["250.00", "2026-04-01", "10"]
+      ]
+    },
+    "paid": {
+      "checking_usd": "25400.00",
+      "mortgage_usd": "-397540.00",
+      "escrow_usd": "4200.00",
+      "interest_total_usd": "5940.00"
+    },
+    "swapped": {
+      "booked_gains_2026_usd": "5000.00",
+      "btc_units_left": "0.300000",
+      "eth_lot": ["3000.00", "2026-06-15", "4.000000"]
+    },
+    "year_end": {
+      "prices": {
+        "VTI": "300.00 USD",
+        "BTC": "60000.00 USD",
+        "ETH": "3000.00 USD",
+        "OAKST": "620000.00 USD"
+      },
+      "holdings_market_usd": {
+        "VTI": "6000.00",
+        "BTC": "18000.00",
+        "ETH": "12000.00",
+        "OAKST": "620000.00"
+      },
+      "unrealized_usd": {
+        "VTI": "2400.00",
+        "BTC": "6000.00",
+        "ETH": "0.00",
+        "OAKST": "110000.00"
+      },
+      "realized_2026_booked_usd": "5000.00",
+      "net_worth_book_usd": "169692.50",
+      "checking_usd": "25400.00"
+    },
+    "closed_june": {
+      "checking_statement": "opening 27800.00, one -2400.00 row, closing 25400.00",
+      "checking_assertion": "2026-07-01 balance Assets:Checking 25400.00 USD",
+      "tied_accounts": ["Assets:Checking"],
+      "note": "Every other account with a balance is disclosed as unverified in the close report (no statements supplied for them); the commit contains only main.bean and never pushes"
+    }
+  },
+  "arithmetic": {
+    "purchase": "price 500000 + capitalized 10000 + expensed 2000 + escrow seed 3000 = 515000 = cash 115000 + loan 400000",
+    "seeded_broker": "10x100 + 5x120 + 1000 cash = 2600 (export total)",
+    "seeded_crypto": "0.5 x 40000 = 20000 (export total)",
+    "payments": "principal 600+610+620+630 = 2460; 400000 - 2460 = 397540 (June statement new balance); interest 1500+1490+1480+1470 = 5940; escrow 3000 + 4x300 = 4200",
+    "imported_sell": "FIFO sell 5 @ 300 from the 2023 lot: gain 5x(300-100) = 1000 booked; brokerage cash 1000 - 2505 + 42.50 + 1495 = 32.50",
+    "swap": "0.2 BTC (cost 8000) at stated 12000 total -> gain 4000; realized 2026 total 1000 + 4000 = 5000 ties to Income:CapitalGains"
+  }
+}

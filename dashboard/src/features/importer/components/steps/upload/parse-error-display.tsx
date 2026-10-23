@@ -1,10 +1,12 @@
 import { Card, CardContent } from "@/common/components/ui/card";
 import { Button } from "@/common/components/ui/button";
 import { AlertCircle, Download, Sparkles, FileText } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { useTranslations } from "@/common/hooks/use-translations";
-import { track } from "@/common/analytics";
+import { useUserLimits } from "@/common/hooks/use-user-limits";
+import { UpgradePromptLink } from "@/common/components/upgrade-prompt-link";
+import { getNextTier } from "@/common/lib/subscription/tier-config";
 import { isPremiumRequired } from "../../../utils/is-premium-required";
+import { CsvEncodingError } from "../../../utils/decode-csv-bytes";
 import type { FileFormat } from "../../../types";
 
 interface ParseErrorDisplayProps {
@@ -65,6 +67,10 @@ function PremiumRequiredError({
   fileFormat: FileFormat;
 }) {
   const { t } = useTranslations();
+  const { tier } = useUserLimits();
+  // A Premium user who spent the AI allowance needs Growth, so the heading
+  // names whatever plan the button recommends.
+  const next = getNextTier(tier);
   // A CSV only reaches AI parsing because the user chose it, so name the
   // spent quota rather than a file type that "requires" AI.
   const isCsv = fileFormat === "csv";
@@ -92,24 +98,18 @@ function PremiumRequiredError({
           <div className="flex items-center justify-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             <p className="text-sm font-medium">
-              {t("importer.error.upgradeToPremium")}
+              {next
+                ? t("importer.error.upgradeToPlan", { plan: t(next.labelKey) })
+                : t("importer.error.upgradePlan")}
             </p>
           </div>
           <p className="text-xs text-muted-foreground">
             {t("importer.error.upgradeDescription")}
           </p>
           <Button asChild className="w-full" size="sm">
-            <Link
-              to="/settings/general"
-              onClick={() =>
-                track("upgrade_prompt_clicked", {
-                  surface: "importer_paywall",
-                  target_tier: "PREMIUM",
-                })
-              }
-            >
+            <UpgradePromptLink surface="importer_paywall" plan={next}>
               {t("importer.error.upgradeNow")}
-            </Link>
+            </UpgradePromptLink>
           </Button>
         </div>
 
@@ -180,6 +180,27 @@ function ServerError({ onReset }: { onReset: () => void }) {
 }
 
 /**
+ * A CSV whose bytes are not UTF-8: say how to re-save it rather than import
+ * changed text (w4/278).
+ */
+function EncodingError({ onReset }: { onReset: () => void }) {
+  const { t } = useTranslations();
+
+  return (
+    <ErrorLayout onReset={onReset}>
+      <div role="alert" className="space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">
+          {t("importer.error.notUtf8")}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {t("importer.error.notUtf8Description")}
+        </p>
+      </div>
+    </ErrorLayout>
+  );
+}
+
+/**
  * Parent component that routes to appropriate error display
  * based on error type
  */
@@ -190,6 +211,10 @@ export function ParseErrorDisplay({
 }: ParseErrorDisplayProps) {
   // Detect if error is premium-related using GraphQL extensions.code
   const isPremiumRequiredError = isPremiumRequired(error);
+
+  if (error instanceof CsvEncodingError) {
+    return <EncodingError onReset={onReset} />;
+  }
 
   if (isPremiumRequiredError) {
     return <PremiumRequiredError onReset={onReset} fileFormat={fileFormat} />;

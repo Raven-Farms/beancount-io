@@ -30,6 +30,7 @@ import { Button } from "@/components/button";
 import { PressableScale } from "@/components/pressable-scale";
 import { createConnectionTestGate } from "./connection-test-gate";
 import { useStackKeyboardOffset } from "@/common/hooks/use-stack-keyboard-offset";
+import { InlineError } from "@/components/inline-error";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -72,7 +73,7 @@ const getStyles = (theme: ColorTheme) =>
       borderColor: theme.error,
     },
     helper: {
-      color: theme.black60,
+      color: theme.black80,
       fontSize: 13,
       lineHeight: 19,
     },
@@ -126,7 +127,7 @@ function validationMessage(
 
 function connectionMessage(
   result: ServerConnectionResult,
-  t: (key: string) => string,
+  t: (key: string, options?: Record<string, string>) => string,
 ): string {
   switch (result.kind) {
     case "connected":
@@ -137,9 +138,31 @@ function connectionMessage(
       return t("serverConnectionTimeout");
     case "unreachable":
       return t("serverConnectionUnreachable");
+    case "older":
+      return t("serverConnectionOlder");
     case "incompatible":
+      // Say what the server told us, so the fix is a tap rather than a guess
+      // (w21/214); only a server that answered without a hint gets the
+      // generic words.
+      if (result.detail?.reason === "not_configured") {
+        return t("serverConnectionNotConfigured");
+      }
+      if (result.detail?.reason === "mismatch") {
+        return t("serverConnectionCanonical", {
+          url: result.detail.canonicalUrl,
+        });
+      }
       return t("serverConnectionIncompatible");
   }
+}
+
+/** The address a mismatched server names itself by, when it offered one. */
+function canonicalAddress(
+  result: ServerConnectionResult | undefined,
+): string | undefined {
+  return result?.kind === "incompatible" && result.detail?.reason === "mismatch"
+    ? result.detail.canonicalUrl
+    : undefined;
 }
 
 export function ServerSettingsScreen(): JSX.Element {
@@ -182,6 +205,23 @@ export function ServerSettingsScreen(): JSX.Element {
     setConnection(result);
   }, [testing, testGate, validate]);
 
+  // One tap from "this server identifies as X": take X and test it, so the
+  // user does not retype an address the server already told us (w21/214).
+  const onUseCanonical = useCallback(
+    async (canonical: string) => {
+      setUrl(canonical);
+      setValidationError(undefined);
+      const token = testGate.start();
+      setTesting(true);
+      setConnection(undefined);
+      const result = await testServerConnection(canonical);
+      if (!testGate.isCurrent(token)) return;
+      setTesting(false);
+      setConnection(result);
+    },
+    [testGate],
+  );
+
   const onSave = useCallback(async () => {
     if (saving) {
       return;
@@ -210,6 +250,7 @@ export function ServerSettingsScreen(): JSX.Element {
     setSaving(false);
   }, [saving, testGate]);
 
+  const canonical = canonicalAddress(connection);
   const connectionIsSuccess = connection?.kind === "connected";
   const connectionIsError = connection !== undefined && !connectionIsSuccess;
 
@@ -253,17 +294,30 @@ export function ServerSettingsScreen(): JSX.Element {
             />
             <Text style={styles.helper}>{t("serverUrlHelper")}</Text>
             {validationError && (
-              <Text style={styles.error} accessibilityRole="alert">
-                {validationMessage(validationError, t)}
-              </Text>
+              <InlineError
+                style={styles.error}
+                message={validationMessage(validationError, t)}
+              />
             )}
             {connection && (
-              <Text
+              <InlineError
                 style={connectionIsSuccess ? styles.success : styles.error}
-                accessibilityRole="alert"
+                message={connectionMessage(connection, t)}
+              />
+            )}
+            {canonical !== undefined && (
+              <PressableScale
+                style={styles.restoreButton}
+                accessibilityRole="button"
+                accessibilityLabel={t("serverUseCanonical")}
+                testID="use-canonical-server"
+                disabled={saving || testing}
+                onPress={() => void onUseCanonical(canonical)}
               >
-                {connectionMessage(connection, t)}
-              </Text>
+                <Text style={styles.restoreText}>
+                  {t("serverUseCanonical")}
+                </Text>
+              </PressableScale>
             )}
             {connectionIsError && (
               <Text style={styles.helper}>{t("serverConnectionAdvisory")}</Text>

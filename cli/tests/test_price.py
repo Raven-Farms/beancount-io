@@ -1654,16 +1654,18 @@ class TestCacheAndUrlEdges:
         assert isinstance(decision, RefusedUrl)
         assert "the path must be /prices/<ALIAS>" in decision.detail
 
-    @pytest.mark.parametrize("etag", ['"head"', '".hidden"', 'W/"head"'])
+    @pytest.mark.parametrize("etag", ['"head"', '".hidden"', 'W/"head"', '"HEAD"', '"Head"', 'W/"HEAD"'])
     def test_a_reserved_etag_falls_back_to_the_body_hash(self, etag: str) -> None:
         assert feed_revision_id(etag, "body") == hashlib.sha256(b"body").hexdigest()
         assert feed_revision_id('"r1.2"', "body") == "r1.2"
 
-    def test_a_head_etag_keeps_the_cache_head(self, feed_server: str, tmp_path: Path) -> None:
+    @pytest.mark.parametrize("etag", ['"head"', '"HEAD"', '"Head"', 'W/"HEAD"'])
+    def test_a_head_etag_keeps_the_cache_head(self, feed_server: str, tmp_path: Path, etag: str) -> None:
+        """`HEAD.json` overwrote head.json on a case-insensitive volume, so offline found no revision (w5/862)."""
         now = time.time()
         _FeedHandler.routes["/prices/BTC-USD"] = {
             "body": _feed_text(_stamp(now)).encode("utf-8"),
-            "headers": {"ETag": '"head"'},
+            "headers": {"ETag": etag},
         }
         _resolve(feed_server, tmp_path, now=now)
 

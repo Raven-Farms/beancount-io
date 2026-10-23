@@ -121,9 +121,13 @@ test("normalizeLedgerFileName: preserves .beancount extension", () => {
   }
 });
 
-test("normalizeLedgerFileName: rejects paths and unsupported extensions", () => {
-  if (normalizeLedgerFileName("nested/file.bean") !== null) {
-    throw new Error("paths should not be accepted as filenames");
+test("normalizeLedgerFileName: rejects traversal and unsupported extensions", () => {
+  // Folders are allowed, as the server allows them (w21/014); escaping is not.
+  if (normalizeLedgerFileName("nested/file") !== "nested/file.bean") {
+    throw new Error("a relative path into a folder should be accepted");
+  }
+  if (normalizeLedgerFileName("../file.bean") !== null) {
+    throw new Error("traversal should be rejected");
   }
   if (normalizeLedgerFileName("notes.txt") !== null) {
     throw new Error("unsupported extensions should be rejected");
@@ -241,6 +245,26 @@ test("isConflictError: case-insensitive SHA detection", () => {
     throw new Error("should detect 'SHA' case-insensitively");
 });
 
+// w21/387: a substring test read an account named Shares, an amount of 409.00
+// and a line main.bean:1409 as a conflict.
+test("isConflictError: does not read words that merely contain sha or 409", () => {
+  for (const text of [
+    "Balance failed for Assets:Brokerage:Shares: expected 409.00 USD (main.bean:1409)",
+    "Posting to inactive account Expenses:Marshal",
+    "rushed 4090 times",
+  ]) {
+    if (isConflictError(text)) throw new Error(`flagged: ${text}`);
+  }
+  for (const text of [
+    "sha256sum mismatch: the entry changed",
+    "sha does not match [given: a, expected: b]",
+    "HTTP 409 Conflict",
+    "status code 409",
+  ]) {
+    if (!isConflictError(text)) throw new Error(`missed: ${text}`);
+  }
+});
+
 test("isConflictError: returns false for unrelated errors", () => {
   if (isConflictError("Network request failed"))
     throw new Error("unrelated error should not be flagged as conflict");
@@ -259,11 +283,45 @@ test("filterFileErrors: matches by exact path", () => {
   if (filtered[0].message !== "err") throw new Error("wrong error returned");
 });
 
-test("filterFileErrors: matches by filename only (no path)", () => {
-  const errors = [{ message: "oops", filename: "expenses.bean", lineno: 10 }];
+// w21/089: a bare or same-named path is another file's error.
+test("filterFileErrors: leaves out a same-named file in another folder", () => {
+  const errors = [
+    { message: "oops", filename: "expenses.bean", lineno: 10 },
+    { message: "oops", filename: "2023/expenses.bean", lineno: 12 },
+  ];
   const filtered = filterFileErrors(errors, "2024/expenses.bean");
-  if (filtered.length !== 1)
-    throw new Error(`expected 1 match by filename, got ${filtered.length}`);
+  if (filtered.length !== 0)
+    throw new Error(`expected no match by basename, got ${filtered.length}`);
+});
+
+test("filterFileErrors: leaves the root main.bean's errors off sub/main.bean", () => {
+  const errors = [{ message: "oops", filename: "main.bean", lineno: 3 }];
+  if (filterFileErrors(errors, "sub/main.bean").length !== 0)
+    throw new Error("root main.bean errors matched sub/main.bean");
+  if (filterFileErrors(errors, "main.bean").length !== 1)
+    throw new Error("root main.bean lost its own errors");
+});
+
+test("filterFileErrors: a path in a null-filename message must be this file's", () => {
+  const errors = [
+    {
+      message: "parse errors in 2023/expenses.bean",
+      filename: null,
+      lineno: null,
+    },
+  ];
+  if (filterFileErrors(errors, "2024/expenses.bean").length !== 0)
+    throw new Error("another folder's path in the message matched");
+  if (filterFileErrors(errors, "2023/expenses.bean").length !== 1)
+    throw new Error("the file's own path in the message did not match");
+});
+
+test("filterFileErrors: ignores a leading ./", () => {
+  const errors = [
+    { message: "oops", filename: "./2024/expenses.bean", lineno: 1 },
+  ];
+  if (filterFileErrors(errors, "2024/expenses.bean").length !== 1)
+    throw new Error("./-prefixed path did not match");
 });
 
 test("filterFileErrors: matches by suffix path", () => {
@@ -305,15 +363,29 @@ test("filterFileErrors: message fallback still scopes to the open file", () => {
     throw new Error(`expected 0 matches, got ${filtered.length}`);
 });
 
-test("filterFileErrors: message fallback matches a nested path by basename", () => {
+// w21/310: the engine writes the full repository path, so a bare filename in a
+// message can only be a root-level file.
+test("filterFileErrors: a bare filename in a message is the root file, not a nested one", () => {
   const errors = [
     { message: "parse errors in expenses.bean", filename: "", lineno: null },
   ];
-  const filtered = filterFileErrors(errors, "2024/expenses.bean");
-  if (filtered.length !== 1)
-    throw new Error(
-      `expected 1 match for empty filename, got ${filtered.length}`,
-    );
+  if (filterFileErrors(errors, "2024/expenses.bean").length !== 0)
+    throw new Error("a bare name matched a file in a folder");
+  if (filterFileErrors(errors, "expenses.bean").length !== 1)
+    throw new Error("the root file lost its own error");
+});
+
+test("filterFileErrors: sub/main.bean shows only its own error beside the root's", () => {
+  const errors = [
+    { message: "parse errors in main.bean", filename: null, lineno: null },
+    { message: "parse errors in sub/main.bean", filename: null, lineno: null },
+  ];
+  const nested = filterFileErrors(errors, "sub/main.bean");
+  if (nested.length !== 1 || !nested[0].message.endsWith("sub/main.bean"))
+    throw new Error(`sub/main.bean got ${nested.length} errors`);
+  const root = filterFileErrors(errors, "main.bean");
+  if (root.length !== 1 || root[0].message !== "parse errors in main.bean")
+    throw new Error(`main.bean got ${root.length} errors`);
 });
 
 test("filterFileErrors: a present filename never falls back to the message", () => {
@@ -334,15 +406,25 @@ test("filterFileErrors: a present filename never falls back to the message", () 
 // ── keyboard overlap ─────────────────────────────────────────────────────────
 
 test("getKeyboardOverlap: removes the bottom safe-area gap", () => {
-  const overlap = getKeyboardOverlap(291, 34);
+  const overlap = getKeyboardOverlap(291, 34, "ios");
   if (overlap !== 257) {
     throw new Error(`expected 257px overlap, got ${overlap}`);
   }
 });
 
 test("getKeyboardOverlap: never returns a negative overlap", () => {
-  const overlap = getKeyboardOverlap(20, 34);
+  const overlap = getKeyboardOverlap(20, 34, "ios");
   if (overlap !== 0) {
     throw new Error(`expected zero overlap, got ${overlap}`);
   }
+});
+
+// w21/049: a folder's own main.bean was locked because the bare name was
+// compared; only the root file is protected.
+test("canDeleteLedgerFile: protects the root main.bean only", () => {
+  expect(canDeleteLedgerFile("main.bean")).toBe(false);
+  expect(canDeleteLedgerFile("/main.bean")).toBe(false);
+  expect(canDeleteLedgerFile("qa-20261020/main.bean")).toBe(true);
+  expect(canDeleteLedgerFile("/qa-20261020/main.bean")).toBe(true);
+  expect(canDeleteLedgerFile("accounts.bean")).toBe(true);
 });

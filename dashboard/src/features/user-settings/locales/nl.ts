@@ -7,10 +7,6 @@ export interface TranslationEntry {
 
 const nlUserSettings: Record<string, TranslationEntry> = {
   ...apiKeyTranslations.nl,
-  "userSettings.accessUntil": {
-    message: "Toegang tot",
-    description: "Label for access remaining until date",
-  },
   "userSettings.accountDeleted": {
     message: "Account succesvol verwijderd",
     description: "Success message when account is deleted",
@@ -47,15 +43,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "Abonnement annuleren",
     description: "Button text to cancel subscription",
   },
-  "userSettings.cancelSubscriptionDescription": {
-    message:
-      "Weet u zeker dat u uw abonnement wilt annuleren? U behoudt toegang tot het einde van uw huidige factureringsperiode.",
-    description: "Confirmation dialog description for canceling subscription",
-  },
-  "userSettings.cancelSubscriptionTitle": {
-    message: "Abonnement annuleren?",
-    description: "Confirmation dialog title for canceling subscription",
-  },
   "userSettings.canceling": {
     message: "Annuleren...",
     description: "Button text while canceling subscription",
@@ -71,10 +58,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.changeUsername": {
     message: "Gebruikersnaam wijzigen",
     description: "Dialog title for changing username",
-  },
-  "userSettings.confirmCancel": {
-    message: "Ja, abonnement annuleren",
-    description: "Button text to confirm subscription cancellation",
   },
   "userSettings.createKey": {
     message: "Sleutel aanmaken",
@@ -394,13 +377,49 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "SSH-sleutels",
     description: "Page title for SSH keys",
   },
+  "userSettings.subscriptionStatus.active": {
+    message: "Actief",
+    description:
+      "Billing badge for a subscription whose Stripe status is active: paid and current.",
+  },
+  "userSettings.subscriptionStatus.trialing": {
+    message: "Proefperiode",
+    description:
+      "Billing badge for a subscription whose Stripe status is trialing: in a free trial.",
+  },
+  "userSettings.subscriptionStatus.past_due": {
+    message: "Achterstallig",
+    description:
+      "Billing badge for a subscription whose Stripe status is past_due: the last renewal failed and Stripe is retrying.",
+  },
+  "userSettings.subscriptionStatus.unpaid": {
+    message: "Onbetaald",
+    description:
+      "Billing badge for a subscription whose Stripe status is unpaid: Stripe stopped retrying a failed renewal.",
+  },
+  "userSettings.subscriptionStatus.incomplete": {
+    message: "Onvolledig",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete: the first payment has not completed.",
+  },
+  "userSettings.subscriptionStatus.incomplete_expired": {
+    message: "Verlopen",
+    description:
+      "Billing badge for a subscription whose Stripe status is incomplete_expired: the first payment never completed.",
+  },
+  "userSettings.subscriptionStatus.canceled": {
+    message: "Opgezegd",
+    description:
+      "Billing badge for a subscription whose Stripe status is canceled: ended.",
+  },
+  "userSettings.subscriptionStatus.paused": {
+    message: "Gepauzeerd",
+    description:
+      "Billing badge for a subscription whose Stripe status is paused: paused.",
+  },
   "userSettings.subscription": {
     message: "Abonnement",
     description: "Subscription section title",
-  },
-  "userSettings.subscriptionCanceled": {
-    message: "Abonnement is geannuleerd",
-    description: "Message when subscription is already canceled",
   },
   "userSettings.subscriptionCanceledSuccess": {
     message: "Abonnement succesvol geannuleerd",
@@ -409,12 +428,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.subscriptionUpgraded": {
     message: "Abonnement succesvol bijgewerkt",
     description: "Success message after upgrading subscription",
-  },
-  "userSettings.paymentRequiresAuth": {
-    message:
-      "Uw betaling vereist extra verificatie. Controleer uw e-mail of neem contact op met uw kaartuitgever.",
-    description:
-      "Message when 3DS authentication is needed for subscription upgrade",
   },
   "userSettings.system": {
     message: "Systeem",
@@ -484,6 +497,10 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "{used} tokens gebruikt deze maand (onbeperkt)",
     description: "AI CFO usage display for unlimited tier",
   },
+  "userSettings.aiCfoUsageUnavailable": {
+    message: "Het verbruik is momenteel niet beschikbaar.",
+    description: "Shown in place of AI token usage when its read fails",
+  },
   "userSettings.currentPlan": {
     message: "Huidig abonnement",
     description: "Badge label for the user's current subscription tier",
@@ -508,10 +525,6 @@ const nlUserSettings: Record<string, TranslationEntry> = {
     message: "{used} / {max} grootboeken",
     description: "Ledger usage count display",
   },
-  "userSettings.upgradeYourPlan": {
-    message: "Upgrade uw abonnement",
-    description: "Section header for upgrade tier cards",
-  },
   "userSettings.billing": {
     message: "Facturering",
     description: "Section header for billing management",
@@ -527,6 +540,10 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.aiTokensPerMonth": {
     message: "{count} AI-tokens/maand",
     description: "AI token allowance for a subscription tier",
+  },
+  "userSettings.unlimitedAiTokens": {
+    message: "Onbeperkte AI-tokens",
+    description: "Unlimited AI token allowance",
   },
   "userSettings.unlimitedLedgers": {
     message: "Onbeperkte grootboeken",
@@ -582,6 +599,401 @@ const nlUserSettings: Record<string, TranslationEntry> = {
   "userSettings.fingerprint": {
     message: "vingerafdruk",
     description: "Label for an SSH key fingerprint",
+  },
+  "userSettings.yearly": {
+    message: "Jaarlijks",
+    description: "Yearly billing option in the billing-cycle toggle",
+  },
+  "userSettings.billingCycle": {
+    message: "Factuurperiode",
+    description: "Accessible label for the monthly/yearly billing-cycle toggle",
+  },
+  "userSettings.plans": {
+    message: "Abonnementen",
+    description: "Section header above every plan on the Billing page",
+  },
+  "userSettings.switchToYearly": {
+    message: "Overstappen op jaarlijks",
+    description: "Button that moves a monthly subscription to yearly billing",
+  },
+  "userSettings.switchToMonthly": {
+    message: "Overstappen op maandelijks",
+    description: "Button that moves a yearly subscription to monthly billing",
+  },
+  "userSettings.downgrade": {
+    message: "Downgraden",
+    description: "Button for moving to a lower plan",
+  },
+  "userSettings.contactUs": {
+    message: "Neem contact op",
+    description: "Enterprise plan call to action and price label",
+  },
+  "userSettings.billedYearly": {
+    message: "{amount} per jaar gefactureerd",
+    description: "Total charged once a year; {amount} is a formatted price",
+  },
+  "userSettings.saveYearlyPercent": {
+    message: "Bespaar {percent}%",
+    description: "Badge with the yearly saving; {percent} is a whole number",
+  },
+  "userSettings.payYearlyOffer": {
+    message:
+      "Betaal per jaar: {yearly} per jaar in plaats van {monthlyTotal} — je bespaart {saving} per jaar.",
+    description:
+      "Offer on a monthly plan; {yearly}, {monthlyTotal} and {saving} are formatted prices",
+  },
+  "userSettings.perYear": {
+    message: "/jaar",
+    description: "Price interval suffix for yearly prices",
+  },
+  "userSettings.legacyPrice": {
+    message: "Oude prijs",
+    description: "Label for an older price an existing subscriber keeps",
+  },
+  "userSettings.checkoutConfirming": {
+    message: "Je betaling wordt bevestigd…",
+    description:
+      "Shown while waiting for Stripe to confirm a just-completed checkout",
+  },
+  "userSettings.checkoutDone": {
+    message: "Je hebt nu {plan}",
+    description:
+      "Confirmation after checkout; {plan} is a plan name and billing cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.checkoutRenews": {
+    message:
+      "Wordt verlengd op {date} voor {amount}. Je ontvangt het betaalbewijs per e-mail.",
+    description:
+      "Renewal line after checkout; {date} is a formatted date and {amount} a formatted price",
+  },
+  "userSettings.checkoutUnlocked": {
+    message: "Nu inbegrepen: {limits}",
+    description: "What the new plan includes; {limits} is a list of quotas",
+  },
+  "userSettings.checkoutPending": {
+    message:
+      "Betaling ontvangen. Je abonnement verschijnt binnen een minuut; vernieuw de pagina om het te controleren.",
+    description:
+      "Shown when the payment is done but the subscription is not recorded yet",
+  },
+  "userSettings.refresh": {
+    message: "Vernieuwen",
+    description: "Button that reloads the subscription status",
+  },
+  "userSettings.backToWork": {
+    message: "Terug naar waar je was",
+    description: "Button that returns to the page where the purchase began",
+  },
+  "userSettings.startUsingPlan": {
+    message: "Aan de slag met {plan}",
+    description:
+      "Primary button on the checkout confirmation when the purchase did not start at an in-product prompt; opens the ledgers. {plan} is the plan name, e.g. Premium",
+  },
+  "userSettings.checkoutCanceled": {
+    message: "Het afrekenen is geannuleerd. Er is niets in rekening gebracht.",
+    description:
+      "Notice on Billing after the customer leaves Stripe Checkout without paying",
+  },
+  "userSettings.viewBilling": {
+    message: "Facturering bekijken",
+    description:
+      "Button that closes the checkout confirmation and shows billing settings",
+  },
+  "userSettings.planChangeTitle": {
+    message: "Wijzigen naar {plan}",
+    description:
+      "Title of the plan-change sheet; {plan} is a plan and cycle such as 'Premium \u00b7 Yearly'",
+  },
+  "userSettings.planChangePreviewing": {
+    message: "We berekenen wat deze wijziging kost…",
+    description: "Shown while the server prices a plan change",
+  },
+  "userSettings.planChangePreviewFailed": {
+    message:
+      "We konden de prijs van deze wijziging niet berekenen. Probeer het opnieuw.",
+    description: "Shown when the plan-change price could not be loaded",
+  },
+  "userSettings.planChangeStartsToday": {
+    message: "Gaat vandaag in.",
+    description: "The plan change takes effect immediately",
+  },
+  "userSettings.planChangeDueToday": {
+    message: "Vandaag te betalen",
+    description: "Label for the amount charged today",
+  },
+  "userSettings.planChangeCredit": {
+    message:
+      "Inclusief een tegoed van {credit} voor de ongebruikte tijd van je huidige abonnement.",
+    description: "Credit for unused time; {credit} is a formatted price",
+  },
+  "userSettings.planChangeNext": {
+    message: "Daarna {amount}, volgende betaling op {date}.",
+    description:
+      "Next charge; {amount} is a price with its interval and {date} a formatted date",
+  },
+  "userSettings.planChangeChargedTo": {
+    message: "Afgeschreven van {card}",
+    description:
+      "Card the change is charged to; {card} is a card brand and its last four digits",
+  },
+  "userSettings.planChangeWhatYouGet": {
+    message: "Wat je krijgt",
+    description: "Heading above what the new plan adds",
+  },
+  "userSettings.planChangePayAndSwitch": {
+    message: "Betaal {amount} en wijzig",
+    description:
+      "Confirm button; {amount} is the formatted amount charged today",
+  },
+  "userSettings.planChangeContinueToCheckout": {
+    message: "Doorgaan naar betalen",
+    description: "Confirm button that opens Stripe Checkout",
+  },
+  "userSettings.planChangeNotNow": {
+    message: "Niet nu",
+    description:
+      "Button that closes the plan-change sheet without changing anything",
+  },
+  "userSettings.planChangeCreditNote": {
+    message:
+      "Ongebruikte tijd wordt altijd verrekend — je betaalt nooit dubbel.",
+    description: "Reassurance under the confirm button",
+  },
+  "userSettings.planChangeRefusalCurrent": {
+    message: "Je hebt dit abonnement al.",
+    description: "The chosen plan is the one the customer already has",
+  },
+  "userSettings.planChangeRefusalSameTier": {
+    message:
+      "Je houdt dit abonnement tegen een oudere, lagere prijs; wijzigen zou die alleen verhogen.",
+    description:
+      "The customer keeps an older, cheaper price for the same plan and cycle",
+  },
+  "userSettings.planChangeRefusalMultiple": {
+    message:
+      "Je account heeft meer dan één actief abonnement. Neem contact op met support om van abonnement te wisselen.",
+    description: "The account has duplicate subscriptions and needs support",
+  },
+  "userSettings.planChangeRefusalNoSubscription": {
+    message:
+      "Er is geen actief abonnement om te wijzigen. Vernieuw de pagina om een abonnement te kiezen.",
+    description: "The subscription ended before the change was confirmed",
+  },
+  "userSettings.planChangeRefusalPastDue": {
+    message:
+      "Je laatste verlengingsbetaling is niet gelukt. Werk je betaalmethode bij onder Facturering beheren en wijzig daarna je abonnement.",
+    description:
+      "A plan change is refused until a failed renewal payment is fixed",
+  },
+  "userSettings.planChangeStartsOn": {
+    message: "Gaat in op {date}. Tot dan houd je {plan}.",
+    description:
+      "When a scheduled change takes effect and the plan kept until then",
+  },
+  "userSettings.planChangeNothingToday": {
+    message: "Vandaag hoef je niets te betalen.",
+    description: "A scheduled change charges nothing today",
+  },
+  "userSettings.planChangeWhatChanges": {
+    message: "Wat er verandert op {date}",
+    description:
+      "Heading for the limits and features that change on the effective date",
+  },
+  "userSettings.planChangeLimitCollaborators": {
+    message: "Medewerkers per grootboek",
+    description: "Row label: collaborators allowed per ledger",
+  },
+  "userSettings.planChangeLimitAiTokens": {
+    message: "AI-tokens per maand",
+    description: "Row label: AI tokens allowed per month",
+  },
+  "userSettings.planChangeYouHave": {
+    message: "je hebt er {count}",
+    description: "The reader's current usage beside a limit row",
+  },
+  "userSettings.planChangeOverLimit": {
+    message:
+      "Al je grootboeken blijven van jou en blijven werken. Je kunt pas een nieuwe maken als je onder de nieuwe limiet van {max} zit.",
+    description:
+      "Explains what happens when usage is above the lower plan's ledger limit",
+  },
+  "userSettings.planChangeScheduleDowngrade": {
+    message: "Downgrade inplannen",
+    description:
+      "Button that schedules a downgrade for the end of the paid period",
+  },
+  "userSettings.planChangeScheduleSwitch": {
+    message: "Wissel inplannen",
+    description:
+      "Button that schedules a billing-cycle switch for the end of the paid period",
+  },
+  "userSettings.planChangeKeep": {
+    message: "{plan} houden",
+    description: "Button that keeps the current plan and closes the sheet",
+  },
+  "userSettings.planChangeScheduled": {
+    message: "Gepland voor {date}. Tot dan verandert er niets.",
+    description: "Toast after a change was scheduled",
+  },
+  "userSettings.planChangeReplacesScheduled": {
+    message: "Dit vervangt je geplande wijziging naar {plan} op {date}.",
+    description: "Note that this choice replaces an already scheduled change",
+  },
+  "userSettings.planChangeWithdrawsCancellation": {
+    message: "Dit trekt ook je opzegging in, dus je abonnement loopt door.",
+    description: "Note that this choice withdraws a pending cancellation",
+  },
+  "userSettings.planChangeLegacyEnds": {
+    message:
+      "Je huidige prijs wordt niet meer aangeboden en stopt met deze wijziging.",
+    description: "Note for a subscriber on a price that is no longer offered",
+  },
+  "userSettings.planChangeSplitIntro": {
+    message:
+      "{plan} met maandelijkse facturering kan ingaan bij je verlenging op {date}. Wil je {plan} vandaag al?",
+    description:
+      "Introduces the two options when choosing a higher tier on monthly while on yearly",
+  },
+  "userSettings.planChangeSplitNow": {
+    message: "{plan} vandaag met jaarlijkse facturering — nu {amount}",
+    description:
+      "Option: the higher tier today on yearly billing, with the amount due now",
+  },
+  "userSettings.planChangeSplitLater": {
+    message: "Op {date} overstappen naar {plan} maandelijks — vandaag niets",
+    description: "Option: the higher tier on monthly from the renewal date",
+  },
+  "userSettings.planChangeAtRenewal": {
+    message: "Gaat in bij je verlenging",
+    description:
+      "Under a plan card whose change waits for the end of the paid period",
+  },
+  "userSettings.planChangeFeaturesEnd": {
+    message: "Niet meer inbegrepen",
+    description:
+      "Heading above the plan features the lower plan does not include",
+  },
+  "userSettings.planChangeLimitDirectives": {
+    message: "Richtlijnen",
+    description: "Row label: entries (Beancount directives) allowed in total",
+  },
+  "userSettings.scheduledHeading": {
+    message: "Gepland",
+    description:
+      "Heading of the panel listing what happens at the end of the paid period",
+  },
+  "userSettings.scheduledChangesTo": {
+    message: "Wordt op {date} {plan}.",
+    description: "A scheduled plan change and its date",
+  },
+  "userSettings.scheduledEnds": {
+    message: "{plan} eindigt op {date}.",
+    description: "A pending cancellation and the date the plan ends",
+  },
+  "userSettings.scheduledKeepCurrent": {
+    message: "Huidige houden",
+    description: "Button that undoes a scheduled plan change",
+  },
+  "userSettings.scheduledKept": {
+    message: "Je abonnement blijft zoals het is.",
+    description: "Toast after undoing a scheduled plan change",
+  },
+  "userSettings.scheduledKeepFailed": {
+    message:
+      "Je geplande wijziging kon niet ongedaan worden gemaakt. Probeer het opnieuw.",
+    description: "Toast when undoing a scheduled plan change fails",
+  },
+  "userSettings.cancelSheetTitle": {
+    message: "{plan} opzeggen?",
+    description: "Title of the sheet shown before cancelling",
+  },
+  "userSettings.cancelSheetKeepUntil": {
+    message:
+      "Je houdt {plan} tot {date}. Daarna zit je op het gratis abonnement: {limits}.",
+    description:
+      "What the reader keeps until the period ends, and the Free limits afterwards",
+  },
+  "userSettings.cancelSheetPlainText": {
+    message:
+      "Je boeken zijn platte tekst — exporteer ze wanneer je wilt. Er wordt niets verwijderd.",
+    description: "Reassurance that cancelling deletes nothing",
+  },
+  "userSettings.cancelSheetOtherOptions": {
+    message: "Andere mogelijkheden",
+    description: "Heading above the cheaper alternative to cancelling",
+  },
+  "userSettings.cancelSheetSwitchToYearly": {
+    message: "Overstappen naar jaarlijks — {price}/maand",
+    description:
+      "Alternative to cancelling: switch to yearly at the per-month price",
+  },
+  "userSettings.cancelSheetDowngradeTo": {
+    message: "Downgraden naar {plan}",
+    description: "Alternative to cancelling: the next lower plan",
+  },
+  "userSettings.cancelSheetReason": {
+    message: "Wat is de belangrijkste reden? (optioneel)",
+    description: "Optional question about why the reader cancels",
+  },
+  "userSettings.cancelReasonTooExpensive": {
+    message: "Te duur",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonMissingFeatures": {
+    message: "Er ontbreekt een functie",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonUnused": {
+    message: "Ik gebruik het niet",
+    description: "Cancellation reason",
+  },
+  "userSettings.cancelReasonSwitchedService": {
+    message: "Ik stap over naar een ander programma",
+    description: "Cancellation reason: moving to another tool",
+  },
+  "userSettings.cancelReasonOther": {
+    message: "Anders",
+    description: "Cancellation reason",
+  },
+  "userSettings.planChangeRequiresAction": {
+    message:
+      "Je bank moet deze betaling goedkeuren. Tot dan verandert er niets; vernieuw deze pagina na de goedkeuring.",
+    description: "The bank must approve the payment before the change applies",
+  },
+  "userSettings.planChangeApproving": {
+    message: "Wachten tot je bank de betaling goedkeurt…",
+    description:
+      "Shown while Stripe asks the bank to approve a plan change's payment",
+  },
+  "userSettings.planChangeApprovePayment": {
+    message: "Betaling goedkeuren",
+    description: "Button that opens Stripe's page to approve the payment",
+  },
+  "userSettings.planChangeFailed": {
+    message:
+      "Je bank heeft de betaling niet goedgekeurd. Er is niets veranderd.",
+    description: "The payment was declined and the plan did not change",
+  },
+  "userSettings.planChangeUseAnotherCard": {
+    message: "Andere kaart gebruiken",
+    description: "Button that opens billing settings to change the card",
+  },
+  "userSettings.featureAutomaticBackups": {
+    message: "Automatische back-ups",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureAutomationIntegrations": {
+    message: "Geavanceerde automatisering en integraties",
+    description: "Plan feature from the pricing table",
+  },
+  "userSettings.featureOidcSso": {
+    message: "Single sign-on (SSO) via OIDC",
+    description:
+      "Plan feature from the pricing table; OIDC and SSO stay as written",
+  },
+  "userSettings.featureMultiEntity": {
+    message: "Consolidatie van meerdere entiteiten",
+    description: "Plan feature from the pricing table",
   },
 };
 

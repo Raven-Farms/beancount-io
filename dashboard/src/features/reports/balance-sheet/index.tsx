@@ -24,6 +24,7 @@ import { BalanceSheetContent } from "./balance-sheet-content";
 import { useReportConversion } from "@/features/reports/components/use-report-conversion";
 import { selectSettledReportData } from "@/features/reports/lib/select-settled-report-data";
 import { useUrlView } from "@/common/hooks/use-url-view";
+import { useQueryRetry } from "@/common/hooks/use-query-retry";
 import { BALANCE_SHEET_VIEWS, DEFAULT_VIEW } from "./search";
 
 /**
@@ -65,6 +66,7 @@ export default function LedgerBalanceSheetPage() {
     data,
     loading: isLoading,
     error,
+    refetch,
   } = useQuery(GetLedgerBalanceSheetDocument, {
     variables: {
       ledgerId: ledgerId,
@@ -76,6 +78,7 @@ export default function LedgerBalanceSheetPage() {
     },
     fetchPolicy: "cache-first",
   });
+  const { failure, retrying, retry } = useQueryRetry(error, refetch);
 
   const settled = selectSettledReportData(
     isLoading,
@@ -87,12 +90,14 @@ export default function LedgerBalanceSheetPage() {
     [data?.getLedgerAccounts],
   );
 
-  if (settled.pending) {
-    return <ReportLoadingState />;
+  if (failure) {
+    return (
+      <ReportErrorState error={failure} onRetry={retry} retrying={retrying} />
+    );
   }
 
-  if (error) {
-    return <ReportErrorState error={error} />;
+  if (settled.pending) {
+    return <ReportLoadingState />;
   }
 
   const balanceSheetData = settled.data;

@@ -133,7 +133,12 @@ Claude Code signed in for real against `https://beancount.io` through its
 CIMD document on 2026-10-08. On 2026-10-16, OpenClaw 2026.10.4 (through
 dynamic registration) and Hermes Agent v0.22.2 (through its CIMD document)
 each signed in, read the ledger, and previewed a write with `dry_run`. The
-other hosts have not been verified with a real sign-in yet.
+Cursor desktop 3.24.18 community connection completed native OAuth, a synthetic
+balance query and a dry-run preview on 2026-10-22. Its
+[dated desktop record](./marketplace-submissions/cursor/native-desktop-rehearsal-20261022.md)
+preserves the approved grant's retention and native-card visibility limits.
+Official Cursor publication and VS Code's native gallery/Copilot journey remain
+separate. The other hosts have not been verified with a real sign-in yet.
 
 | Host                                | Identifies itself by                                            | Redirect the fixture authorizes with                                                                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ----------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -156,9 +161,11 @@ a header there.
 Beancount.io publishes the hosted endpoint to the official MCP Registry
 (`registry.modelcontextprotocol.io`) as **`io.beancount/beancount`** (see
 [Publishing the registry listing](#publishing-the-registry-listing)). Clients,
-subregistries, and aggregators that read the registry — Smithery and PulseMCP
-are among those the registry's own documentation names — install it from there
-on their own schedule. The entry names `https://beancount.io/api-gateway/mcp` and nothing else:
+subregistries, and aggregators may import that record on their own schedules.
+The [marketplace inventory and submission packet](./mcp-marketplaces.md) tracks
+actual directory records and external review gates separately; registry
+publication does not establish gallery inclusion.
+The entry names `https://beancount.io/api-gateway/mcp` and nothing else:
 no header and no package, so a client that installs it meets the same `401` and
 discovery chain as one configured by hand, and signs in with the OAuth flow
 above. Claude Code and Codex do not browse the registry; configure them with the
@@ -250,14 +257,14 @@ the principal inputs; inspect the schema before constructing a call.
 
 | Tool                         | Inputs and behavior                                                                                                                                                       | Capability |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| `runBqlQuery`                | `{ "query": "BALANCES" }`; returns formatted query output as a string.                                                                                                    | Read       |
-| `runBqlQueryStructured`      | `{ "query": "BALANCES" }`; returns typed column metadata and rows, or a structured text result, matching REST JSON and GraphQL `queryShell`.                              | Read       |
+| `runBqlQuery`                | `{ "query": "BALANCES" }`; returns formatted query output as a string, cut at 1,000 rows or 100 KB with a closing `[truncated: …]` line.                                  | Read       |
+| `runBqlQueryStructured`      | `{ "query": "BALANCES" }`; returns column metadata (`dtype` labels) and rows, or a structured text result, matching REST JSON and GraphQL `queryShell`.                       | Read       |
 | `listLedgers`                | Optional `page`, `limit` (at most 100); omit both for every ledger. A pinned credential returns its one ledger. Start here, then `getLedgerContext`.                      | Read       |
 | `checkLedger`                | `{}`; bean-check errors with file and line, entry counts, and the latest commit, in one call. Call after any write.                                                       | Read       |
 | `getLedgerContext`           | Optional `payeeLimit`; attributes, open accounts, currencies, payees, years, and source files with counts.                                                                | Read       |
 | `listLedgerEntries`          | Optional `account`, `filter`, `time`, `directiveTypes`, `limit`, `offset`; journal entries with the `entry_hash` other tools take.                                        | Read       |
-| `getEntryContext`            | `entryHash` from `listLedgerEntries`; the source context around one entry — read before editing it.                                                                       | Read       |
-| `listLedgerFiles`            | Optional `dir_path`; lists one directory level, directories first.                                                                                                        | Read       |
+| `getEntryContext`            | `entryHash` from `listLedgerEntries`; the source context around one entry — read before editing it. `generated_from` names the source of a plugin or pad copy.            | Read       |
+| `listLedgerFiles`            | Optional `dir_path`; lists one directory level, directories first. A `dir_path` that does not exist, or names a file, is `NOT_FOUND`.                                    | Read       |
 | `readLedgerFiles`            | `files: [{ path, start_line?, end_line? }]`; returns text and line-range metadata.                                                                                        | Read       |
 | `appendLedgerText`           | `text`, optional `path`, `dry_run`, `allowInvalid`; appends Beancount directive text, routed by type and date and inserted in date order.                                 | Write      |
 | `refreshManagedPrices`       | Optional `ledger`; re-fetches every managed price include (`include "https://beancount.io/prices/BTC-USD"`) now and returns each source's status. Never edits the ledger. | Write      |
@@ -326,7 +333,7 @@ operation's arguments without `operation`. For the file tools, drop
 | `removeLedgerCollaborator`      | `manageLedgerCollaborators` `delete`     |
 | `leaveLedger`                   | `manageLedgerCollaborators` `leave`      |
 | `createPullRequest`             | `managePullRequests` `create`            |
-| `approvePullRequest`            | `managePullRequests` `approve`           |
+| `mergePullRequest`              | `managePullRequests` `approve`           |
 | `rejectPullRequest`             | `managePullRequests` `reject`            |
 | `createLedgerFiles`             | `editLedgerFiles` `create`               |
 | `updateLedgerFiles`             | `editLedgerFiles` `update` and `replace` |
@@ -350,10 +357,24 @@ own files together, so a mixed change is now one commit per kind.
 ```
 
 It parses the text into directives and refuses anything that is not one —
-prose, a diff, JSON — before writing. Each directive goes to the file the
+prose, a diff, JSON — before writing. It also refuses `option`, `plugin` and
+`include` lines with `BAD_USER_INPUT` naming the line: they reconfigure the
+whole ledger rather than record an entry, so change them deliberately with
+`updateLedgerFiles`. `pushtag`/`poptag` and `pushmeta`/`popmeta` around
+entries are applied to them — the tag written onto each enclosed transaction,
+the metadata under each enclosed directive — and the statements themselves are
+not written, because each entry moves to its date position; a push that is
+never popped, or a pop with no push, is refused naming the line. Each directive goes to the file the
 ledger's own `bcio` options assign its type and date, unless `path` names one,
 and is inserted after the last directive dated on or before it rather than at
-the end of the file. A file whose own directives are out of date order gets
+the end of the file. A `path` must be a file the ledger loads — one of its
+`source-files` — or the call is refused as `BAD_USER_INPUT`: an entry written
+anywhere else would never appear in a report. Create and `include` a new file
+first. A file the routing rules pick that nothing includes — a new year's file
+under per-year includes — gains an `include` in `main.bean` in the same commit,
+and the message says so ("main.bean now includes txns/2027.bean"); a glob
+include that already covers it needs nothing (w23/062). The same applies to
+`addLedgerEntries`. A file whose own directives are out of date order gets
 them appended, and says so in `appendedUnsorted`.
 
 Before committing, it bean-checks the projected ledger. New errors are a
@@ -379,8 +400,36 @@ One tool per kind of change, each batching its files into one commit:
 | Tool                | Each `files` item                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `createLedgerFiles` | `path`, `content`: a new file's text.                                                                              |
-| `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text). |
-| `deleteLedgerFiles` | `path`.                                                                                                            |
+| `updateLedgerFiles` | `path` with either `old_string`, `new_string` (an exact replacement; the old text must occur once) or `content` (the complete replacement text) and an optional `sha`. |
+| `deleteLedgerFiles` | `path` and an optional `sha`.                                                                                      |
+
+`readLedgerFiles` returns each file's blob `sha`. Pass it back on a `content`
+rewrite or a delete: if another writer committed since you read the file, the
+write is refused as `CONFLICT` — "`<path>` changed since you read it" — and
+nothing changes. Without `sha`, a whole-file `content` write or a delete
+replaces whatever is there now, including changes you never saw. An
+`old_string` edit is guarded by its own text, which must still match.
+
+Several items may name the same file. They apply in order, each exact-text
+replacement matching the text the items before it produced, and the file is
+committed once with the result, so the preview's diff is what lands. A path
+may not be created twice, created and then deleted, or changed after it is
+deleted in one call; those are refused as `BAD_USER_INPUT` before anything is
+read.
+
+`main.bean` is the ledger's entry point, so deleting it (`deleteLedgerFiles`,
+REST `DELETE`, GraphQL `deleteLedgerFile`) and renaming it away are refused as
+`BAD_USER_INPUT`; replace its content to rewrite it. A preview of any change
+that would leave the ledger without it reports that as a new error.
+
+A file that is not valid UTF-8 (a Windows-1252 export, say) reads back from
+`readLedgerFiles` and REST `GET …/files/{path}` with `lossy: true`: its
+undecodable bytes show as U+FFFD, and GraphQL `getLedgerFile` returns the exact
+bytes as base64. Anything that would rewrite such a file from that text — an
+`old_string` edit, `appendLedgerText`/`addLedgerEntries`, or an include rewrite
+in `renameLedgerFile` — is refused as `BAD_USER_INPUT` naming the file, so no
+write replaces bytes it never touched. Replacing the whole content, deleting
+the file, and renaming it (which moves its bytes unchanged) still work.
 
 Send plain UTF-8 text, not base64. For example, these are arguments to
 `updateLedgerFiles` for a preview; use an existing path and exact text from your
@@ -466,8 +515,11 @@ credential pin and file-read permission, and signs the URL. REST exposes this
 at `GET /api-gateway/v1/asset-download-url` with the same query arguments.
 
 `beancount://{owner}/{name}/archive-download-url` returns the existing HTTP URL
-for `main.zip`. Fetch that URL using the same session cookie, OAuth bearer
-token, or API key. Every archive fetch checks access again and returns a
+for `main.zip`, on the server's public origin. It is a REST endpoint: fetch it
+with a personal API key (`x-api-key`) or a signed-in browser session. An MCP
+OAuth token (audience `{issuer}/api-gateway/mcp`) is scoped to the MCP
+endpoint by design ([ADR 0007](../../../docs/adrs/ADR007-backend-v2-mcp-surface.md)) and is refused there with
+`UNAUTHENTICATED`. Every archive fetch checks access again and returns a
 `private, no-store` response. Credentials are never embedded in archive URLs.
 
 Asset URLs use object-storage signatures and their configured expiry. Previously
@@ -481,10 +533,27 @@ For direct archive delivery, read
 The original Content-Disposition value is retained in
 `_meta["beancount/contentDisposition"]`. Decode `blob` to save the archive.
 
+`{archive}` is a branch, tag, or commit followed by `.zip` or `.tar.gz`. Any
+other name is refused with `BAD_USER_INPUT` before the repository is contacted.
+A reference that names no branch, tag, or commit — including a well-formed but
+unknown full commit SHA — answers `NOT_FOUND` promptly. `SERVICE_UNAVAILABLE`
+means the repository host itself failed, and only that is worth a retry.
+
+The blob is capped at 8 MiB of archive bytes. A resource read is one JSON-RPC
+message, so the archive is held whole in memory, and base64 adds a third. A
+larger archive is refused with `OPERATION_NOT_ALLOWED` (JSON-RPC `-32003`) as
+soon as its `Content-Length` or the bytes read so far pass the cap, and the
+error's `hint` names `beancount://{owner}/{name}/archive-download-url`. The URL
+that resource returns streams at any size, but only with a personal API key or
+browser session, as above; a client connected only through MCP OAuth cannot
+fetch an archive larger than the cap. It names `main.zip`, and its last path
+segment takes any other `<ref>.zip` or `<ref>.tar.gz`.
+
 MCP and both REST spellings share the existing 30-downloads-per-minute
-credential bucket. Every download checks current ledger access. REST
-streams the response; MCP buffers it to produce a base64 resource payload.
-GraphQL's deliberate raw-byte exclusion remains unchanged.
+credential bucket; a refused read still spends one. Every download checks
+current ledger access. REST streams the response from Gitea; MCP buffers it,
+up to the cap, to produce a base64 resource payload. GraphQL's deliberate
+raw-byte exclusion remains unchanged.
 
 ### Pull requests
 
@@ -502,7 +571,8 @@ Three tools, each requiring repository write authority and a `ledger` target
   differs from base and refuses a diff-less branch unless `fastForward: true`
   skips verification. The result carries the PR's actual `baseBranch`/`headBranch`
   refs — use those to follow up, not the requested names.
-- `approvePullRequest` requires `prNumber` and merges the PR.
+- `mergePullRequest` requires `prNumber` and merges the PR (GraphQL and REST
+  call this operation approve).
 - `rejectPullRequest` requires `prNumber` and closes it without merging.
 
 Reviews apply immediately; preview is unsupported. Repository refusals return
@@ -523,20 +593,57 @@ for review. The three mutations use POST; review bodies are `{}`.
 ### Ledger lifecycle
 
 `createLedger`, `updateLedger`, and `deleteLedger` require administrative
-authority and apply changes immediately. They offer no preview.
+authority and apply changes immediately. Creation can be previewed first with
+`previewLedgerSetup`; update and delete offer no preview.
 
-- `createLedger` requires `name` and accepts `description`, `private`, and `template`
-  (`STARTER` or `SAMPLE`; omission selects starter files). Names use lowercase
-  letters, numbers, hyphens, and underscores, up to 100 characters. Creation
+- `previewLedgerSetup` requires `setup`, the same setup specification
+  `createLedger` accepts ([ADR 021](../../../docs/adrs/ADR021-backend-v2-ledger-creation-experience.md)). It creates nothing and
+  returns the resolved `preset`, `operatingCurrency`, and `historyStart`, the
+  `accounts` the ledger would open, and the `files` it would write, keyed by
+  path, plus `validation: { ok, errors }` — bean-check's verdict on those
+  files, run by the ledger service before anything exists. `createLedger`
+  with a `setup` runs the same check and refuses with `VALIDATION_FAILED` on
+  `setup` when the new ledger would not load. A specification `createLedger`
+  would refuse — an unknown preset or capability, an unsupported currency, an
+  invalid date, a known opening on `Equity:OpeningBalances` itself — is
+  refused here with the same `setup` validation error. It needs the same
+  account authority as creation.
+- `createLedger` requires `name` and accepts `description`, `private`, and either
+  `template` (`STARTER` or `SAMPLE`) or `setup`; passing both is a validation
+  error, and omitting both selects starter files. `setup` takes a `preset` and
+  optional `title`, `operatingCurrency`, `historyStart`, `capabilities`, and
+  `accounts`. Names use lowercase
+  letters, numbers, and underscores joined by single hyphens, up to 100
+  characters — the name the ledger is stored under. A name the service would
+  store differently (`x-`, `-x`, `a--b`) is refused, naming the form to use
+  (w23/064); the same rule applies to `updateLedger`'s `name`. Creation
   uses the authenticated account and accepts no `ledger` selector; the existing
   account policy also permits creation with a ledger-pinned admin credential.
-- `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`.
+- `createLedger` also accepts `requestId` (1–200 characters) for safe retries.
+  Repeating a creation with the same `requestId` and the same inputs returns
+  the ledger the first call created instead of creating a second one; reusing
+  it with different inputs is a validation error, and a repeat while the first
+  call is still running is a conflict. A call that fails — a plan limit, a
+  refused name, an outage — releases its `requestId`, so repeating it runs the
+  creation again. A successful `requestId` is remembered for 24 hours.
+- `private` controls who can read the ledger. On create, an omitted or null
+  value keeps it private; `false` publishes it, readable by anyone.
+- `updateLedger` accepts `ledger` and optional `name`, `description`, and `private`;
+  an omitted field stays as it is.
+- A name another ledger holds is a `CONFLICT` on create or rename. So is a
+  renamed ledger's former name: the repository host keeps it as a redirect to
+  the renamed ledger, so the name stays taken though no ledger has it, and the
+  refusal (reason code `LEDGER_NAME_RESERVED`) names the ledger it redirects to
+  (w23/061). Renaming a ledger back to its own former name is allowed.
 - `deleteLedger` accepts only `ledger` and returns `{ "ledgerId": "owner/name" }`.
 
 For update/delete, unpinned credentials must supply `ledger`; pinned credentials
 may omit it and cannot select another ledger. Creation and update return ledger
-metadata and clone URLs. REST exposes `POST /api-gateway/v1/ledgers` and
-`PUT`/`DELETE /api-gateway/v1/ledgers/{owner}/{name}`.
+metadata and clone URLs. REST exposes `POST /api-gateway/v1/ledgers/preview`,
+`POST /api-gateway/v1/ledgers`, and
+`PUT`/`DELETE /api-gateway/v1/ledgers/{owner}/{name}`; GraphQL exposes the
+`previewLedgerSetup` query and the `createLedger`, `updateLedger`, and
+`deleteLedger` mutations.
 
 Deletion uses the same cleanup sequence as GraphQL: it attempts remote bank
 revocation, then deletes local bank metadata and the repository. If repository
@@ -564,7 +671,10 @@ credential can omit it.
 | `leaveLedger`              | No collaborator or permission argument                                       | Remove the authenticated caller. Owners cannot leave their own ledger.                                                        |
 
 These tools apply immediately; preview is not supported. Undeclared arguments,
-including `dry_run`, are rejected. A membership removal affects the next
+including `dry_run`, are rejected. Only an explicit collaborator can leave: the
+owner, or a reader of a public ledger who holds no grant, gets
+`OPERATION_NOT_ALLOWED` saying why, while a caller who cannot see the ledger
+still gets `NOT_FOUND` (w23/063). A membership removal affects the next
 protected call.
 
 ## Resources
@@ -603,7 +713,20 @@ Journal resources are `journal`, `plaintext-journal`, `account-journal`, and
 Journal subtype filters (`directiveTypes`, `transactionSubtypes`,
 `documentSubtypes`, `customSubtypes`) are JSON-encoded string arrays in URL
 parameters, for example `directiveTypes=%5B%22Transaction%22%5D`. Empty arrays
-are preserved. Plaintext journal returns `{ "content": "..." }`.
+are preserved. Values match case-insensitively, so `"transaction"` (the
+spelling `addLedgerEntries` takes) selects the same entries as `"Transaction"`.
+`directiveTypes` takes `Transaction`, `Balance`, `Commodity`, `Close`, `Custom`,
+`Document`, `Event`, `Note`, `Open`, `Pad`, and `Price`; `transactionSubtypes`
+takes `cleared`, `pending`, and `other`; `documentSubtypes` takes `discovered`
+and `linked`; `customSubtypes` takes `budget`. Any other value is refused with
+`BAD_USER_INPUT` on every surface, rather than matching nothing.
+Plaintext journal returns `{ "content": "...", "total": N, "truncated": … }`
+and takes `limit` (1–1,000 entries) and `offset`. Every page keeps the
+ledger's option header, so each one loads on its own; `total` counts the
+entries the filters select and `truncated` says whether more remain. Without
+`limit`, the MCP resource returns the first 200 entries — a whole ledger's text
+can run to hundreds of kilobytes — while REST and GraphQL return every entry,
+the export the dashboard downloads.
 
 Account journal requires `account`, accepts `filter`, `time`, `limit`, `offset`,
 `with_children`, and `conversion`, and defaults to 20 entries, offset 0,
@@ -627,10 +750,17 @@ those entries, including counterpart accounts; zero-count accounts are omitted
 and rows are sorted by account name.
 
 By default (`shape=summary`) REST and MCP return each statement as totals
-and the nonzero accounts behind them, in one stated `currency`. The balance
-sheet adds `valuation`: `units` (positions unconverted), `cost` (booked cost),
-or `latest-price` (a currency conversion or `at_value`, priced at the ledger's
-most recent price). `asOf` is the position cut-off, not the price date, so a
+and the nonzero accounts behind them, in one stated `currency`. Whatever the
+other currencies hold is not added in, but it is not hidden either: when the
+stated currency leaves something out, the summary carries `otherCurrencies`, a
+map from each other currency or commodity to the amount its headline number
+excludes — net worth on the balance sheet and overview, `net` on the income
+statement, each interval's `total` — so `conversion=units` on a ledger with
+stocks lists them there. The balance sheet adds `valuation`: `units`
+(positions unconverted), `cost` (booked cost), or `latest-price` (a currency
+conversion or `at_value`, priced at the ledger's most recent price). A
+conversion to a currency the ledger has no prices for converts nothing, so it
+reads `units` and reports in the currency the data does carry. `asOf` is the position cut-off, not the price date, so a
 historical window shows its positions at the latest recorded prices. `netWorth` is always
 `assets + liabilities`, on the same basis as `byAccount`. The income
 statement's `period` gives `to`, the statement's last day, and `time`, the
@@ -652,9 +782,11 @@ Collaborator reads also require `ledger.admin` and current administrative
 access, even though they do not modify data:
 
 - `beancount://{owner}/{name}/collaborators{?page,limit}` lists members and their
-  permissions, defaulting to page `1` and limit `10`.
+  permissions, defaulting to page `1` and limit `10`, at most 50 per page.
 - `beancount://{owner}/{name}/collaborators/permission{?collaborator}` reads one
-  member's permission and user information. `collaborator` is required.
+  member's permission and user information. `collaborator` is required and
+  must be the owner or a collaborator; any other name, whether or not the
+  account exists, answers `NOT_FOUND` with the same message.
 
 Optional user fields omitted in REST/MCP appear as `null` when selected in
 GraphQL. The workflow preserves its existing behavior: a failed per-member
@@ -894,13 +1026,28 @@ The text block is what a person would read and `structuredContent` is what a
 program parses. `runBqlQuery` leads its text block with the canonical row count
 from the same query execution, followed by the rendered table. Multiline cells
 and directive postings do not add result rows. `structuredContent.result`
-remains the exact rendered string, including embedded and trailing newlines.
+remains the exact rendered string, including embedded and trailing newlines, up
+to a ceiling: past 1,002 lines (header, separator, and 1,000 rows) or 100 KB,
+the text is cut at a line boundary and ends with a `[truncated: showing the
+first N of M lines (B of T bytes) …]` line. The lead line then reads
+`3209 rows (output truncated; …)`. The count is still the whole result's. Add
+`LIMIT` or a narrower `WHERE`, or use `runBqlQueryStructured`, to see the rest.
+REST and GraphQL `queryShellText` return the full text.
 
 When an older ledger service omits count metadata, or reports an unknown count,
 the text begins `BQL result — row count unavailable` and preserves the readable
-result. `runBqlQueryStructured` returns typed rows instead: its `rowCount` counts
+result. `runBqlQueryStructured` returns a table with column metadata instead: its `rowCount` counts
 the rows returned, capped at 1,000, and `truncated` says whether rows were
 dropped. Text results retain their full count.
+
+BQL `dtype` labels currently come from the ledger service's inference, not a
+native expression schema. Numeric-looking or date-looking text and renamed
+projections can be labelled incorrectly; empty or entirely null columns fall
+back to column names. Scalar text and decimal strings preserve their values,
+including leading zeros and precision. Do not convert an identifier to a number
+solely because its inferred `dtype` says `Decimal`. REST JSON, GraphQL
+`queryShell` and `runBqlQueryStructured` share the same producer metadata and
+this [known type limitation](../../ledger/README.md#bql-column-types).
 
 ```json
 { "ok": true, "result": "tool-specific payload" }
@@ -995,9 +1142,11 @@ SSE responses. See the [OAuth deployment contract](../README.md#oauth-deployment
 and [well-known path inventory](../../../docs/adrs/ADR009-backend-v2-well-known-paths.md).
 
 `/.well-known/mcp.json` is a Beancount discovery manifest with the endpoint and
-descriptor-derived tool/resource catalogs. Its current `auth.scopes` field
-contains the old `read`/`write` labels; use OAuth protected-resource metadata and
-the `ledger.*` scope names above when requesting permissions.
+descriptor-derived tool, resource and prompt catalogs. Each prompt lists its
+arguments by name, description and requiredness, as `prompts/list` does. Its
+`auth.scopes` field lists the `ledger.*` scope names above; OAuth
+protected-resource metadata remains the authoritative source when requesting
+permissions.
 
 From `backend-cluster/backend-v2/`, run:
 
@@ -1116,7 +1265,8 @@ All three require repository read access to the URI's ledger:
 - `beancount://{owner}/{name}/latest-commit{?branchName}` returns the latest
   commit, or `null` for an empty repository. `branchName` defaults to `main`.
 - `beancount://{owner}/{name}/commits{?branch,page,limit}` returns commit history.
-  Defaults are `main`, page `1`, and limit `30`.
+  Defaults are `main`, page `1`, and limit `30`; a page holds at most 50, so
+  page through with `page`.
 - `beancount://{owner}/{name}/commit-details{?sha}` requires `sha` and returns
   metadata, parents, file statistics, and a unified diff.
 
@@ -1173,7 +1323,7 @@ The MCP resources below match public REST routes and GraphQL list queries:
 | `beancount://social/starred-repositories` | `/api-gateway/v1/social/starred-repositories` | `getUserStarredRepos` |
 
 Every route/resource requires a `username` query argument and accepts `page`
-and `limit`, defaulting to 1 and 20. Encode query values once. Responses retain
+and `limit`, defaulting to 1 and 20, at most 50 per page. Encode query values once. Responses retain
 user/repository fields and ISO timestamps. `total` is the returned page's size,
 not the overall collection size. The shared service currently returns an empty
 page on upstream failure, so an empty result does not establish that the user
@@ -1288,8 +1438,18 @@ ledger; unpinned callers must select it. The protected workflow validates both
 repository-relative paths and moves the file preserving its content in one
 atomic commit (default message `Rename oldPath → newPath`). When `oldPath`
 is still `include`d, the rename is refused unless `updateIncludes: true`
-rewrites those lines in the same commit. The result contains `oldPath` and
-`newPath`. Write capability and current content-write access are required.
+rewrites those lines in the same commit. An include counts when its target
+resolves to `oldPath` the way the ledger loads it, relative to the directory of
+the file that declares it, so `include "x.bean"` in `d/inc.bean` names
+`d/x.bean`. A rewritten include names `newPath` relative to that same
+directory, keeps a leading `./` or `/`, and is escaped so it reads back as the
+same path. A glob include cannot be rewritten for one file: when `oldPath`
+matches a glob that `newPath` would not, the rename is refused even with
+`updateIncludes`. The moved file's own relative includes are held to the same
+rule: a move to another folder that would point them elsewhere is refused
+without `updateIncludes` and rewritten with it, and a glob in the moved file
+is refused. The result contains `oldPath`, `newPath` and `updatedIncludes`. Write capability and current content-write access are
+required.
 
 This operation exposes GraphQL's existing contract: it has no caller-supplied
 SHA or preview flag. Repository conflicts remain errors.
@@ -1301,6 +1461,9 @@ Three tools reach the existing journal service:
 - `updateEntrySource`: `entryHash`, `sha256sum`, and `newContent`; returns
   `message`, `newSha256sum`, and `newEntryHash` — the request's `entryHash` is
   stale after the commit, so use `newEntryHash` for the next edit.
+  `newContent` must be exactly one dated directive with its indented lines
+  (comments may surround it); an `option`, `plugin` or `include` line, a
+  second entry, or nothing at all is refused as `BAD_USER_INPUT`.
 - `deleteEntrySource`: `entryHash` and `sha256sum`; returns `message` and
   `entryHash`.
 - `deleteEntrySources`: `entries: [{entryHash, sha256sum}]`; returns `message`
@@ -1311,6 +1474,13 @@ only its own arguments and optional `ledger`; a pinned credential may omit the
 ledger. Current content-write access is required. Each delegates source
 validation and mutation to the ledger service and does not support preview.
 
+An edit or delete that would leave the ledger with a bean-check error it did
+not have — deleting an entry a balance assertion depends on, or re-dating it
+past one — is refused before anything is committed, with `VALIDATION_FAILED`
+and each new error named in `newLedgerErrors`, the same refusal
+`addLedgerEntries` gives (w21/m1). Errors the ledger already had never block.
+Pass `allowInvalid: true` to commit the write anyway.
+
 ### Insert structured directives
 
 `addLedgerEntries` accepts `entries: [{type, entry}]` and optional `ledger`.
@@ -1320,11 +1490,20 @@ the REST input shapes. GraphQL instead uses an uppercase enum and a payload fiel
 named after the directive; its budget interval enum maps to lowercase here.
 
 The tool uses the real entry writer, including file routing and the normal web
-quota policy. Every write result carries the write outcome first: a `summary`
+quota policy. A routed file nothing includes is included from `main.bean` in
+the same commit, and the summary says so (w23/062). Every write result carries the write outcome first: a `summary`
 of what was written and how many new bean-check errors it introduced, then
 `wrote` (files touched), `entryHashes`, and `validation` (`errorsBefore`,
 `errorsAfter`, `newErrors`) — learn about a broken ledger from the write
-result itself instead of re-reading the errors resource. A transaction with at
+result itself instead of re-reading the errors resource. `addLedgerEntries`
+and `appendLedgerText` return one hash per entry they committed, in request
+order — what `getEntryContext`, `updateEntrySource` and `deleteEntrySource`
+take — and REST and GraphQL return the same `entryHashes` (w23/060). The
+list is empty on a dry run, or when the hashes could not be resolved after
+the commit; the write still stands. When bean-check cannot
+run before or after the write, `validation` adds `checked: false` and
+`checkError`, and the summary says the ledger is unverified instead of
+claiming no new errors; the write itself still stands. A transaction with at
 most one amount omitted is written elided; any other imbalance is refused with
 `UNBALANCED`. Like `appendLedgerText`, it bean-checks the projected ledger
 before committing: entries that would add new errors — a second `open` for an

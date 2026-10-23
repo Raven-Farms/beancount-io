@@ -36,6 +36,12 @@ const bgCollaboration: Record<string, TranslationEntry> = {
     message: "Грешка при зареждане на сътрудниците",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "Планът на собственика на тази книга не позволява повече сътрудници. Само собственикът може да надгради за повече.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Неуспешно добавяне на сътрудник",
     description: "Error message when adding collaborator fails",

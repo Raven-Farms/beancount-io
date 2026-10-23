@@ -36,6 +36,12 @@ const enCollaboration: Record<string, TranslationEntry> = {
     message: "Error Loading Collaborators",
     description: "Error title when collaborators fail to load",
   },
+  "collaboration.ownerPlanLimitReached": {
+    message:
+      "This ledger's owner is on a plan that allows no more collaborators. Only the owner can upgrade for more.",
+    description:
+      "Shown when adding a collaborator to someone else's ledger hits the owner's plan limit; only the owner can upgrade.",
+  },
   "collaboration.failedToAddCollaborator": {
     message: "Failed to add collaborator",
     description: "Error message when adding collaborator fails",

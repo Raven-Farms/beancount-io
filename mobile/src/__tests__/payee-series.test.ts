@@ -1,3 +1,4 @@
+import { detectRecurrence } from "../screens/merchants-screen/selectors/detect-recurrence";
 import {
   buildPayeeSeriesBql,
   mapPayeeSeries,
@@ -114,5 +115,141 @@ describe("mapPayeeSeries", () => {
         ]),
       ).size,
     ).toBe(0);
+  });
+});
+
+// w21/173: a payee that is only ever a transfer never entered the series,
+// so it was never detected and a manual mark read "Not enough history".
+describe("a payee that is only ever a transfer", () => {
+  const WITH_ACCOUNT = [...TYPES, { name: "account", dtype: "str" }];
+  const saturdays = [
+    "2026-09-05",
+    "2026-09-12",
+    "2026-09-19",
+    "2026-09-26",
+    "2026-10-03",
+    "2026-10-10",
+    "2026-10-17",
+  ];
+
+  it("reads its debited legs, and is detected weekly", () => {
+    const mapped = mapPayeeSeries(
+      table(
+        saturdays.map((date) => [
+          date,
+          "ATM Withdrawal",
+          "100.00",
+          "USD",
+          "Assets:Cash",
+        ]),
+        WITH_ACCOUNT,
+      ),
+    );
+    const series = mapped.get("ATM Withdrawal")!;
+    expect(series.length).toBe(7);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("weekly");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(100);
+    expect(verdict?.nextExpected).toBe("2026-10-24");
+  });
+
+  it("keeps a payee's Expenses legs when it has them", () => {
+    const mapped = mapPayeeSeries(
+      table(
+        [
+          ["2026-10-01", "Grocer", "40.00", "USD", "Expenses:Food"],
+          // A refund's debited cash leg is not the payee's spending.
+          ["2026-10-02", "Grocer", "5.00", "USD", "Assets:Cash"],
+        ],
+        WITH_ACCOUNT,
+      ),
+    );
+    expect(mapped.get("Grocer")!.map((p) => p.amount)).toEqual([40]);
+  });
+
+  // w21/334: one ATM fee (an Expenses leg) anywhere in the window made the
+  // payee read money legs only, which left a one-event series.
+  it("keeps the transfer series when a single fee leg is on file", () => {
+    const rows = [
+      ...saturdays.map((date) => [
+        date,
+        "QA SWEEP",
+        "100.00",
+        "USD",
+        "Assets:Cash",
+      ]),
+      ["2026-07-03", "QA SWEEP", "2.50", "USD", "Expenses:Bank:Fees"],
+      // And a fee on a day that also has a transfer.
+      ["2026-10-10", "QA SWEEP", "2.50", "USD", "Expenses:Bank:Fees"],
+    ];
+    const series = mapPayeeSeries(table(rows, WITH_ACCOUNT)).get("QA SWEEP")!;
+    expect(series.length).toBe(7);
+    expect(series.every((point) => point.amount === 100)).toBe(true);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("weekly");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(100);
+    expect(verdict?.isApproximate).toBe(false);
+  });
+
+  it("still prefers the money legs when they cover more days", () => {
+    const rows = [
+      ["2026-10-01", "Grocer", "40.00", "USD", "Expenses:Food"],
+      ["2026-10-08", "Grocer", "45.00", "USD", "Expenses:Food"],
+      ["2026-10-02", "Grocer", "5.00", "USD", "Assets:Cash"],
+    ];
+    expect(
+      mapPayeeSeries(table(rows, WITH_ACCOUNT))
+        .get("Grocer")!
+        .map((p) => p.amount),
+    ).toEqual([40, 45]);
+  });
+
+  it("asks for debited legs alongside the money legs", () => {
+    const bql = buildPayeeSeriesBql("2023-07-20");
+    expect(bql.includes(", account WHERE")).toBe(true);
+    expect(bql.includes(" OR number > 0)")).toBe(true);
+  });
+});
+
+// w21/336: legs of one charge are summed, and the float sum made an unchanged
+// price read "~".
+describe("a steady price whose legs sum with float noise", () => {
+  const WITH_ACCOUNT = [...TYPES, { name: "account", dtype: "str" }];
+
+  it("sums split legs cleanly and is not approximate", () => {
+    const rows: unknown[][] = [];
+    for (let month = 1; month <= 7; month += 1) {
+      rows.push([
+        `2026-0${month}-05`,
+        "Streamer",
+        "11.87",
+        "USD",
+        "Expenses:Media",
+      ]);
+    }
+    for (const month of [8, 9, 10]) {
+      rows.push([
+        `2026-${String(month).padStart(2, "0")}-05`,
+        "Streamer",
+        "10.99",
+        "USD",
+        "Expenses:Media",
+      ]);
+      rows.push([
+        `2026-${String(month).padStart(2, "0")}-05`,
+        "Streamer",
+        "0.88",
+        "USD",
+        "Expenses:Media:Tax",
+      ]);
+    }
+    const series = mapPayeeSeries(table(rows, WITH_ACCOUNT)).get("Streamer")!;
+    expect(series.map((point) => point.amount).slice(-3)).toEqual([
+      11.87, 11.87, 11.87,
+    ]);
+    const verdict = detectRecurrence(series, "2026-10-21");
+    expect(verdict?.cadence).toBe("monthly");
+    expect(verdict?.typicalAmountByCurrency.USD).toBe(11.87);
+    expect(verdict?.isApproximate).toBe(false);
   });
 });

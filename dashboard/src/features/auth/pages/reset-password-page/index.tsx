@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useSearch, Link } from "@tanstack/react-router";
+import { useSearch, Link } from "@tanstack/react-router";
+import { redirectToLogin } from "@/features/auth/lib/redirect-to-login";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +30,10 @@ import { PasswordAuthDisabled } from "@/features/auth/components/google-sign-in-
 import { useAuthProviders } from "@/features/auth/hooks/use-auth-providers";
 import { useErrorMessage } from "@/common/lib/errors/error-message";
 import { PageSEO } from "@/common/components/seo/page-seo";
+import {
+  newPasswordSchema,
+  useNewPasswordErrorMessage,
+} from "@/features/auth/lib/password-rule";
 
 type ResetPasswordFormData = {
   newPassword: string;
@@ -43,7 +48,7 @@ export default function ResetPasswordPage() {
   const { password: passwordEnabled } = useAuthProviders();
   const { t } = useTranslations();
   const formatError = useErrorMessage();
-  const navigate = useNavigate();
+  const formatResetError = useNewPasswordErrorMessage();
   const search = useSearch({ from: "/auth/reset-password" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -51,11 +56,7 @@ export default function ResetPasswordPage() {
   // Create Zod schema with translated messages
   const resetPasswordSchema = z
     .object({
-      newPassword: z
-        .string()
-        .min(1, t("auth.newPasswordRequired"))
-        .min(6, t("auth.newPasswordMinLength"))
-        .max(128, t("auth.newPasswordMaxLength")),
+      newPassword: newPasswordSchema(t),
       confirmPassword: z.string().min(1, t("auth.confirmPasswordRequired")),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
@@ -138,15 +139,15 @@ export default function ResetPasswordPage() {
 
       if (response.data?.resetPassword.success) {
         setSuccess(true);
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          void navigate({ to: "/auth/login" });
-        }, 2000);
+        // Redirect to login after 2 seconds. A document load, not a router
+        // navigation: the reset ended this browser's session too, and the
+        // router still holds the signed-in profile it loaded before.
+        setTimeout(redirectToLogin, 2000);
       } else {
         setError(t("auth.failedToResetPassword"));
       }
     } catch (err: unknown) {
-      setError(formatError(err));
+      setError(formatResetError(err));
     }
   };
 
@@ -361,7 +362,6 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     placeholder={t("auth.enterYourNewPassword")}
                     className="w-full"
-                    maxLength={128}
                     {...register("newPassword")}
                     aria-invalid={errors.newPassword ? true : undefined}
                     aria-describedby={
@@ -387,7 +387,6 @@ export default function ResetPasswordPage() {
                     autoComplete="new-password"
                     placeholder={t("auth.confirmYourNewPassword")}
                     className="w-full"
-                    maxLength={128}
                     {...register("confirmPassword")}
                     aria-invalid={errors.confirmPassword ? true : undefined}
                     aria-describedby={

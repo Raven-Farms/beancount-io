@@ -10,18 +10,20 @@ import { formatNumber } from "@/common/lib/format/format-number";
  *   const formatNum = useFormatNumber();
  *   formatNum(1234567.89) // "1,234,567.89" or "1234567.89" depending on the option
  *   formatNum(4559.8, "USD") // "4,559.80": ISO currencies use their minor units
+ *   formatNum(4.00995, "ETH", 5) // "4.00995": a commodity keeps its source digits
  */
 export function useFormatNumber(): (
   value: number,
   currency?: string,
+  fractionDigits?: number,
 ) => string {
   const { ledgerData } = useLedger();
   const { i18n } = useTranslations();
   const renderCommas = ledgerData.options.renderCommas ?? true;
   const language = i18n.language;
   return useCallback(
-    (value: number, currency?: string) =>
-      formatNumber(value, renderCommas, language, currency),
+    (value: number, currency?: string, fractionDigits?: number) =>
+      formatNumber(value, renderCommas, language, currency, fractionDigits),
     [renderCommas, language],
   );
 }

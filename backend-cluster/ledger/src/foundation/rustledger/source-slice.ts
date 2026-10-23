@@ -137,6 +137,22 @@ const DATE_PREFIX = /^\d{4}-\d{2}-\d{2}\b/;
 const PUSH_POP_TAG_RE = /^(pushtag|poptag)[^\S\r\n]+#(\S+)/;
 
 /**
+ * Apply a `pushtag`/`poptag` block to a file's tag stack. Returns whether the
+ * block was one. `poptag` removes one occurrence (beancount's `list.remove`).
+ */
+function applyTagStackOp(blockText: string, activeTags: string[]): boolean {
+  const tagOp = PUSH_POP_TAG_RE.exec(blockText);
+  if (!tagOp) return false;
+  if (tagOp[1] === "pushtag") {
+    activeTags.push(tagOp[2]);
+  } else {
+    const index = activeTags.indexOf(tagOp[2]);
+    if (index !== -1) activeTags.splice(index, 1);
+  }
+  return true;
+}
+
+/**
  * Hash a directive as beancount would under the file-level `pushtag` set active
  * at its source location. beancount applies the tag stack to TRANSACTIONS (the
  * pushed tags are unioned into the transaction's own tags), so a transaction that
@@ -202,21 +218,28 @@ export interface EntrySourceLocation {
 
 /** Source details recoverable from raw text but absent from DirectiveJson. */
 export interface EntrySourceDetails extends EntrySourceLocation {
-  /** Inline tags on a Document directive, when present in source. */
-  documentTags?: string[];
-  /** Inline links on a Document directive, when present in source. */
-  documentLinks?: string[];
+  /** A Document's or Note's tags, inline and pushed, when it has any. */
+  syntaxTags?: string[];
+  /** A Document's or Note's inline links, when present in source. */
+  syntaxLinks?: string[];
 }
 
 export interface EntrySourceDetailsOptions {
   /**
-   * Parse only Document blocks. This is sufficient for recovering syntax that
-   * rustledger omits and avoids reparsing every transaction in large ledgers.
-   * Callers that need filename/line provenance for arbitrary directives (for
-   * example `link_documents`) leave this disabled.
+   * Parse only Document and Note blocks. This is sufficient for recovering
+   * syntax that rustledger omits and avoids reparsing every transaction in
+   * large ledgers. Callers that need filename/line provenance for arbitrary
+   * directives (for example `link_documents`) leave this disabled.
    */
-  documentsOnly?: boolean;
+  syntaxOnly?: boolean;
 }
+
+/**
+ * The tags and links a Document or Note carries once the parse has restored
+ * them from source: rustledger's note has neither field, and its document
+ * lacks pushed tags (w21/655).
+ */
+export type SourceSyntax = { tags?: string[]; links?: string[] };
 
 /** Annotated parse input used to recover filename/line metadata in one parse. */
 export interface SourceDetailsProbe {
@@ -235,6 +258,11 @@ export interface SourceBlock {
   text: string;
   /** Whether the block starts with a date (a parseable directive). */
   isDated: boolean;
+  /**
+   * 0-based line on which the directive's header line logically ends — the
+   * start line unless a quoted string in the header spans physical lines.
+   */
+  headerEndLine: number;
 }
 
 /**
@@ -255,12 +283,43 @@ function isTopLevelStart(line: string): boolean {
 }
 
 /**
+ * Whether a quoted string is still open at the end of `line`, given whether
+ * one was open at its start. Beancount strings escape `"` and `\\` with a
+ * backslash; outside a string, `;` starts a comment that runs to line end.
+ */
+export function endsInsideString(line: string, startsInside: boolean): boolean {
+  let inside = startsInside;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (inside) {
+      if (ch === "\\") i += 1;
+      else if (ch === '"') inside = false;
+    } else if (ch === '"') {
+      inside = true;
+    } else if (ch === ";") {
+      break;
+    }
+  }
+  return inside;
+}
+
+/** Whether `line` continues the block above it outside a string. */
+function isContinuation(line: string): boolean {
+  return line.trim().length > 0 && (line[0] === " " || line[0] === "\t");
+}
+
+/**
  * Split a file's text into top-level blocks, mirroring fava's
  * `_find_entry_lines`: a block is a column-0 directive line plus its
  * immediately-following indented continuation lines, stopping at the first
  * blank or non-indented line. Blank lines and non-directive column-0 lines
  * between blocks are NOT part of any block (they are the whitespace fava's
  * delete/update preserve).
+ *
+ * Lines inside a quoted string are content, not layout: a multiline Note
+ * or narration keeps its unindented, blank and date-like lines in its block
+ * (w4/m34). A string that never closes falls back to the plain line rule,
+ * so one stray quote cannot swallow the rest of an invalid file.
  */
 export function splitIntoBlocks(fileText: string): SourceBlock[] {
   const lines = fileText.split("\n");
@@ -273,20 +332,29 @@ export function splitIntoBlocks(fileText: string): SourceBlock[] {
       continue;
     }
     let end = index + 1;
-    while (end < lines.length) {
-      const next = lines[end];
-      if (next.trim().length === 0) break;
-      if (next[0] === " " || next[0] === "\t") {
-        end += 1;
-        continue;
+    let headerEndLine = index;
+    let inString = endsInsideString(line, false);
+    let headerOpen = inString;
+    while (end < lines.length && (inString || isContinuation(lines[end]))) {
+      inString = endsInsideString(lines[end], inString);
+      if (headerOpen) {
+        headerEndLine = end;
+        headerOpen = inString;
       }
-      break;
+      end += 1;
     }
+    if (inString) {
+      end = index + 1;
+      while (end < lines.length && isContinuation(lines[end])) end += 1;
+      headerEndLine = index;
+    }
+
     blocks.push({
       startLine: index,
       endLine: end,
       text: lines.slice(index, end).join("\n"),
       isDated: DATE_PREFIX.test(line),
+      headerEndLine,
     });
     index = end;
   }
@@ -328,27 +396,21 @@ export function buildSourceDetailsProbe(
         block,
       ]),
     );
+    // Keyed by the header's last physical line: the marker must follow the
+    // whole header, never land inside a multiline string literal (w4/m34).
     const markerByLine = new Map<number, string>();
+    const activeTags: string[] = [];
     for (const block of splitIntoBlocks(source)) {
+      if (applyTagStackOp(block.text, activeTags)) continue;
       if (!block.isDated) continue;
       const marker = String(nextMarker);
       nextMarker += 1;
-      markerByLine.set(block.startLine, marker);
+      markerByLine.set(block.headerEndLine, marker);
       const original = sourceBlocks.get(block.startLine) ?? block;
-      const documentSyntax = DOCUMENT_LINE_RE.test(
-        original.text.split("\n", 1)[0],
-      )
-        ? documentTagsAndLinks(original.text)
-        : undefined;
       detailsByMarker.set(marker, {
         filename: file,
         lineno: block.startLine + 1,
-        ...(documentSyntax?.tags.length
-          ? { documentTags: documentSyntax.tags }
-          : {}),
-        ...(documentSyntax?.links.length
-          ? { documentLinks: documentSyntax.links }
-          : {}),
+        ...sourceSyntaxDetails(original.text, activeTags),
       });
     }
 
@@ -376,7 +438,11 @@ export function sourceDetailsFromProbe(
   const entryIds = buildEntryIdMap(directives);
   const details = new Map<string, EntrySourceDetails>();
   for (const directive of directives) {
-    if (options.documentsOnly === true && directive.type !== "document") {
+    if (
+      options.syntaxOnly === true &&
+      directive.type !== "document" &&
+      directive.type !== "note"
+    ) {
       continue;
     }
     const marker = directive.meta?.[probe.markerKey];
@@ -536,17 +602,7 @@ export function findEntrySlice(
     // with fresh parser state, so pushed tags do NOT cross `include` boundaries).
     const activeTags: string[] = [];
     for (const block of blocks) {
-      const tagOp = PUSH_POP_TAG_RE.exec(block.text);
-      if (tagOp) {
-        if (tagOp[1] === "pushtag") {
-          activeTags.push(tagOp[2]);
-        } else {
-          // `poptag` removes one occurrence (beancount's `list.remove`).
-          const idx = activeTags.indexOf(tagOp[2]);
-          if (idx !== -1) activeTags.splice(idx, 1);
-        }
-        continue;
-      }
+      if (applyTagStackOp(block.text, activeTags)) continue;
       if (!block.isDated) continue;
       const directives = parseBlock(block.text);
       const matched = directives.some(
@@ -609,20 +665,11 @@ export function buildEntrySourceDetailsMap(
     const activeTags: string[] = [];
 
     for (const block of splitIntoBlocks(fileText)) {
-      const tagOp = PUSH_POP_TAG_RE.exec(block.text);
-      if (tagOp) {
-        if (tagOp[1] === "pushtag") {
-          activeTags.push(tagOp[2]);
-        } else {
-          const index = activeTags.indexOf(tagOp[2]);
-          if (index !== -1) activeTags.splice(index, 1);
-        }
-        continue;
-      }
+      if (applyTagStackOp(block.text, activeTags)) continue;
       if (!block.isDated) continue;
       if (
-        options.documentsOnly === true &&
-        !DOCUMENT_LINE_RE.test(block.text.split("\n", 1)[0])
+        options.syntaxOnly === true &&
+        syntaxSuffix(block.text) === undefined
       ) {
         continue;
       }
@@ -631,18 +678,11 @@ export function buildEntrySourceDetailsMap(
         const base = hashWithActiveTags(directive, activeTags);
         const occurrence = occurrences.get(base) ?? 0;
         occurrences.set(base, occurrence + 1);
-        const documentSyntax =
-          directive.type === "document"
-            ? documentTagsAndLinks(block.text)
-            : undefined;
         details.set(entryIdFor(base, occurrence), {
           filename: file,
           lineno: block.startLine + 1,
-          ...(documentSyntax?.tags.length
-            ? { documentTags: documentSyntax.tags }
-            : {}),
-          ...(documentSyntax?.links.length
-            ? { documentLinks: documentSyntax.links }
+          ...(directive.type === "document" || directive.type === "note"
+            ? sourceSyntaxDetails(block.text, activeTags)
             : {}),
         });
       }
@@ -652,36 +692,48 @@ export function buildEntrySourceDetailsMap(
   return details;
 }
 
-const DOCUMENT_LINE_RE =
-  /^\d{4}-\d{2}-\d{2}\s+document\s+\S+\s+"(?:\\.|[^"\\])*"(?<suffix>.*)$/u;
-const DOCUMENT_TAG_LINK_RE = /(?<sigil>[#^])(?<value>[A-Za-z0-9\-_/.]+)/gu;
+/** A Document or Note header line; `suffix` follows its quoted string. */
+const SYNTAX_LINE_RE =
+  /^\d{4}-\d{2}-\d{2}\s+(?:document|note)\s+\S+\s+"(?:\\.|[^"\\])*"(?<suffix>.*)$/u;
+const TAG_LINK_RE = /(?<sigil>[#^])(?<value>[A-Za-z0-9\-_/.]+)/gu;
 
-function documentTagsAndLinks(blockText: string): {
-  tags: string[];
-  links: string[];
-} {
-  const firstLine = blockText.split("\n", 1)[0];
-  const suffix = (DOCUMENT_LINE_RE.exec(firstLine)?.groups?.suffix ?? "").split(
-    ";",
-    1,
-  )[0];
+/** What follows a Document or Note's string, before any comment. */
+function syntaxSuffix(blockText: string): string | undefined {
+  const suffix = SYNTAX_LINE_RE.exec(blockText.split("\n", 1)[0])?.groups
+    ?.suffix;
+  return suffix?.split(";", 1)[0];
+}
+
+/**
+ * A Document or Note block's tags and links: Beancount gives both directives
+ * their inline ones plus the tags `pushtag` holds there (w21/655).
+ */
+function sourceSyntaxDetails(
+  blockText: string,
+  activeTags: readonly string[],
+): Pick<EntrySourceDetails, "syntaxTags" | "syntaxLinks"> {
+  const suffix = syntaxSuffix(blockText);
+  if (suffix === undefined) return {};
   const tags: string[] = [];
   const links: string[] = [];
-  for (const match of suffix.matchAll(DOCUMENT_TAG_LINK_RE)) {
+  for (const match of suffix.matchAll(TAG_LINK_RE)) {
     const target = match.groups?.sigil === "#" ? tags : links;
     const value = match.groups?.value;
     if (value !== undefined && !target.includes(value)) target.push(value);
   }
-  return { tags, links };
+  for (const tag of activeTags) if (!tags.includes(tag)) tags.push(tag);
+  return {
+    ...(tags.length > 0 ? { syntaxTags: tags } : {}),
+    ...(links.length > 0 ? { syntaxLinks: links } : {}),
+  };
 }
 
 /**
  * Produce the new file content with the block `[startLine, endLine)` removed,
- * matching fava's `delete_source_slice`:
- * `lines[:entry_start] + lines[entry_end:]`. Only the entry's own lines are
- * removed; surrounding blank lines are preserved verbatim (so a deleted entry
- * that had a blank line on each side leaves two adjacent blanks — byte-exact
- * fava behaviour).
+ * plus the one blank separator the entry no longer needs. Fava's
+ * `delete_source_slice` (`lines[:entry_start] + lines[entry_end:]`) kept the
+ * blank lines on both sides, so a deleted entry left two adjacent blanks and
+ * deleting what an append wrote did not restore the file (w23/055).
  */
 export function deleteSliceFromFile(
   fileText: string,
@@ -689,16 +741,61 @@ export function deleteSliceFromFile(
   endLine: number,
 ): string {
   const lines = splitKeepEnds(fileText);
-  const kept = [...lines.slice(0, startLine), ...lines.slice(endLine)];
-  return kept.join("");
+  const blank = (line: string | undefined) =>
+    line !== undefined && line.trim() === "";
+  let start = startLine;
+  let end = endLine;
+  // Entries are written with one blank line around them; removing just the
+  // block left both, so every add → delete grew the file (w23/055). Between
+  // two separators, one goes with the entry…
+  if ((start === 0 || blank(lines[start - 1])) && blank(lines[end])) end += 1;
+  // …and at the end of the file the one before it has nothing left to
+  // separate.
+  if (start > 0 && blank(lines[start - 1]) && lines.slice(end).every(blank)) {
+    start -= 1;
+  }
+  return [...lines.slice(0, start), ...lines.slice(end)].join("");
+}
+
+/**
+ * The line ending a block of kept-end lines uses: CRLF when its first line
+ * ends that way, else LF. A CRLF file's lines end `\r\n`, and the split on
+ * `\n` that serves a slice leaves the `\r` on each line (w21/252).
+ */
+function blockLineEnding(blockLines: readonly string[]): "\r\n" | "\n" {
+  const ended = blockLines.find((line) => line.endsWith("\n"));
+  return ended?.endsWith("\r\n") ? "\r\n" : "\n";
+}
+
+/**
+ * A replacement entry as it is stored: trailing newlines trimmed (the entry
+ * gets exactly one line ending after it) and every line ending the replaced
+ * block's own, so an edit in a CRLF file stays CRLF and a trailing newline in
+ * the new text cannot leave a blank line (w21/252).
+ */
+export function normalizeSliceReplacement(
+  newContent: string,
+  eol: "\r\n" | "\n",
+): string {
+  return newContent.replace(/[\r\n]+$/u, "").replace(/\r?\n/gu, eol);
+}
+
+/**
+ * The slice a fresh read serves for a block stored as `stored`: the split on
+ * `\n` leaves the `\r` of a CRLF line on its last line. Its checksum is the
+ * `sha256sum` the next edit of the entry must present.
+ */
+export function servedSliceText(stored: string): string {
+  return stored.includes("\r\n") ? `${stored}\r` : stored;
 }
 
 /**
  * Produce the new file content with the block `[startLine, endLine)` replaced by
  * `newContent`, matching fava's `update_source_slice`:
- * `[*lines[:entry_start], new_content + "\n", *lines[entry_end:]]`. Note fava
- * always appends exactly one `"\n"` to `newContent` regardless of the original
- * block's trailing newline.
+ * `[*lines[:entry_start], new_content + "\n", *lines[entry_end:]]`, except that
+ * the block's own line ending is kept (CRLF stays CRLF) and trailing newlines
+ * in `newContent` are trimmed first, where fava appended one `"\n"` after
+ * whatever it was given and left a CRLF entry mixed and a blank line behind.
  */
 export function replaceSliceInFile(
   fileText: string,
@@ -707,12 +804,22 @@ export function replaceSliceInFile(
   newContent: string,
 ): string {
   const lines = splitKeepEnds(fileText);
+  const eol = blockLineEnding(lines.slice(startLine, endLine));
   const kept = [
     ...lines.slice(0, startLine),
-    `${newContent}\n`,
+    `${normalizeSliceReplacement(newContent, eol)}${eol}`,
     ...lines.slice(endLine),
   ];
   return kept.join("");
+}
+
+/** The line ending {@link replaceSliceInFile} gives a replacement at `startLine`. */
+export function replacementLineEnding(
+  fileText: string,
+  startLine: number,
+  endLine: number,
+): "\r\n" | "\n" {
+  return blockLineEnding(splitKeepEnds(fileText).slice(startLine, endLine));
 }
 
 /**

@@ -8,6 +8,12 @@
  * Free of `@/` imports so the jest-lite runner can require it.
  */
 
+/** The longest filter pattern the ledger service accepts. */
+const MAX_PATTERN_LENGTH = 256;
+
+/** One tag or link token, in Beancount's tag/link character set. */
+const TAG_OR_LINK = /^[#^][A-Za-z0-9_\-./]+$/;
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -20,19 +26,73 @@ export function toPlainSearchFilter(raw: string): string | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
 
-  // Lexer forms: `"[^"]*"` and `'[^']*'`, with no escape processing inside.
-  // Prefer double quotes; fall back to single quotes when the needle itself
-  // contains `"`. When both quote kinds appear, keep double quotes and encode
-  // each embedded `"` as the regex escape `\x22`, so the literal still lexes
-  // and still matches the quote. `escapeRegExp` escapes typed backslashes
-  // first, so a typed `\x22` stays literal text rather than becoming a quote.
-  const escaped = escapeRegExp(trimmed);
+  // A lone `#tag` or `^link` is Fava filter syntax for that tag or link, and
+  // only works unquoted: quoted, it matched payee and narration only, so a
+  // search for the tags the detail screen shows found nothing (w21/025). But
+  // the same token is also how a check or order number is written in a
+  // narration ("Check #1042"), which the bare form never finds, so it is sent
+  // as an alternative: the tag or link, or the text (`,` is Fava's OR) (w21/400).
+  // The bare form compares exactly, case and all, and the field does not
+  // capitalize, so "#japan2026" missed #Japan2026: a third alternative matches
+  // the start of any one tag (or link) case-insensitively, through the filter's
+  // `tags:` attribute, whose list reads "a, b" (w21/640).
+  if (TAG_OR_LINK.test(trimmed)) {
+    const attribute = trimmed.startsWith("#") ? "tags" : "links";
+    const prefix = `${attribute}:"(?:^|, )${escapeRegExp(trimmed.slice(1))}"`;
+    return `${trimmed},${prefix},${quoted(trimmed)}`;
+  }
 
-  if (!escaped.includes('"')) {
-    return `"${escaped}"`;
+  return quoted(trimmed);
+}
+
+/**
+ * The text as one quoted STRING literal that matches it as typed.
+ *
+ * The lexer's forms are `"[^"]*"` and `'[^']*'`, with no escape processing
+ * inside, so a double quote cannot appear in a double-quoted literal; it is
+ * written as the regex escape `\x22`. Quotes match their typographic forms
+ * too: iOS Smart Punctuation turns a typed `Trader Joe's` into `Trader Joe’s`,
+ * which matched nothing, and a ledger imported with curly quotes was not found
+ * by a straight one (w21/401). So an apostrophe is `['‘’]` and a double quote
+ * `[\x22“”]`, and the literal is always double-quoted. `escapeRegExp` escapes
+ * typed backslashes first, so a typed `\x22` stays literal text rather than
+ * becoming a quote.
+ */
+function quoted(trimmed: string): string {
+  // The ledger service refuses a pattern longer than this, and escaping makes a
+  // text several times longer (a dot is two characters, an apostrophe five), so
+  // a long memo failed the whole list. A needle that would not fit is cut to the
+  // longest prefix that does, which finds the entries that contain it rather
+  // than an error (w21/402). Each unit is encoded whole, so no escape is ever
+  // cut in half.
+  //
+  // Tolerant of how the same text is written: a run of whitespace matches any
+  // run (a double space, a no-break space from a bank export), and a letter that
+  // can be composed or decomposed ("é" or "e" and a combining accent) matches
+  // either, since iOS types the first and an import may hold the second
+  // (w21/466).
+  let body = "";
+  for (const unit of searchUnits(trimmed)) {
+    const encoded = encodeUnit(unit);
+    if (body.length + encoded.length > MAX_PATTERN_LENGTH) break;
+    body += encoded;
   }
-  if (!escaped.includes("'")) {
-    return `'${escaped}'`;
-  }
-  return `"${escaped.replace(/"/g, "\\x22")}"`;
+  return `"${body}"`;
+}
+
+/** The text as composed characters, a whole run of whitespace being one. */
+function searchUnits(text: string): string[] {
+  return text.normalize("NFC").match(/\s+|[\s\S]/gu) ?? [];
+}
+
+function encodeUnit(unit: string): string {
+  if (/^\s+$/u.test(unit)) return "\\s+";
+  const literal = (char: string) =>
+    escapeRegExp(char)
+      .replace(/['\u2018\u2019]/g, "['\u2018\u2019]")
+      .replace(/["\u201c\u201d]/g, "[\\x22\u201c\u201d]");
+  const decomposed = unit.normalize("NFD");
+  return decomposed === unit
+    ? literal(unit)
+    : `(?:${literal(unit)}|${[...decomposed].map(literal).join("")})`;
 }

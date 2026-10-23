@@ -53,6 +53,7 @@ export function AccountCombobox({ children }: AccountComboboxProps) {
   const accountsLoaded = data?.getLedgerAccounts !== undefined;
   const fullAccounts = data?.getLedgerAccounts ?? [];
   const accounts = generateAllAccountPaths(fullAccounts);
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const showLoading = loading && !accountsLoaded;
   const showError = Boolean(error) && !accountsLoaded && !loading;
 
@@ -70,6 +71,7 @@ export function AccountCombobox({ children }: AccountComboboxProps) {
         >
           <Command label={t("component.accountCombobox.placeholder")}>
             <CommandInput
+              ref={searchRef}
               placeholder={t("component.accountCombobox.placeholder")}
             />
             <CommandList>
@@ -90,6 +92,10 @@ export function AccountCombobox({ children }: AccountComboboxProps) {
                     size="sm"
                     variant="outline"
                     onClick={() => {
+                      // The loading view replaces this button; give focus to
+                      // the search input first so the keyboard keeps a home
+                      // through the retry and after it (w4/274).
+                      searchRef.current?.focus();
                       void refetch();
                     }}
                     onKeyDown={(event) => {

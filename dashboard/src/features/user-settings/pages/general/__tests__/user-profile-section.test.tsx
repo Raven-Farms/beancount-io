@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { toast } from "sonner";
 import userEvent from "@testing-library/user-event";
@@ -544,6 +550,53 @@ describe("UserProfileSection", () => {
 
       expect((firstNameInput as HTMLInputElement).value).toBe("  John  ");
       // Note: Trimming happens on submit via the mutation handler
+    });
+  });
+
+  /** An IME's Enter commits its text; it must not submit (w4/296). */
+  describe("Enter during IME composition", () => {
+    const composingEnter = (input: HTMLElement, keyCode = 13) =>
+      fireEvent.keyDown(input, { key: "Enter", keyCode, isComposing: true });
+
+    it.each(["First Name", "Last Name"])(
+      "submits nothing from %s while composing, then the final name once",
+      async (label) => {
+        mockUpdateProfile.mockResolvedValue({
+          data: { updateProfile: { success: true } },
+        });
+        render(<UserProfileSection userData={mockUserData} />);
+        fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+        const input = await screen.findByLabelText(label);
+
+        fireEvent.compositionStart(input);
+        fireEvent.change(input, { target: { value: "qa-20261020名" } });
+        composingEnter(input);
+        composingEnter(input, 229);
+        expect(mockUpdateProfile).not.toHaveBeenCalled();
+        expect(input).toHaveValue("qa-20261020名");
+        expect(input).toBeEnabled();
+
+        fireEvent.compositionEnd(input);
+        fireEvent.change(input, { target: { value: "qa-20261020-final" } });
+        fireEvent.keyDown(input, { key: "Enter", keyCode: 13 });
+        await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+        expect(JSON.stringify(mockUpdateProfile.mock.calls[0])).toContain(
+          "qa-20261020-final",
+        );
+      },
+    );
+
+    it("submits no username while composing", async () => {
+      render(<UserProfileSection userData={mockUserData} />);
+      fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+      const input = await screen.findByPlaceholderText("Enter new username");
+
+      fireEvent.change(input, { target: { value: "qa_20261020" } });
+      composingEnter(input);
+      expect(mockUpdateUsername).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(input, { key: "Enter", keyCode: 13 });
+      await waitFor(() => expect(mockUpdateUsername).toHaveBeenCalledTimes(1));
     });
   });
 });

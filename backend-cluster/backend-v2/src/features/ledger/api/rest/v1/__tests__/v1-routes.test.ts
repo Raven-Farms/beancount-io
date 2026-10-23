@@ -55,7 +55,7 @@ const services = {
 const workflows = {
   ledger: {
     listLedgers: jest.fn(async () => [{ id: "alice/main" }]),
-    getLedger: jest.fn(async () => ({ id: "alice/main" })),
+    getLedgerMetadata: jest.fn(async () => ({ id: "alice/main" })),
   },
 };
 
@@ -186,12 +186,12 @@ describe("v1 authentication and scope", () => {
 
   it("lets the protected workflow's PDP enforce the ledger pin", async () => {
     server.setIdentity(pinnedReadToken);
-    workflows.ledger.getLedger.mockRejectedValueOnce(
+    workflows.ledger.getLedgerMetadata.mockRejectedValueOnce(
       new ForbiddenError("credential is pinned to alice/main"),
     );
     const { status } = await call("GET", "/api-gateway/v1/ledgers/alice/other");
     expect(status).toBe(403);
-    expect(workflows.ledger.getLedger).toHaveBeenCalledWith({
+    expect(workflows.ledger.getLedgerMetadata).toHaveBeenCalledWith({
       ledgerId: "alice/other",
       identity: pinnedReadToken,
     });
@@ -206,7 +206,7 @@ describe("v1 authentication and scope", () => {
       identity: pinnedReadToken,
       args: { page: undefined, limit: undefined },
     });
-    expect(workflows.ledger.getLedger).not.toHaveBeenCalled();
+    expect(workflows.ledger.getLedgerMetadata).not.toHaveBeenCalled();
   });
 });
 
@@ -261,7 +261,7 @@ describe("v1 reads", () => {
   it("addresses one ledger by owner and name, never by an encoded id", async () => {
     const { status } = await call("GET", LEDGER);
     expect(status).toBe(200);
-    expect(workflows.ledger.getLedger).toHaveBeenCalledWith({
+    expect(workflows.ledger.getLedgerMetadata).toHaveBeenCalledWith({
       ledgerId: "alice/main",
       identity: sessionIdentity,
     });
@@ -358,6 +358,42 @@ describe("v1 files", () => {
       operation: "update",
       sha: "sha123",
     });
+  });
+
+  // w21/553: REST committed "Update <path>" for a create and refused an empty
+  // message, where GraphQL committed "Create <path>" and took "" as omitted.
+  it("commits Create <path> for a new file and Update <path> for a replacement, and reads an empty message as omitted", async () => {
+    server.setIdentity(writeToken);
+    const messageOf = (index: number) =>
+      (
+        services.ledgerRepo.changeFiles.mock.calls as unknown as Array<
+          [{ message: string }]
+        >
+      )[index][0].message;
+    const before = services.ledgerRepo.changeFiles.mock.calls.length;
+    await call("PUT", `${LEDGER}/files/new.bean`, { content: "; new" });
+    await call("PUT", `${LEDGER}/files/new.bean`, {
+      content: "; new",
+      message: "",
+    });
+    await call("PUT", `${LEDGER}/files/new.bean`, {
+      content: "; edited",
+      sha: "sha123",
+    });
+    await call("PUT", `${LEDGER}/files/new.bean`, {
+      content: "; edited",
+      sha: "sha123",
+      message: "Tidy",
+    });
+    expect(messageOf(before)).toBe("Create new.bean");
+    expect(messageOf(before + 1)).toBe("Create new.bean");
+    expect(messageOf(before + 2)).toBe("Update new.bean");
+    expect(messageOf(before + 3)).toBe("Tidy");
+    const { status } = await call("DELETE", `${LEDGER}/files/new.bean`, {
+      message: "",
+    });
+    expect(status).toBe(200);
+    expect(messageOf(before + 4)).toBe("Delete new.bean");
   });
 
   it("hands the service the caller's UTF-8 text, not an encoding of it (w2/011)", async () => {

@@ -46,7 +46,12 @@ export function LanguageSelector() {
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-75 p-0" align="end">
+      {/* The popup is its own dialog node; name it too, not only its trigger (w4/333). */}
+      <PopoverContent
+        aria-label={t("userSettings.currentLanguage")}
+        className="w-75 p-0"
+        align="end"
+      >
         <div className="max-h-100 overflow-y-auto p-1">
           {Object.entries(LANGUAGE_NAMES).map(([code, name]) => (
             <Button

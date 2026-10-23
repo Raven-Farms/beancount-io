@@ -16,6 +16,7 @@ import { operationNotAllowedFromCause } from "@/features/ledger/utils/operation-
 import { BadUserInputError } from "@/shared/errors";
 import { resolveEntryFile } from "@/features/ledger/utils/entry-file-resolver";
 import { parseDirectiveDate } from "@/features/ledger/utils/directive-date";
+import { LEDGER_ENTRY_POINT } from "@/features/ledger/utils/ledger-entry-point";
 import { directiveLimitExemptParams } from "@/features/ledger/operations/directive-limit-bypass";
 import type { FavaApiClient } from "@/foundation/fava";
 import type { IFavaClientFactory } from "@/foundation/clients/fava-client-factory";
@@ -132,6 +133,16 @@ export type AddBulkEntriesResult = {
   success: boolean;
   message?: string;
   files?: string[];
+  /**
+   * The hash each committed entry now carries, in request order; empty when
+   * they could not be resolved after the commit (w23/060).
+   */
+  entryHashes?: string[];
+  /**
+   * Files the write routed to outside the include closure, now included
+   * from the entry point in the same commit (w23/062).
+   */
+  includedFiles?: string[];
 };
 
 type BulkEntries = EntryAddBulkEntriesRequest["entries"];
@@ -206,6 +217,8 @@ export interface ILedgerEntryWriter {
     inputs: LedgerEntryInput[],
     platform: "web" | "mobile",
     allowInvalid?: boolean,
+    /** Run every check the write would and commit nothing (w23/058). */
+    dryRun?: boolean,
   ): Promise<AddBulkEntriesResult>;
 }
 
@@ -285,6 +298,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     inputs: LedgerEntryInput[],
     platform: "web" | "mobile",
     allowInvalid = false,
+    dryRun = false,
   ): Promise<AddBulkEntriesResult> {
     const ledgerId = `${ledgerOwner}/${ledgerName}`;
     // At most one posting per transaction may omit its amount; the ledger
@@ -337,7 +351,8 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       return this.buildEntry(input, filename);
     });
 
-    // Ensure each distinct target file exists before committing.
+    // Ensure each distinct target file exists before committing; a dry run
+    // creates nothing, and the ledger checks a missing one as empty.
     const distinctFiles = [
       ...new Set(
         entries
@@ -345,7 +360,7 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
           .filter((filename): filename is string => Boolean(filename)),
       ),
     ];
-    for (const filename of distinctFiles) {
+    for (const filename of dryRun ? [] : distinctFiles) {
       await this.ensureFileExists(
         favaApiClient,
         ledgerOwner,
@@ -354,20 +369,29 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
       );
     }
 
-    await this.addEntries(
+    const { entryHashes, includedFiles } = await this.addEntries(
       favaApiClient,
       ledgerOwner,
       ledgerName,
       entries,
       platform,
       allowInvalid,
+      dryRun,
     );
 
     const noun = inputs.length === 1 ? "entry" : "entries";
+    // A routed file nothing included is included from the entry point in the
+    // same commit (w23/062); the result says so.
+    const included =
+      includedFiles.length > 0
+        ? `; ${LEDGER_ENTRY_POINT} now includes ${includedFiles.join(", ")}`
+        : "";
     return {
       success: true,
-      message: `Added ${inputs.length} ${noun} successfully`,
+      message: `Added ${inputs.length} ${noun} successfully${included}`,
       files: distinctFiles,
+      entryHashes,
+      ...(includedFiles.length > 0 && { includedFiles }),
     };
   }
 
@@ -560,17 +584,24 @@ class FavaLedgerEntryWriter implements ILedgerEntryWriter {
     entries: BulkEntries,
     platform: "web" | "mobile" = "web",
     allowInvalid = false,
-  ): Promise<void> {
-    await unwrapFavaResponse(
+    dryRun = false,
+  ): Promise<{ entryHashes: string[]; includedFiles: string[] }> {
+    const written = await unwrapFavaResponse(
       favaApiClient.entries.addBulkEntries(
         ledgerOwner,
         ledgerName,
-        { entries, allowInvalid },
+        { entries, allowInvalid, ...(dryRun && { dryRun }) },
         directiveLimitExemptParams(platform),
       ),
       "add entries",
       (cause) => operationNotAllowedFromCause("add entries", cause),
     );
+    // A ledger service older than w23/060 answers `null`.
+    const result = written as Partial<typeof written> | null;
+    return {
+      entryHashes: result?.entry_hashes ?? [],
+      includedFiles: result?.included_files ?? [],
+    };
   }
 }
 

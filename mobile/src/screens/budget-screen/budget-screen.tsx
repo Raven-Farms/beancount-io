@@ -25,6 +25,7 @@ import { GetLedgerIntervalTotalsDocument } from "@/generated-graphql/graphql";
 import { LoadingTile } from "@/components/loading-tile";
 import { FadeInView } from "@/components/crossfade";
 import { Button, DashboardCard, TimeRangePills } from "@/components";
+import { rangePillText } from "@/common/series-util";
 import { LedgerGuard, useLedgerGuard } from "@/components/ledger-guard";
 import { ThemedRefreshControl } from "@/components/dashboard-scroll-view";
 import { useBudgetGroups } from "@/screens/budget-screen/hooks/use-budget-groups";
@@ -36,7 +37,10 @@ import {
   timeSpanToFilter,
   type BudgetTimeSpan,
 } from "@/screens/budget-screen/selectors/budget-labels";
-import type { BudgetGroup } from "@/screens/budget-screen/selectors/budget-selectors";
+import {
+  latestBudgetDate,
+  type BudgetGroup,
+} from "@/screens/budget-screen/selectors/budget-selectors";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -62,7 +66,7 @@ const getStyles = (theme: ColorTheme) =>
     },
     stateText: {
       fontSize: fontSizes.md,
-      color: theme.black60,
+      color: theme.black80,
       textAlign: "center",
     },
     emptyIcon: {
@@ -134,6 +138,10 @@ function BudgetScreenImpl(): JSX.Element {
               account: group.account,
               interval: group.interval.toUpperCase(),
               currency: group.currency,
+              // Shown as the Amount placeholder, never prefilled (w21/034).
+              currentAmount: group.amount,
+              // An Update cannot be dated before it (w21/623).
+              currentDate: latestBudgetDate(group.budgetHistory),
             }
           : {},
       });
@@ -183,7 +191,7 @@ function BudgetScreenImpl(): JSX.Element {
           value={span}
           options={BUDGET_TIME_SPANS.map((key) => ({
             key,
-            label: t(TIME_SPAN_LABEL_KEYS[key]),
+            ...rangePillText(t, TIME_SPAN_LABEL_KEYS[key]),
           }))}
           onChange={setSpan}
         />

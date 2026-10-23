@@ -234,6 +234,12 @@ const bgReceipt: Record<string, TranslationEntry> = {
     message: "Неуспешно записване на транзакцията от разписката",
     description: "Error message when recording the transaction fails",
   },
+  "receipt.workflow.recordUnconfirmed": {
+    message:
+      "Възможно е все пак да е записана, затова проверете Дневника, преди да я запишете отново.",
+    description:
+      "Added after a connection failure while recording: the transaction may exist",
+  },
 };
 
 export default bgReceipt;

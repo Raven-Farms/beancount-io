@@ -16,6 +16,10 @@ const nlEvents: Record<string, TranslationEntry> = {
     message: "Gebeurtenissen: {filtered} / {total}",
     description: "Count of filtered events out of total",
   },
+  "page.events.emptyType": {
+    message: "(geen type)",
+    description: "Label for an event whose type is empty, in the type filter",
+  },
   "page.events.noEventsFound": {
     message: "Geen gebeurtenissen gevonden",
     description: "Empty state title when no events exist",

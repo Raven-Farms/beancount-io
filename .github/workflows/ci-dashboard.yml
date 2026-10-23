@@ -5,11 +5,14 @@ on:
     branches: [main]
     paths:
       - "dashboard/**"
+      # stripe-config.test.ts pins the dashboard's prices to these plans.
+      - "backend-cluster/backend-v2/src/features/stripe/service/stripe.ts"
       - ".github/workflows/ci-dashboard.yml"
   pull_request:
     branches: [main]
     paths:
       - "dashboard/**"
+      - "backend-cluster/backend-v2/src/features/stripe/service/stripe.ts"
       - ".github/workflows/ci-dashboard.yml"
 
 concurrency:

@@ -124,6 +124,42 @@ const COMMA_GROUPING =
   /^(?:[1-9]\d{0,2}(?:,\d{3})+|[1-9]\d?(?:,\d{2})*,\d{3})$/;
 const SINGLE_COMMA_THREE = /^\d+,\d{3}$/;
 
+// Symbols that name the currency a row must post, ported from the CLI's
+// `_SYMBOL_CURRENCIES` (w3/421, w4/m44). `£` is also GIP, FKP, SHP and EGP,
+// and `₩` is also KPW, so those accept any currency they name. `$` (dollars
+// of a dozen countries) and `¥` (JPY and CNY) are deliberately absent: they
+// say nothing a row can be refused over, and every `$` column keeps importing.
+const SYMBOL_CURRENCIES: Record<string, readonly string[]> = {
+  "€": ["EUR"],
+  "£": ["GBP", "GIP", "FKP", "SHP", "EGP"],
+  "₹": ["INR"],
+  "₽": ["RUB"],
+  "₩": ["KRW", "KPW"],
+  "₪": ["ILS"],
+  "₺": ["TRY"],
+  "₫": ["VND"],
+  "₴": ["UAH"],
+  "฿": ["THB"],
+  "₱": ["PHP"],
+  "₦": ["NGN"],
+};
+
+type AmountCurrencySymbol = {
+  symbol: string;
+  currencies: readonly string[];
+};
+
+/** The currencies an amount cell's own symbol names, if it names any. */
+export function amountCurrencySymbol(
+  value: string,
+): AmountCurrencySymbol | null {
+  for (const character of value) {
+    const currencies = SYMBOL_CURRENCIES[character];
+    if (currencies) return { symbol: character, currencies };
+  }
+  return null;
+}
+
 type SplitAmount = { sign: string; core: string; negations: number };
 
 /**

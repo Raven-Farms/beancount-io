@@ -18,8 +18,15 @@ from pydantic import (
     model_validator,
 )
 
-from bea_engine.amounts import parse_exact, refuse_zero_divisor, require_plain_decimal, split_total_price
-from bea_engine.ledger.text import parse_iso_date, require_commodity, require_flag, require_tag_or_link
+from bea_engine.amounts import (
+    JsonFloat,
+    parse_exact,
+    refuse_scientific_notation,
+    refuse_zero_divisor,
+    require_plain_decimal,
+    split_total_price,
+)
+from bea_engine.ledger.text import parse_iso_date, require_commodity, require_flag, require_link, require_tag
 
 
 def _strip_sigil(sigil: str) -> Callable[[Any], Any]:
@@ -34,6 +41,28 @@ def _strip_sigil(sigil: str) -> Callable[[Any], Any]:
         return value[1:] if isinstance(value, str) and value.startswith(sigil) else value
 
     return strip
+
+
+def _tag_or_link(sigil: str, check: Callable[[str], str]) -> Callable[[Any, ValidationInfo], Any]:
+    """Accept one tag or link with or without its sigil, storing it bare.
+
+    On a write, anything else is refused with this kind's message quoting the
+    typed value: the shared refusal named both sigils and, running after the
+    sigil was stripped, quoted `##c` back as `'#c'` (w5/722). A read strips
+    as before and checks nothing.
+    """
+
+    strip = _strip_sigil(sigil)
+
+    def parse(value: Any, info: ValidationInfo) -> Any:
+        if not isinstance(value, str):
+            return value
+        context = info.context
+        if isinstance(context, dict) and context.get("write_input"):
+            return check(value)
+        return strip(value)
+
+    return parse
 
 
 #: Validation context for a directive built from a write request — `bea add`,
@@ -54,8 +83,8 @@ def _on_write(check: Callable[[str], str]) -> Callable[[Any, ValidationInfo], An
 # Each is written as one bare token, so a write must supply exactly one: a
 # value such as `a ^b` or one with a line break would otherwise print as extra
 # tags, links or whole directives the caller never asked for.
-Tag = Annotated[str, BeforeValidator(_strip_sigil("#")), AfterValidator(_on_write(require_tag_or_link))]
-Link = Annotated[str, BeforeValidator(_strip_sigil("^")), AfterValidator(_on_write(require_tag_or_link))]
+Tag = Annotated[str, BeforeValidator(_tag_or_link("#", require_tag))]
+Link = Annotated[str, BeforeValidator(_tag_or_link("^", require_link))]
 Commodity = Annotated[str, AfterValidator(_on_write(require_commodity))]
 Flag = Annotated[str, AfterValidator(_on_write(require_flag))]
 
@@ -66,7 +95,7 @@ def _require_calendar_date(value: Any) -> Any:
         return value
     if isinstance(value, datetime.date):
         return value
-    if isinstance(value, bool) or isinstance(value, int | float):
+    if isinstance(value, bool) or isinstance(value, int | float | JsonFloat):
         raise ValueError("date must be a string in YYYY-MM-DD form, not a number.")
     if isinstance(value, str):
         # Strictly `YYYY-MM-DD`: Pydantic would read "1769904000" as a Unix
@@ -92,6 +121,23 @@ class Amount(BaseModel):
     # object would otherwise leave a valid but different amount or lot.
     model_config = ConfigDict(extra="forbid")
     number: AmountNumber
+    currency: Commodity
+
+
+class Units(BaseModel):
+    """A posting's units, whose number Beancount interpolates when left null.
+
+    `add transaction --json` reports a number-less posting (`HOOL {100 USD}`)
+    with a null number, and the round-trip guarantee needs bulk input to read
+    it back: null interpolates, exactly as the flag spelling does (w5/801).
+    The key stays required — an omitted number is a typo, while an explicit
+    null says the number was left open — and the currency with it: the flag
+    path defaults the currency before answering, so an answer never leaves
+    that open. Prices and every other amount keep a required number.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    number: AmountNumber | None
     currency: Commodity
 
 
@@ -129,7 +175,7 @@ class Cost(BaseModel):
 class Posting(BaseModel):
     model_config = ConfigDict(extra="forbid")
     account: str
-    units: Amount | None = None
+    units: Units | None = None
     cost: Cost | None = None
     price: Amount | None = None
     price_total: Amount | None = None
@@ -245,28 +291,41 @@ def _posting_fragment(amount: str) -> dict[str, Any]:
     """
     from beancount.core.number import MISSING
 
+    from bea_engine.query import readable_parser_message
+
     def refuse(reason: str) -> NoReturn:
-        raise ValueError(f"Could not parse amount {amount!r} as a posting fragment: {reason}. {_FRAGMENT_HELP}")
+        readable = readable_parser_message(reason, text=amount)
+        stop = "" if readable.endswith(".") else "."
+        raise ValueError(f"Could not parse amount {amount!r} as a posting fragment: {readable}{stop} {_FRAGMENT_HELP}")
 
     if "\n" in amount or "\r" in amount:
         raise ValueError(f"amount {amount!r} must be one posting fragment without line breaks. {_FRAGMENT_HELP}")
     if comment_start(amount) is not None:
         raise ValueError(f"amount {amount!r} contains a ';'. {COMMENT_HELP}")
     refuse_zero_divisor(amount)
+    refuse_scientific_notation(amount)
     entries, errors, _ = parse_exact(f'2026-01-02 * "probe"\n  Assets:Probe {amount}\n  Equity:Probe\n')
     entry: Any = entries[0] if len(entries) == 1 and not errors else None
     posting: Any = entry.postings[0] if entry is not None else None
     if posting is None:
         refuse(errors[0].message if errors else "it is not a valid posting")
     units = posting.units
-    if units is MISSING or units.number is MISSING or units.currency is MISSING:
+    if units is MISSING or units.number is MISSING:
         refuse("no amount found")
+    if units.currency is MISSING:
+        refuse("no currency found")
     fields: dict[str, Any] = {
         "units": {"number": format(units.number, "f"), "currency": units.currency},
     }
     cost = posting.cost
     if cost is not None:
         if cost.number_total is not None and cost.number_total is not MISSING:
+            if cost.number_per is not None and cost.number_per is not MISSING and cost.number_per != 0:
+                raise ValueError(
+                    f"amount {amount!r} uses a per-unit cost with a total ('{{... # ...}}'), which the amount "
+                    'shorthand cannot express. Use "units" with a structured "cost" carrying "number", '
+                    '"number_total" and "currency".'
+                )
             raise ValueError(
                 f"amount {amount!r} uses a total cost '{{{{...}}}}', which the amount shorthand cannot express. "
                 'Split the lot into a per-unit cost \'{...}\', or use "units" with a structured "cost" '
@@ -416,10 +475,12 @@ class DocumentDirective(BaseModel):
     model_config = ConfigDict(extra="forbid")
     date: LedgerDate
     account: str
+    #: Relative to the file that wrote the directive, which `source` names (w5/833).
     filename: str
     tags: list[Tag] = Field(default_factory=list)
     links: list[Link] = Field(default_factory=list)
     meta: dict[str, Any] = Field(default_factory=dict)
+    source: SourceLocation | None = None
     generated: bool = Field(default=False, exclude=True)
 
 

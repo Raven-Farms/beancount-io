@@ -45,3 +45,9 @@ tmp/
 
 .tmp
 *.env
+
+# Python bytecode caches (skills tooling and eval fixtures)
+__pycache__/
+*.py[cod]
+
+.internal

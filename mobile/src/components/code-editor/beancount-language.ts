@@ -140,3 +140,32 @@ function consumeStringBody(
   }
   state.inStr = true;
 }
+
+// ─── Indentation ─────────────────────────────────────────────────────────────
+
+const DATED_LINE = /^\d{4}-\d{2}-\d{2}(?:\s|$)/u;
+
+/**
+ * The indentation the line being started gets after Enter (w21/338). Without a
+ * language rule CodeMirror copies the current line's indentation, so after a
+ * posting a blank line and the next line both started at two spaces and a new
+ * date line was indented, which bean-check refuses ("unexpected INDENT"); after
+ * a header the first posting started at column 0.
+ *
+ * - Before text that starts a directive (a date) or after a blank line: 0.
+ * - After a dated header or an indented line (a posting, metadata): one unit.
+ * - Otherwise `null`, leaving CodeMirror's default.
+ *
+ * `previousLine` is the line above the one being indented, or null at the top.
+ */
+export function beancountIndent(
+  previousLine: string | null,
+  textAfter: string,
+  unit: number,
+): number | null {
+  if (DATED_LINE.test(textAfter.trimStart())) return 0;
+  if (previousLine === null || previousLine.trim() === "") return 0;
+  if (DATED_LINE.test(previousLine)) return unit;
+  if (/^\s/u.test(previousLine)) return unit;
+  return null;
+}

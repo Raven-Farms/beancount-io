@@ -1,4 +1,9 @@
-import { selectRangedAccountTree } from "../select-ranged-account-tree";
+import { isolateLtr } from "../../../../common/bidi";
+import {
+  emptyFlowLabel,
+  notInTotalNote,
+  selectRangedAccountTree,
+} from "../select-ranged-account-tree";
 
 // Backend `accountBalances` shape: { account: { currency: amount } }.
 type AcctBal = Record<string, Record<string, number | string>>;
@@ -16,10 +21,12 @@ describe("selectRangedAccountTree", () => {
     expect(selectRangedAccountTree("USD", undefined, "6M", "income")).toEqual({
       tree: [],
       total: 0,
+      notInTotal: [],
     });
     expect(selectRangedAccountTree("USD", [], "6M", "income")).toEqual({
       tree: [],
       total: 0,
+      notInTotal: [],
     });
   });
 
@@ -30,7 +37,7 @@ describe("selectRangedAccountTree", () => {
       "ALL",
       "income",
     );
-    expect(result).toEqual({ tree: [], total: 0 });
+    expect(result).toEqual({ tree: [], total: 0, notInTotal: [] });
   });
 
   it("lists top-level accounts sorted by balance for ALL range, total = sum", () => {
@@ -191,7 +198,7 @@ describe("selectRangedAccountTree", () => {
     expect(result.total).toBe(37000);
   });
 
-  it("resolves the active currency and falls back to USD", () => {
+  it("totals the active currency and discloses the rest (w21/058)", () => {
     const result = selectRangedAccountTree(
       "CNY",
       [
@@ -203,9 +210,14 @@ describe("selectRangedAccountTree", () => {
       "ALL",
       "income",
     );
-    expect(result.tree.map((n) => n.name)).toEqual(["Salary", "UsdJob"]);
-    expect(result.tree.map((n) => n.value)).toEqual([6500, 1000]);
-    expect(result.total).toBe(7500);
+    expect(result.tree.map((n) => n.name)).toEqual(["Salary"]);
+    expect(result.total).toBe(6500);
+    expect(result.notInTotal).toEqual([
+      {
+        account: "UsdJob",
+        holding: { currency: "USD", scale: 0, number: 1000 },
+      },
+    ]);
   });
 
   it("parses string balances", () => {
@@ -217,5 +229,124 @@ describe("selectRangedAccountTree", () => {
     );
     expect(result.tree[0].value).toBe(1234.5);
     expect(result.total).toBe(1234.5);
+  });
+});
+
+// w21/038: Reports dropped a 50 EUR Travel expense from the USD Expenses card
+// with no hint, where Home and Accounts say "not in total".
+describe("selectRangedAccountTree: other currencies", () => {
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}:${String(params?.amounts)}`;
+
+  it("totals the active currency and names what it leaves out, by top-level account", () => {
+    const result = selectRangedAccountTree(
+      "USD",
+      [
+        point("2026-08", {
+          "Expenses:Housing:Rent": { USD: "4000.00" },
+          "Expenses:Food": { USD: "76.00" },
+        }),
+        point("2026-09", {
+          "Expenses:Travel": { EUR: "30.00" },
+          "Expenses:Travel:Hotel": { EUR: "20.00" },
+        }),
+      ],
+      "6M",
+      "expenses",
+    );
+    expect(result.total).toBe(4076);
+    expect(result.notInTotal).toEqual([
+      { account: "Travel", holding: { currency: "EUR", number: 50, scale: 2 } },
+    ]);
+    expect(notInTotalNote(result.notInTotal, t)).toBe(
+      `notInTotal:${isolateLtr("50.00 EUR (Travel)")}`,
+    );
+  });
+
+  it("gives income its display sign", () => {
+    const result = selectRangedAccountTree(
+      "USD",
+      [point("2026-09", { "Income:Salary": { USD: "-100", EUR: "-25.5" } })],
+      "6M",
+      "income",
+    );
+    expect(result.notInTotal).toEqual([
+      {
+        account: "Salary",
+        holding: { currency: "EUR", number: 25.5, scale: 1 },
+      },
+    ]);
+  });
+
+  it("discloses nothing for a single-currency ledger", () => {
+    const result = selectRangedAccountTree(
+      "USD",
+      [point("2026-09", { "Expenses:Food": { USD: "10" } })],
+      "6M",
+      "expenses",
+    );
+    expect(result.notInTotal).toEqual([]);
+    expect(notInTotalNote(result.notInTotal, t)).toBe(null);
+  });
+});
+
+// w21/174: a parent's own postings had no row on Reports' breakdown cards, so
+// Food read 240 over children adding to 190.
+describe("a parent's own postings on a breakdown", () => {
+  it("get a row of their own at every level, so each adds up", () => {
+    const { tree } = selectRangedAccountTree(
+      "USD",
+      [
+        point("2026-10-31", {
+          "Expenses:Food": { USD: 50 },
+          "Expenses:Food:Groceries": { USD: 100 },
+          "Expenses:Food:Groceries:Costco": { USD: 60 },
+          "Expenses:Food:Dining": { USD: 30 },
+          "Expenses:Rent": { USD: 1000 },
+        }),
+      ],
+      "ALL",
+      "expenses",
+      "2026-10",
+    );
+    const food = tree.find((node) => node.account === "Expenses:Food")!;
+    expect(food.value).toBe(240);
+    const shape = (nodes: typeof tree) =>
+      nodes.map((node) => [node.name, node.value, node.own ?? false]);
+    expect(shape(food.children)).toEqual([
+      ["Groceries", 160, false],
+      ["Food", 50, true],
+      ["Dining", 30, false],
+    ]);
+    const groceries = food.children[0];
+    expect(shape(groceries.children)).toEqual([
+      ["Groceries", 100, true],
+      ["Costco", 60, false],
+    ]);
+  });
+});
+
+// w21/515: a range whose only flow was in EUR read "No cash flow" in a USD
+// ledger, beside the Expenses card listing 420.00 EUR as not in the total.
+describe("emptyFlowLabel", () => {
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}:${String(params?.amounts)}`;
+
+  it("discloses flow outside the operating currency", () => {
+    const expense = selectRangedAccountTree(
+      "USD",
+      [point("2026-10", { "Expenses:QaTravel:Hotel": { EUR: "420.00" } })],
+      "6M",
+      "expenses",
+      "2026-10",
+    );
+    expect(expense.total).toBe(0);
+    expect(emptyFlowLabel("No cash flow", expense.notInTotal, t)).toBe(
+      `No cash flow notInTotal:${isolateLtr("420.00 EUR (QaTravel)")}`,
+    );
+  });
+
+  it("stays the plain empty message for a range with nothing in any currency", () => {
+    expect(emptyFlowLabel("No cash flow", [], t)).toBe("No cash flow");
   });
 });

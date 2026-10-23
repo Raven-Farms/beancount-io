@@ -1,9 +1,9 @@
+import { signInFailureMessageKey } from "@/screens/welcome/failure-message";
 import {
   View,
   ScrollView,
   StyleSheet,
   Image,
-  Text,
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,11 +18,10 @@ import { PressableScale } from "@/components/pressable-scale";
 import { startGuestVisit } from "@/common/guest/guest-state";
 import { getServerUrl, serverUrlOverrideVar } from "@/common/vars/server-url";
 import { useReactiveVar } from "@apollo/client";
+import { signOutReasonVar } from "@/common/vars/sign-out-reason";
 import { isOfficialServerUrl } from "@/common/server-url-validation";
-import {
-  useNativeSignIn,
-  type NativeSignIn,
-} from "@/screens/welcome/use-native-sign-in";
+import { useNativeSignIn } from "@/screens/welcome/use-native-sign-in";
+import { InlineError } from "@/components/inline-error";
 
 const getStyles = (theme: ColorTheme) =>
   StyleSheet.create({
@@ -80,31 +79,19 @@ const getStyles = (theme: ColorTheme) =>
     },
   });
 
-/**
- * A server problem is named as one — the same words the Server screen's
- * "Test connection" uses — so a stale custom URL does not read as a wrong
- * password. Only a rejection blames the sign-in or sign-up itself.
- */
-function failureMessageKey(
-  failure: NonNullable<NativeSignIn["failure"]>,
-): string {
-  switch (failure.reason) {
-    case "unreachable":
-      return "serverConnectionUnreachable";
-    case "incompatible":
-      return "serverConnectionIncompatible";
-    case "rejected":
-      return failure.flow === "sign_up" ? "signUpFailed" : "signInFailed";
-  }
-}
-
 export function WelcomeScreen(): JSX.Element {
   useReactiveVar(serverUrlOverrideVar);
   const showExamples = isOfficialServerUrl(getServerUrl());
   const styles = useThemeStyle(getStyles);
   const { t } = useTranslations();
   const theme = useTheme().colorTheme;
-  const { pendingFlow, failure, start } = useNativeSignIn();
+  const { pendingFlow, failure, start: startSignIn } = useNativeSignIn();
+  // Why the app signed the user out, said once; a new sign-in clears it.
+  const signOutReason = useReactiveVar(signOutReasonVar);
+  const start = (flow: Parameters<typeof startSignIn>[0]) => {
+    signOutReasonVar(null);
+    startSignIn(flow);
+  };
   const busy = pendingFlow !== null;
   const { fontScale } = useWindowDimensions();
   const stacked = prefersStackedLayout(fontScale);
@@ -177,8 +164,17 @@ export function WelcomeScreen(): JSX.Element {
             </Button>
           </View>
           {failure && (
-            <Text style={styles.error}>{t(failureMessageKey(failure))}</Text>
+            <InlineError
+              style={styles.error}
+              message={t(signInFailureMessageKey(failure))}
+            />
           )}
+          {signOutReason === "sessionEnded" && !failure ? (
+            <InlineError
+              style={styles.error}
+              message={t("sessionEndedNotice")}
+            />
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>

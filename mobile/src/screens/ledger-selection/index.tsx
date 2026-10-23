@@ -7,7 +7,9 @@ import {
   Pressable,
   TextInput,
   useWindowDimensions,
+  Platform,
 } from "react-native";
+import { tabRole } from "@/common/accessibility";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useApolloClient, useReactiveVar } from "@apollo/client";
@@ -16,7 +18,7 @@ import {
   GetLedgerDocument,
   type GetLedgerQuery,
 } from "@/generated-graphql/graphql";
-import { prefersStackedLayout, useTheme } from "@/common/theme";
+import { prefersStackedLayout, space, useTheme } from "@/common/theme";
 import { useThemeStyle } from "@/common/hooks";
 import { useTranslations } from "@/common/hooks/use-translations";
 import { useToast } from "@/common/hooks/use-toast";
@@ -28,6 +30,7 @@ import { LoadingTile } from "@/components/loading-tile";
 import { useDiscovery } from "./use-discovery";
 import { filterLedgers, type DiscoveryTab } from "./discovery-store";
 import { ledgerRowDescription } from "./ledger-row-description";
+import { ledgerRowAccessibilityLabel } from "./ledger-row-label";
 
 const tabs = ["yours", "starred", "explore"] as const;
 const widths = [180, 140, 220, 160, 200];
@@ -61,6 +64,9 @@ const getStyles = (theme: ColorTheme) =>
       paddingHorizontal: 12,
       flexDirection: "row",
       alignItems: "center",
+      // The magnifier sat flush against the text; the shared SearchBar and
+      // Merchants keep this gap (w21/002). A row gap mirrors under RTL.
+      gap: space.sm,
       borderRadius: 12,
       backgroundColor: theme.controlFill,
     },
@@ -155,8 +161,12 @@ export function LedgerSelectionScreen() {
     : tab === "explore"
       ? state.items
       : filterLedgers(state.items, query);
-  const showError = () =>
+  // A star that fails after the user left (a slow connection, then Back) must
+  // not toast over whatever screen is showing now (w21/300).
+  const showError = () => {
+    if (!mounted.current) return;
     toast.showToast({ message: t("discoveryActionError"), type: "error" });
+  };
   const open = async (id: string) => {
     if (openingRef.current) return;
     openingRef.current = true;
@@ -179,7 +189,10 @@ export function LedgerSelectionScreen() {
       )
         return;
       ledgerVar(id);
-      router.replace("/(app)/(tabs)");
+      // Back to the tab bar that is already mounted below this screen; a
+      // replace made a second copy of the whole tab bar on every switch
+      // (w21/242).
+      router.dismissTo("/(app)/(tabs)");
     } catch {
       if (mounted.current) showError();
     } finally {
@@ -220,7 +233,7 @@ export function LedgerSelectionScreen() {
           <Pressable
             key={value}
             testID={`discovery-tab-${value}`}
-            accessibilityRole="tab"
+            accessibilityRole={tabRole}
             accessibilityState={{ selected: tab === value }}
             style={[styles.tab, tab === value && styles.selected]}
             // The query carries across tabs: moving to Explore is how a search
@@ -260,6 +273,9 @@ export function LedgerSelectionScreen() {
         data={items}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        // The last ledgers scroll above the keyboard (w21/145).
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+        keyboardDismissMode="on-drag"
         refreshControl={
           <ThemedRefreshControl
             refreshing={state.refreshing}
@@ -274,7 +290,16 @@ export function LedgerSelectionScreen() {
               testID={`discovery-open-${item.fullName}`}
               style={styles.content}
               accessibilityRole="button"
-              accessibilityLabel={t("discoveryOpen", { name: item.fullName })}
+              // The whole row, as it reads on screen (w21/243).
+              accessibilityLabel={ledgerRowAccessibilityLabel({
+                open: t("discoveryOpen", { name: item.fullName }),
+                visibility: t(
+                  item.private ? "discoveryPrivate" : "discoveryPublic",
+                ),
+                description: item.description,
+                current:
+                  item.id === selected ? t("discoveryCurrent") : undefined,
+              })}
               accessibilityState={{
                 selected: item.id === selected,
                 disabled: opening !== null,
@@ -345,7 +370,9 @@ export function LedgerSelectionScreen() {
           </View>
         )}
         ListEmptyComponent={
-          state.loading || waitingForSearch ? (
+          // A retry in flight is a load: it must not read as an empty account
+          // ("Your ledgers will appear here") (w21/383).
+          state.loading || state.refreshing || waitingForSearch ? (
             skeleton
           ) : (
             <View style={styles.state}>
@@ -383,6 +410,10 @@ export function LedgerSelectionScreen() {
         }
         ListFooterComponent={
           <View style={styles.state}>
+            {/* With rows above, the failure is told here, beside Retry. */}
+            {state.error && state.items.length > 0 ? (
+              <Text style={styles.text}>{t("discoveryLoadError")}</Text>
+            ) : null}
             {state.error ? (
               <Pressable
                 accessibilityRole="button"

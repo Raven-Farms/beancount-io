@@ -9,8 +9,11 @@ const searchParamsMock = vi.hoisted(() => ({
   filter: "",
   time: "",
 }));
+const access = vi.hoisted(() => ({ canWrite: true }));
 
 vi.mock("@apollo/client/react", () => ({ useQuery: vi.fn() }));
+// The public reader's header star is not under test here.
+vi.mock("../components/star-button", () => ({ StarButton: () => null }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -63,7 +66,10 @@ vi.mock("@/common/hooks/use-ledger", () => ({
 }));
 
 vi.mock("@/common/hooks/use-ledger-permission", () => ({
-  useLedgerPermission: () => ({ isAdmin: true, canWrite: true }),
+  useLedgerPermission: () => ({
+    isAdmin: access.canWrite,
+    canWrite: access.canWrite,
+  }),
 }));
 
 vi.mock("@/common/lib/fava-options", () => ({
@@ -156,6 +162,7 @@ describe("Overview customization from the all-hidden prompt", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    access.canWrite = true;
   });
 
   it("stays open while modules are restored, then returns focus to a visible trigger", async () => {
@@ -198,5 +205,88 @@ describe("Overview customization from the all-hidden prompt", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Customize" }),
     );
+  });
+
+  /**
+   * A public reader has no header Customize trigger, so once restoring a
+   * module removed the prompt's button, closing the panel left focus on the
+   * body and the next Tab restarted at the skip link (w4/299).
+   */
+  describe("for a public reader", () => {
+    beforeEach(() => {
+      access.canWrite = false;
+    });
+
+    function renderInShell() {
+      render(
+        <main id="main-content" tabIndex={-1}>
+          <LedgerOverviewPage />
+        </main>,
+      );
+      return screen.getByRole("main");
+    }
+
+    async function openFromPrompt() {
+      const promptCard = screen.getByText(/All dashboard modules are hidden/)
+        .parentElement as HTMLElement;
+      within(promptCard).getByRole("button", { name: "Customize" }).focus();
+      await userEvent.keyboard("{Enter}");
+      return screen.findByRole("dialog");
+    }
+
+    it("resumes in the dashboard after restoring a module", async () => {
+      const main = renderInShell();
+      expect(screen.queryByRole("button", { name: "Customize" })).toBe(
+        within(main).getByRole("button", { name: "Customize" }),
+      );
+      const dialog = await openFromPrompt();
+      within(dialog)
+        .getByRole("switch", { name: "Show module: Financial position" })
+        .focus();
+      await userEvent.keyboard(" ");
+      expect(
+        screen.getByTestId("module-financial-position"),
+      ).toBeInTheDocument();
+
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      // There is no header trigger to fall back to: the dashboard's own title.
+      expect(screen.queryByRole("button", { name: "Customize" })).toBeNull();
+      const heading = screen.getByRole("heading", { level: 1 });
+      expect(document.activeElement).toBe(heading);
+
+      await userEvent.tab();
+      expect(main.contains(document.activeElement)).toBe(true);
+      expect(
+        heading.compareDocumentPosition(document.activeElement!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("resumes in the dashboard after Reset layout", async () => {
+      renderInShell();
+      const dialog = await openFromPrompt();
+      within(dialog)
+        .getByRole("button", { name: /Reset layout/ })
+        .focus();
+      await userEvent.keyboard("{Enter}");
+      expect(screen.queryByText(/All dashboard modules are hidden/)).toBeNull();
+
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(document.activeElement).toBe(
+        screen.getByRole("heading", { level: 1 }),
+      );
+    });
+
+    it("still returns to the prompt's button when nothing changed", async () => {
+      const main = renderInShell();
+      await openFromPrompt();
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      expect(document.activeElement).toBe(
+        within(main).getByRole("button", { name: "Customize" }),
+      );
+    });
   });
 });

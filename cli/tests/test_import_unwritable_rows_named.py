@@ -25,12 +25,13 @@ BASE = textwrap.dedent("""
     import datetime
     from decimal import Decimal as D
     from beancount.core import amount, data
+    from beancount.core.inventory import Inventory
 
-    def txn(day, narration, a="-3.00", b="3.00", meta=None, account="Expenses:Food", units=True):
+    def txn(day, narration, a="-3.00", b="3.00", meta=None, account="Expenses:Food", units=True, pmeta=None):
         m = data.new_metadata("bank.txt", 1)
         m.update(meta or {})
         src = data.Posting("Assets:Checking", amount.Amount(D(a), "USD") if units else None, None, None, None, None)
-        dst = data.Posting(account, amount.Amount(D(b), "USD"), None, None, None, None)
+        dst = data.Posting(account, amount.Amount(D(b), "USD"), None, None, None, pmeta)
         return data.Transaction(m, day, "*", None, narration, data.EMPTY_SET, data.EMPTY_SET, [src, dst])
 
     def day(n):
@@ -104,6 +105,24 @@ def test_apply_names_the_invalid_row(tmp_path: Path, bea_config_dir: Path) -> No
     assert (tmp_path / "main.bean").read_text() == LEDGER
 
 
+def test_apply_refuses_a_dict_metadata_value_it_would_silently_drop(tmp_path: Path, bea_config_dir: Path) -> None:
+    """The printer passes over dict values, so the row printed fine and lost them (w5/728)."""
+    _import(tmp_path, 'txn(day(1), "r1", meta={"ok": {"a": 1}})', "--json")
+    result = runner.invoke(
+        app,
+        ["--json", "--no-input", "--file", str(tmp_path / "main.bean"), "import", str(tmp_path / "bank.txt")]
+        + ["--config", str(tmp_path / "imp.py"), "--apply"],
+    )
+
+    assert result.exit_code == 1, result.output
+    error = json.loads(result.stderr)["error"]
+    assert (
+        error["message"] == "Importer base row 1 cannot be written as a ledger entry: metadata 'ok' is a dict, "
+        "which Beancount cannot print."
+    )
+    assert (tmp_path / "main.bean").read_text() == LEDGER
+
+
 @pytest.mark.parametrize(
     ("rows", "said"),
     [
@@ -125,8 +144,31 @@ def test_apply_names_the_invalid_row(tmp_path: Path, bea_config_dir: Path) -> No
             ", ".join(f'txn(day({n}), "r{n}", units={n != 3})' for n in range(1, 5)),
             "Importer base row 3 cannot be written as a ledger entry: its Assets:Checking posting has no amount.",
         ),
+        (
+            'txn(day(1), "r1", meta={"ok": {"a": 1}})',
+            "Importer base row 1 cannot be written as a ledger entry: metadata 'ok' is a dict, "
+            "which Beancount cannot print.",
+        ),
+        (
+            'txn(day(1), "r1", meta={"inv": Inventory()})',
+            "Importer base row 1 cannot be written as a ledger entry: metadata 'inv' is an Inventory, "
+            "which Beancount cannot print.",
+        ),
+        (
+            'txn(day(1), "r1", pmeta={"ok": {"a": 1}})',
+            "Importer base row 1 cannot be written as a ledger entry: posting 2 metadata 'ok' is a dict, "
+            "which Beancount cannot print.",
+        ),
     ],
-    ids=["metadata-key", "string-date", "datetime-date", "no-units"],
+    ids=[
+        "metadata-key",
+        "string-date",
+        "datetime-date",
+        "no-units",
+        "dict-meta",
+        "inventory-meta",
+        "posting-dict-meta",
+    ],
 )
 def test_an_unwritable_row_stops_the_import_naming_it(
     tmp_path: Path, bea_config_dir: Path, rows: str, said: str
@@ -136,3 +178,45 @@ def test_an_unwritable_row_stops_the_import_naming_it(
     assert result.exit_code == 1, result.output
     assert said in " ".join(result.stderr.split())
     assert "Directive " not in result.stderr and "Error: AttributeError" not in result.stderr
+
+
+def _apply(tmp_path: Path, rows: str, *flags: str) -> Any:
+    _import(tmp_path, rows)
+    return runner.invoke(
+        app,
+        [*flags, "--no-input", "--file", str(tmp_path / "main.bean"), "import", str(tmp_path / "bank.txt")]
+        + ["--config", str(tmp_path / "imp.py"), "--apply"],
+    )
+
+
+MIXED = 'txn(day(1), "r1", "-2.00", "2.00"), txn(day(2), "r2", "-4.00", "4.00", account="Expenses:Unopened"), ' + (
+    'txn(day(3), "r3", "-3.00", "3.50")'
+)
+
+
+@pytest.mark.parametrize("flags", [(), ("--json",)])
+def test_an_apply_refused_for_a_blocked_row_names_the_invalid_row_too(
+    tmp_path: Path, bea_config_dir: Path, flags: tuple[str, ...]
+) -> None:
+    """The blocked refusal raised first and listed row 2 alone; row 3's imbalance vanished (w5/858)."""
+    result = _apply(tmp_path, MIXED, *flags)
+
+    assert result.exit_code == 4, result.output
+    if flags:
+        error = json.loads(result.stderr)["error"]
+        message, details = error["message"], error["details"]
+    else:
+        message, details = " ".join(result.stderr.split()), result.stderr.splitlines()
+    assert "1 row is blocked" in message and "1 row would also leave the ledger invalid" in message
+    assert any("Row 2 (blocked):" in line for line in details)
+    assert any("Row 3: Transaction does not balance: (0.50 USD)" in line for line in details)
+    assert (tmp_path / "main.bean").read_text() == LEDGER
+
+
+def test_an_invalid_only_apply_keeps_its_exit_1(tmp_path: Path, bea_config_dir: Path) -> None:
+    result = _apply(tmp_path, UNBALANCED)
+
+    assert result.exit_code == 1, result.output
+    assert result.stderr.count("Row 3: Transaction does not balance: (0.50 USD)") == 1
+    assert "would also leave" not in result.stderr
+    assert (tmp_path / "main.bean").read_text() == LEDGER

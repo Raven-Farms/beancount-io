@@ -11,6 +11,7 @@ description: Autonomous maintenance routine that deletes provably unreachable co
   (routine-useless-test-pruner), or live single-implementation indirection
   (routine-abstraction-improver). The core trigger is "find and delete code
   nothing can reach".
+metadata: {"internal": true}
 ---
 
 # Task: Delete provably unreachable code

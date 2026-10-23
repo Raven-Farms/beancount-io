@@ -51,13 +51,13 @@ vi.mock("@/common/components/ui/date-picker", () => ({
     value,
     onChange,
   }: {
-    value: Date;
-    onChange: (d: Date | undefined) => void;
+    value: string | undefined;
+    onChange: (d: string | undefined) => void;
   }) => (
     <input
       aria-label="Date"
-      value={value?.toISOString()}
-      onChange={(event) => onChange(new Date(event.target.value))}
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value)}
       readOnly
     />
   ),

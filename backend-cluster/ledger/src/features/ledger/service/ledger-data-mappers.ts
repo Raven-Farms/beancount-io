@@ -37,7 +37,9 @@ export function toAttributesPublic(
  * unbalanced transaction from any other validation failure would otherwise
  * regex the prose, and a reworded engine message would silently change how
  * the error is classified (w2/013). The engine's own `hint` rides along for
- * the same reason.
+ * the same reason. `severity` keeps a warning from passing for an error: the
+ * engine marks a one-posting entry or closing an account with a balance as
+ * warnings while `bean-check` passes, and every client counted them (w21/188).
  */
 export function toBeancountErrorsPublic(
   errors: BeancountError[],
@@ -50,6 +52,7 @@ export function toBeancountErrorsPublic(
         : null,
     code: error.code ?? null,
     hint: error.hint ?? null,
+    severity: error.severity === "warning" ? "warning" : "error",
   }));
 }
 

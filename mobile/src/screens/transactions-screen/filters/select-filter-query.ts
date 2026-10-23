@@ -2,6 +2,7 @@ import { getFormatDate } from "../../../common/format-util";
 import {
   NO_FILTERS,
   ScopedTransactionFilters,
+  TRANSACTION_STATUSES,
   TransactionFilters,
 } from "./types";
 
@@ -21,6 +22,13 @@ export const selectFiltersForLedger = (
 ): TransactionFilters =>
   ledgerId && scoped.ledgerId === ledgerId ? scoped.filters : NO_FILTERS;
 
+/**
+ * The last day a custom window may reach. The server computes the day after the
+ * end, so an end of 9999-12-31 overflows to year 10000, fails to parse and
+ * takes the whole journal with it (w21/307).
+ */
+export const MAX_FILTER_DAY = "9999-12-30";
+
 /** An inclusive `YYYY-MM-DD` window. */
 export type DateRange = { start: string; end: string };
 
@@ -31,7 +39,7 @@ export type FilterQuery = {
   account?: string;
 };
 
-const monthsBack = (today: Date, months: number): Date => {
+export const monthsBack = (today: Date, months: number): Date => {
   const date = new Date(today.getTime());
   const day = date.getDate();
   date.setMonth(date.getMonth() - months);
@@ -87,7 +95,16 @@ export const resolveDateRange = (
       // silently swapping the ends would query a window the user never asked
       // for. The sheet blocks Apply, so this is the backstop.
       return filters.startDate && filters.endDate && isDateRangeValid(filters)
-        ? { start: filters.startDate, end: filters.endDate }
+        ? {
+            start:
+              filters.startDate <= MAX_FILTER_DAY
+                ? filters.startDate
+                : MAX_FILTER_DAY,
+            end:
+              filters.endDate <= MAX_FILTER_DAY
+                ? filters.endDate
+                : MAX_FILTER_DAY,
+          }
         : null;
     case "all":
     default:
@@ -107,6 +124,16 @@ export const formatTimeFilter = (range: DateRange): string =>
   `${range.start} - ${range.end}`;
 
 /**
+ * Whether the status chips filter anything. Cleared, Pending and Other together
+ * match every transaction, so selecting all three is the same as none: no dot,
+ * no subtype sent, and an empty ledger keeps its welcome instead of "No
+ * transactions match your search or filters" (w21/306).
+ */
+const statusFilterActive = (filters: TransactionFilters): boolean =>
+  filters.statuses.length > 0 &&
+  !TRANSACTION_STATUSES.every((status) => filters.statuses.includes(status));
+
+/**
  * Translates filter state into query fields, omitting whatever is inactive so
  * the variables stay identical to an unfiltered query when nothing is set.
  */
@@ -116,7 +143,7 @@ export const toFilterQuery = (
 ): FilterQuery => {
   const query: FilterQuery = {};
 
-  if (filters.statuses.length > 0) {
+  if (statusFilterActive(filters)) {
     query.transactionSubtypes = [...filters.statuses];
   }
 
@@ -142,7 +169,7 @@ export const countActiveFilters = (
   today: Date,
 ): number => {
   let count = 0;
-  if (filters.statuses.length > 0) count += 1;
+  if (statusFilterActive(filters)) count += 1;
   if (resolveDateRange(filters, today)) count += 1;
   if (filters.account) count += 1;
   return count;

@@ -29,8 +29,12 @@ const stub: any = new Proxy(function () {}, {
   get: (_target, key) => (key === "__esModule" ? true : stub),
   apply: () => stub,
 });
-const t = (key: string, params?: { account?: string }) =>
-  params?.account ? `${key} ${params.account}` : key;
+const t = (key: string, params?: { account?: string; name?: string }) =>
+  params?.account
+    ? `${key} ${params.account}`
+    : params?.name
+      ? `${key} ${params.name}`
+      : key;
 
 function loadRow(): (props: Record<string, unknown>) => Node {
   const exports: Record<string, any> = {};
@@ -112,6 +116,49 @@ const render = (rowOverrides: Record<string, unknown>, extra = {}) =>
   });
 let toggles: string[] = [];
 let opened: string[] = [];
+
+// w21/449, then w21/612: a parent's "(own)" row carries its parent's account, so
+// it read, and opened, the same account twice. It is plain text now (its visible
+// label already says "own"): account detail reads an account with its children,
+// so a tap opened the parent's page, $28,100 for a $10,000 own row.
+describe("AccountTable own-postings row", () => {
+  it("is not a button that reopens the parent, while the parent still is", () => {
+    const opened: string[] = [];
+    const parent = AccountTableRow({
+      row: row({
+        key: "Assets:Bank",
+        account: "Assets:Bank",
+        depth: 1,
+        value: 28100,
+      }),
+      label: "Bank",
+      currency: "USD",
+      stacked: false,
+      onToggle: () => undefined,
+      onPressAccount: (account: string) => opened.push(account),
+    });
+    const own = AccountTableRow({
+      row: row({
+        key: "Assets:Bank#own",
+        account: "Assets:Bank",
+        depth: 2,
+        own: true,
+        hasChildren: false,
+        expanded: false,
+        value: 10000,
+      }),
+      label: "Bank (own)",
+      currency: "USD",
+      stacked: false,
+      onToggle: () => undefined,
+      onPressAccount: (account: string) => opened.push(account),
+    });
+    expect(parent.props.accessibilityLabel).toBe("Assets:Bank, $28100");
+    expect(own.props.onPress).toBe(undefined);
+    expect(own.props.accessibilityRole).toBe(undefined);
+    expect(opened.length).toBe(0);
+  });
+});
 
 describe("AccountTable navigating row names", () => {
   beforeEach(() => {

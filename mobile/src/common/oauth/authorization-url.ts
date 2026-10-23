@@ -13,6 +13,7 @@ import type { PendingOAuthAuthorization } from "./authorization-result";
 export function buildAuthorizationUrl(
   pending: PendingOAuthAuthorization,
   codeChallenge: string,
+  options: { chooseAccount?: boolean } = {},
 ): string {
   const url = new URL(pending.authorizationEndpoint);
   url.search = new URLSearchParams({
@@ -36,6 +37,12 @@ export function buildAuthorizationUrl(
     // this hint the server cannot tell them apart and opens the login form for
     // both. A server that does not know the hint ignores it.
     ...(pending.flow === "sign_up" ? { screen_hint: "signup" } : {}),
+    // After a sign-out the browser is still signed in to the previous
+    // account; ask for an explicit choice rather than its one-tap Approve
+    // (w21/153). Sign Up already asks, through its own hint.
+    ...(pending.flow === "sign_in" && options.chooseAccount
+      ? { screen_hint: "select_account" }
+      : {}),
   }).toString();
   url.hash = "";
   return url.toString();

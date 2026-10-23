@@ -137,6 +137,24 @@ describe("validateManagedPriceText", () => {
     expect(result.feed.prices.map((p) => p.line)).toEqual([1, 6]);
   });
 
+  // A lone CR ends no line for rustledger or Beancount: the body parsed as
+  // `unexpected input`, keeping only the first price (w5/844).
+  it.each([
+    ['2026-09-10 price BTC 70000 USD\r  observed-at: "2026-09-10T00:00:00Z"\n', 1],
+    ["; alias: BTC-USD\n2026-09-10 price BTC 70000 USD\r2026-09-11 price BTC 71000 USD\r", 2],
+  ])("rejects a carriage return without a line feed: %j", (text, line) => {
+    expect(validateManagedPriceText(text)).toEqual({
+      ok: false,
+      reason: "a carriage return without a line feed (lines must end in LF or CRLF)",
+      line,
+    });
+  });
+
+  it("still accepts CRLF line endings", () => {
+    const result = validateManagedPriceText("; alias: BTC-USD\r\n2026-09-10 price BTC 70000 USD\r\n");
+    expect(result.ok).toBe(true);
+  });
+
   it("rejects an empty or comment-only body", () => {
     expect(validateManagedPriceText("")).toMatchObject({
       ok: false,

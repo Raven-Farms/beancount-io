@@ -79,15 +79,17 @@ vi.mock("@/common/components/monaco-editor", () => ({
   MonacoEditor: ({
     value,
     options,
+    onChange,
   }: {
     value: string;
     options?: { readOnly?: boolean };
+    onChange?: (value: string | undefined) => void;
   }) => (
     <textarea
       aria-label="entry-source"
       value={value}
       readOnly={options?.readOnly}
-      onChange={() => undefined}
+      onChange={(event) => onChange?.(event.target.value)}
     />
   ),
 }));
@@ -248,6 +250,62 @@ describe("EntryContextPanel", () => {
     });
     await waitFor(() => {
       expect(onDeleted).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("saving a changed source (w4/251)", () => {
+    const edit = () =>
+      fireEvent.change(screen.getByLabelText("entry-source"), {
+        target: {
+          value: '2025-11-15 * "Sale" "edited"\n  Assets:Property  -1 HOUSE\n',
+        },
+      });
+
+    it("hands the owner the identity the save returned", async () => {
+      mocks.updateMutation.mockResolvedValue({
+        data: { updateLedgerEntrySourceSlice: { entryHash: "hash-2" } },
+      });
+      const onSaved = vi.fn();
+      render(
+        <EntryContextPanel
+          entryHash="hash-1"
+          ledgerId="open_ledger/example"
+          onSaved={onSaved}
+        />,
+      );
+      edit();
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(onSaved).toHaveBeenCalledWith("hash-2"));
+    });
+
+    it("keeps the loaded identity when the save returns none", async () => {
+      const onSaved = vi.fn();
+      render(
+        <EntryContextPanel
+          entryHash="hash-1"
+          ledgerId="open_ledger/example"
+          onSaved={onSaved}
+        />,
+      );
+      edit();
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(onSaved).toHaveBeenCalledWith("hash-1"));
+    });
+
+    it("does not report a failed save", async () => {
+      mocks.updateMutation.mockRejectedValue(new Error("offline"));
+      const onSaved = vi.fn();
+      render(
+        <EntryContextPanel
+          entryHash="hash-1"
+          ledgerId="open_ledger/example"
+          onSaved={onSaved}
+        />,
+      );
+      edit();
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+      await waitFor(() => expect(mocks.updateMutation).toHaveBeenCalled());
+      expect(onSaved).not.toHaveBeenCalled();
     });
   });
 

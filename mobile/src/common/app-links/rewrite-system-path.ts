@@ -57,6 +57,24 @@ export function canonicalizeIncomingAppLinkUrl(path: string): string | null {
   return null;
 }
 
+/**
+ * The hosted https URL of a `/ledger/…` link the app has no screen for: a
+ * profile such as `/ledger/open_ledger`, or `/ledger` itself. Opening it in the
+ * browser beats the old rewrite to Home for whatever ledger was current
+ * (w21/346). Null for links the resolver maps, for anything that is not a
+ * hosted ledger URL, and for foreign hosts, which are never opened from here.
+ */
+export function browserFallbackUrl(path: string): string | null {
+  const url = canonicalizeIncomingAppLinkUrl(path);
+  if (!url || !pathIncludesLedger(path)) return null;
+  try {
+    if (new URL(url).origin !== HOSTED_APP_ORIGIN) return null;
+  } catch {
+    return null;
+  }
+  return resolveAppLink(url) === null ? url : null;
+}
+
 function pathIncludesLedger(path: string): boolean {
   return /(?:^|\/)ledger\//.test(path) || /beancount\.io\/ledger\//i.test(path);
 }
